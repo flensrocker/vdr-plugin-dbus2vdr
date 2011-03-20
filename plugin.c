@@ -35,7 +35,7 @@ void cDBus2vdrPlugin::SVDRPCommand(DBusMessage* msg, DBusConnection* conn)
         if (plugin != NULL) {
            if (option == NULL)
               option = &empty;
-           isyslog("dbus2vdr: invoking %s %s", command, option);
+           isyslog("dbus2vdr: invoking PLUG %s %s %s", plugin->Name(), command, option);
            replyCode = 900;
            cString s = plugin->SVDRPCommand(command, option, replyCode);
            if (*s) {
