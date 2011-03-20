@@ -6,6 +6,7 @@
  * $Id$
  */
 
+#include "message.h"
 #include "monitor.h"
 
 #include <vdr/plugin.h>
@@ -81,6 +82,7 @@ void cPluginDbus2vdr::Stop(void)
 {
   // Stop any background activities the plugin is performing.
   cDBusMonitor::StopMonitor();
+  cDBusMessage::StopMessageQueue();
 }
 
 void cPluginDbus2vdr::Housekeeping(void)

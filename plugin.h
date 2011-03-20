@@ -1,14 +1,27 @@
 #ifndef __DBUS2VDR_PLUGIN_H
 #define __DBUS2VDR_PLUGIN_H
 
-#include <dbus/dbus.h>
+#include "message.h"
 
 
-class cDBus2vdrPlugin
+class cDBusMessagePlugin : public cDBusMessage
 {
 public:
-  static void SVDRPCommand(DBusMessage* msg, DBusConnection* conn);
-  static void Service(DBusMessage* msg, DBusConnection* conn);
+  static bool Dispatch(DBusConnection* conn, DBusMessage* msg);
+  
+  virtual ~cDBusMessagePlugin(void);
+
+protected:
+  virtual void Process(void);
+
+private:
+  enum eAction { dmpSVDRPCommand, dmpService };
+
+  cDBusMessagePlugin(eAction action, DBusConnection* conn, DBusMessage* msg);
+  void SVDRPCommand(void);
+  void Service(void);
+
+  eAction _action;
 };
 
 #endif

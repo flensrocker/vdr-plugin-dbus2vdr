@@ -67,12 +67,9 @@ void cDBusMonitor::Action(void)
         if (msg == NULL)
            continue;
         isyslog("dbus2vdr: new message, object %s, interface %s, member %s", dbus_message_get_path(msg), dbus_message_get_interface(msg), dbus_message_get_member(msg));
-        if (dbus_message_is_method_call(msg, DBUS_VDR_PLUGIN_INTERFACE, "SVDRPCommand"))
-           cDBus2vdrPlugin::SVDRPCommand(msg, conn);
-        else if (dbus_message_is_method_call(msg, DBUS_VDR_PLUGIN_INTERFACE, "Service"))
-           cDBus2vdrPlugin::Service(msg, conn);
-        dbus_message_unref(msg);
+        if (!cDBusMessagePlugin::Dispatch(conn, msg)) {
+           isyslog("dbus2vdr: don't know what to do...");
+           dbus_message_unref(msg);
+           }
         }
-
-  dbus_connection_close(conn);
 }
