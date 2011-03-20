@@ -6,6 +6,8 @@
  * $Id$
  */
 
+#include "monitor.h"
+
 #include <vdr/plugin.h>
 
 static const char *VERSION        = "0.0.1";
@@ -71,12 +73,14 @@ bool cPluginDbus2vdr::Initialize(void)
 bool cPluginDbus2vdr::Start(void)
 {
   // Start any background activities the plugin shall perform.
+  cDBusMonitor::StartMonitor();
   return true;
 }
 
 void cPluginDbus2vdr::Stop(void)
 {
   // Stop any background activities the plugin is performing.
+  cDBusMonitor::StopMonitor();
 }
 
 void cPluginDbus2vdr::Housekeeping(void)

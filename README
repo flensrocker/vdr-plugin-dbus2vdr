@@ -17,4 +17,9 @@ This plugin will expose some methods via DBus to control the vdr.
 
 For now implemented features:
 - send SVDRP commands to plugins
+  dbus-send --session --type=method_call --dest=de.tvdr.vdr \
+            --print-reply /Plugins/<pluginname> \
+            de.tvdr.vdr.plugin.SVDRPCommand string:'command' string:'parameter'
+
+Next on my list:
 - call "Service" method of plugins
