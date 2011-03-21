@@ -11,7 +11,7 @@
 
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "0.0.1";
+static const char *VERSION        = "0.0.1a";
 static const char *DESCRIPTION    = "expose methods for controlling vdr via DBus";
 static const char *MAINMENUENTRY  = NULL;
 
@@ -82,7 +82,7 @@ void cPluginDbus2vdr::Stop(void)
 {
   // Stop any background activities the plugin is performing.
   cDBusMonitor::StopMonitor();
-  cDBusMessage::StopMessageQueue();
+  cDBusMessage::StopDispatcher();
 }
 
 void cPluginDbus2vdr::Housekeeping(void)

@@ -9,14 +9,26 @@
 
 class cDBusMessage;
 
-class cDBusMessageHandler : public cThread
+class cDBusMessageHandler : public cThread, cListObject
 {
 public:
-  cDBusMessageHandler(void);
   virtual ~cDBusMessageHandler(void);
+
+  static void NewHandler(cDBusMessage *msg);
+  static void DeleteHandler(void);
 
 protected:
   virtual void Action(void);
+
+  cDBusMessage *_msg;
+
+private:
+  static cMutex   _listMutex;
+  static cCondVar _listCondVar;
+  static cList<cDBusMessageHandler> _activeHandler;
+  static cList<cDBusMessageHandler> _finishedHandler;
+
+  cDBusMessageHandler(cDBusMessage *msg);
 };
 
 class cDBusMessage : public cListObject
@@ -25,7 +37,7 @@ friend class cDBusMessageHandler;
 
 public:
   static void Dispatch(cDBusMessage *msg);
-  static void StopMessageQueue(void);
+  static void StopDispatcher(void);
 
   virtual ~cDBusMessage();
 

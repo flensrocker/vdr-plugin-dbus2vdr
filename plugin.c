@@ -102,7 +102,6 @@ void cDBusMessagePlugin::SVDRPCommand()
   dbus_uint32_t serial = 0;
   if (!dbus_connection_send(_conn, reply, &serial))
      esyslog("dbus2vdr: SVDRPCommand: out of memory!"); 
-  dbus_connection_flush(_conn);
   dbus_message_unref(reply);
 }
 

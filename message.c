@@ -1,12 +1,15 @@
 #include "message.h"
 
 
-cMutex               _msgQueueMutex;
-cList<cDBusMessage>  _msgQueue;
-cDBusMessageHandler *_msgQueueHandler = NULL;
+cMutex cDBusMessageHandler::_listMutex;
+cCondVar cDBusMessageHandler::_listCondVar;
+cList<cDBusMessageHandler> cDBusMessageHandler::_activeHandler;
+cList<cDBusMessageHandler> cDBusMessageHandler::_finishedHandler;
 
-cDBusMessageHandler::cDBusMessageHandler(void)
+cDBusMessageHandler::cDBusMessageHandler(cDBusMessage *msg)
+:_msg(msg)
 {
+  isyslog("dbus2vdr: starting new message handler %p", this);
   SetDescription("dbus2vdr message handler");
   Start();
 }
@@ -14,41 +17,60 @@ cDBusMessageHandler::cDBusMessageHandler(void)
 cDBusMessageHandler::~cDBusMessageHandler(void)
 {
   Cancel(3);
-  _msgQueue.Clear();
+  if (_msg != NULL)
+     delete _msg;
+}
+
+void cDBusMessageHandler::NewHandler(cDBusMessage *msg)
+{
+  cMutexLock lock(&_listMutex);
+  if (_finishedHandler.Count() > 0) {
+     cDBusMessageHandler *h = _finishedHandler.Get(0);
+     isyslog("dbus2vdr: %d idle message handler, reusing %p", _finishedHandler.Count(), h);
+     _finishedHandler.Del(h, false);
+     h->_msg = msg;
+     _activeHandler.Add(h);
+     h->Start();
+     }
+  else
+     _activeHandler.Add(new cDBusMessageHandler(msg));
+}
+
+void cDBusMessageHandler::DeleteHandler(void)
+{
+  cMutexLock lock(&_listMutex);
+  while (_activeHandler.Count() > 0) {
+        isyslog("dbus2vdr: waiting for %d message handlers to finish", _activeHandler.Count());
+        _listCondVar.Wait(_listMutex);
+        }
+  isyslog("dbus2vdr: deleting %d message handlers", _finishedHandler.Count());
+  _finishedHandler.Clear();
 }
 
 void cDBusMessageHandler::Action(void)
 {
-  while (Running()) {
-        cMutexLock lock(&_msgQueueMutex);
-        while (_msgQueue.Count() > 0) {
-              if (!Running())
-                 return;
-              cDBusMessage *msg = _msgQueue.Get(0);
-              if (msg != NULL) {
-                 _msgQueue.Del(msg, false);
-                 msg->Process();
-                 delete msg;
-                 }
-              }
+  if (_msg != NULL) {
+     _msg->Process();
+     delete _msg;
+     _msg = NULL;
      }
+  cMutexLock lock(&_listMutex);
+  isyslog("dbus2vdr: moving message handler %p from active to finished", this);
+  _activeHandler.Del(this, false);
+  _finishedHandler.Add(this);
+  _listCondVar.Broadcast();
 }
 
 void cDBusMessage::Dispatch(cDBusMessage *msg)
 {
   if (msg == NULL)
      return;
-  cMutexLock lock(&_msgQueueMutex);
-  _msgQueue.Add(msg);
-  if (_msgQueueHandler == NULL)
-     _msgQueueHandler = new cDBusMessageHandler;
+  cDBusMessageHandler::NewHandler(msg);
 }
 
-void cDBusMessage::StopMessageQueue(void)
+void cDBusMessage::StopDispatcher(void)
 {
-  if (_msgQueueHandler != NULL)
-     delete _msgQueueHandler;
-  _msgQueueHandler = NULL;
+  cDBusMessageHandler::DeleteHandler();
 }
 
 cDBusMessage::cDBusMessage(DBusConnection *conn, DBusMessage *msg)
