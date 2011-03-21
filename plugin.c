@@ -4,21 +4,6 @@
 #include <vdr/plugin.h>
 
 
-bool cDBusMessagePlugin::Dispatch(DBusConnection* conn, DBusMessage* msg)
-{
-  if ((conn == NULL) || (msg == NULL))
-     return false;
-  if (dbus_message_is_method_call(msg, DBUS_VDR_PLUGIN_INTERFACE, "SVDRPCommand")) {
-     cDBusMessage::Dispatch(new cDBusMessagePlugin(dmpSVDRPCommand, conn, msg));
-     return true;
-     }
-  if (dbus_message_is_method_call(msg, DBUS_VDR_PLUGIN_INTERFACE, "Service")) {
-     cDBusMessage::Dispatch(new cDBusMessagePlugin(dmpService, conn, msg));
-     return true;
-     }
-  return false;
-}
-
 cDBusMessagePlugin::cDBusMessagePlugin(cDBusMessagePlugin::eAction action, DBusConnection* conn, DBusMessage* msg)
 :cDBusMessage(conn, msg)
 ,_action(action)
@@ -107,4 +92,28 @@ void cDBusMessagePlugin::SVDRPCommand()
 
 void cDBusMessagePlugin::Service()
 {
+}
+
+
+cDBusDispatcherPlugin::cDBusDispatcherPlugin(void)
+:cDBusMessageDispatcher(DBUS_VDR_PLUGIN_INTERFACE)
+{
+}
+
+cDBusDispatcherPlugin::~cDBusDispatcherPlugin(void)
+{
+}
+
+cDBusMessage *cDBusDispatcherPlugin::CreateMessage(DBusConnection* conn, DBusMessage* msg)
+{
+  if ((conn == NULL) || (msg == NULL))
+     return NULL;
+
+  if (dbus_message_is_method_call(msg, DBUS_VDR_PLUGIN_INTERFACE, "SVDRPCommand"))
+     return new cDBusMessagePlugin(cDBusMessagePlugin::dmpSVDRPCommand, conn, msg);
+
+  if (dbus_message_is_method_call(msg, DBUS_VDR_PLUGIN_INTERFACE, "Service"))
+     return new cDBusMessagePlugin(cDBusMessagePlugin::dmpService, conn, msg);
+
+  return NULL;
 }

@@ -61,16 +61,41 @@ void cDBusMessageHandler::Action(void)
   _listCondVar.Broadcast();
 }
 
-void cDBusMessage::Dispatch(cDBusMessage *msg)
+cList<cDBusMessageDispatcher> cDBusMessageDispatcher::_dispatcher;
+
+bool cDBusMessageDispatcher::Dispatch(DBusConnection* conn, DBusMessage* msg)
 {
-  if (msg == NULL)
-     return;
-  cDBusMessageHandler::NewHandler(msg);
+  const char *interface = dbus_message_get_interface(msg);
+  if (interface == NULL)
+     return false;
+  for (cDBusMessageDispatcher *d = _dispatcher.First(); d; d = _dispatcher.Next(d)) {
+      if (strcmp(d->_interface, interface) == 0) {
+         cDBusMessage *m = d->CreateMessage(conn, msg);
+         if (m == NULL)
+            return false;
+         cDBusMessageHandler::NewHandler(m);
+         return true;
+         }
+      }
+  return false;
 }
 
-void cDBusMessage::StopDispatcher(void)
+void cDBusMessageDispatcher::Shutdown(void)
 {
   cDBusMessageHandler::DeleteHandler();
+  _dispatcher.Clear();
+}
+
+cDBusMessageDispatcher::cDBusMessageDispatcher(const char *interface)
+:_interface(interface)
+{
+  isyslog("dbus2vdr: new message dispatcher for interface %s", _interface);
+  _dispatcher.Add(this);
+}
+
+cDBusMessageDispatcher::~cDBusMessageDispatcher(void)
+{
+  isyslog("dbus2vdr: deleting message dispatcher for interface %s", _interface);
 }
 
 cDBusMessage::cDBusMessage(DBusConnection *conn, DBusMessage *msg)

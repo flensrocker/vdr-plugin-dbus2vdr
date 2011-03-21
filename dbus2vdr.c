@@ -6,12 +6,12 @@
  * $Id$
  */
 
-#include "message.h"
+#include "plugin.h"
 #include "monitor.h"
 
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "0.0.1a";
+static const char *VERSION        = "0.0.1b";
 static const char *DESCRIPTION    = "expose methods for controlling vdr via DBus";
 static const char *MAINMENUENTRY  = NULL;
 
@@ -74,6 +74,7 @@ bool cPluginDbus2vdr::Initialize(void)
 bool cPluginDbus2vdr::Start(void)
 {
   // Start any background activities the plugin shall perform.
+  new cDBusDispatcherPlugin;
   cDBusMonitor::StartMonitor();
   return true;
 }
@@ -82,7 +83,7 @@ void cPluginDbus2vdr::Stop(void)
 {
   // Stop any background activities the plugin is performing.
   cDBusMonitor::StopMonitor();
-  cDBusMessage::StopDispatcher();
+  cDBusMessageDispatcher::Shutdown();
 }
 
 void cPluginDbus2vdr::Housekeeping(void)

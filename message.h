@@ -31,14 +31,29 @@ private:
   cDBusMessageHandler(cDBusMessage *msg);
 };
 
-class cDBusMessage : public cListObject
+class cDBusMessageDispatcher : public cListObject
+{
+private:
+  static cList<cDBusMessageDispatcher> _dispatcher;
+
+  const char *_interface;
+
+protected:
+  virtual cDBusMessage *CreateMessage(DBusConnection* conn, DBusMessage* msg) = 0;
+
+public:
+  static bool Dispatch(DBusConnection* conn, DBusMessage* msg);
+  static void Shutdown(void);
+
+  cDBusMessageDispatcher(const char *interface);
+  virtual ~cDBusMessageDispatcher(void);
+};
+
+class cDBusMessage
 {
 friend class cDBusMessageHandler;
 
 public:
-  static void Dispatch(cDBusMessage *msg);
-  static void StopDispatcher(void);
-
   virtual ~cDBusMessage();
 
 protected:

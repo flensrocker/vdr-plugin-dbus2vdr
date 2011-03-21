@@ -67,7 +67,7 @@ void cDBusMonitor::Action(void)
         if (msg == NULL)
            continue;
         isyslog("dbus2vdr: new message, object %s, interface %s, member %s", dbus_message_get_path(msg), dbus_message_get_interface(msg), dbus_message_get_member(msg));
-        if (!cDBusMessagePlugin::Dispatch(conn, msg)) {
+        if (!cDBusMessageDispatcher::Dispatch(conn, msg)) {
            isyslog("dbus2vdr: don't know what to do...");
            dbus_message_unref(msg);
            }

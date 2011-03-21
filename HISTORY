@@ -9,3 +9,8 @@ VDR Plugin 'dbus2vdr' Revision History
 
 - use thread pool for handling dbus messages so multiple
   message won't block each other
+
+2011-03-21: Version 0.0.1b
+
+- refactoring of message dispatcher to make it easier to add
+  new interfaces
