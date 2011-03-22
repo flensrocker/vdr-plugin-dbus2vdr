@@ -22,3 +22,7 @@ VDR Plugin 'dbus2vdr' Revision History
 2011-03-22: Version 0.0.2
 
 - add new interface for reading epg-data from a file
+
+2011-03-22: Version 0.0.2a
+
+- use system bus, not session bus

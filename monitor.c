@@ -2,9 +2,9 @@
 #include "common.h"
 #include "plugin.h"
 
-#include <vdr/tools.h>
-
 #include <dbus/dbus.h>
+
+#include <vdr/tools.h>
 
 
 cDBusMonitor *cDBusMonitor::_monitor = NULL;
@@ -40,7 +40,7 @@ void cDBusMonitor::Action(void)
 {
   DBusError err;
   dbus_error_init(&err);
-  DBusConnection* conn = dbus_bus_get(DBUS_BUS_SESSION, &err);
+  DBusConnection* conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
   if (dbus_error_is_set(&err)) {
      esyslog("dbus2vdr: connection error: %s", err.message);
      dbus_error_free(&err);

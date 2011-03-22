@@ -15,23 +15,29 @@ See the file COPYING for more information.
 Description:
 This plugin will expose some methods via DBus to control the vdr.
 
+Installation
+------------
+dbus2vdr will use the system bus so your box has to be configured that the user
+in which context your vdr is running is allowed to connect to it.
+Copy the de.tvdr.vdr.conf file to /etc/dbus-1/system.d and adjust it to your needs.
+
 Implemented features
 --------------------
 
 - send SVDRP commands to plugins
-  dbus-send --session --type=method_call --dest=de.tvdr.vdr \
+  dbus-send --system --type=method_call --dest=de.tvdr.vdr \
             --print-reply /Plugins/<pluginname> \
             de.tvdr.vdr.plugin.SVDRPCommand string:'command' string:'parameter'
 
 If the SVDRP command doesn't take a parameter you can ommit it or pass an empty string.
 
 - call Service method of plugins
-  dbus-send --session --type=method_call --dest=de.tvdr.vdr \
+  dbus-send --system --type=method_call --dest=de.tvdr.vdr \
             --print-reply /Plugins/<pluginname> \
             de.tvdr.vdr.plugin.Service string:'id' string:'data'
 
 - read EPG data from file
-  dbus-send --session --type=method_call --dest=de.tvdr.vdr \
+  dbus-send --system --type=method_call --dest=de.tvdr.vdr \
             --print-reply /EPG \
             de.tvdr.vdr.epg.PutFile string:'/path/to/epg/data'
 
