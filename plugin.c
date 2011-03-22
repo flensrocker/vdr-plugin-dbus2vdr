@@ -1,5 +1,6 @@
 #include "plugin.h"
 #include "common.h"
+#include "helper.h"
 
 #include <vdr/plugin.h>
 
@@ -26,28 +27,22 @@ void cDBusMessagePlugin::Process(void)
     }
 }
 
-void cDBusMessagePlugin::SVDRPCommand()
+void cDBusMessagePlugin::SVDRPCommand(void)
 {
-  static char empty = 0;
-  DBusMessageIter args;
   const char *pluginName = dbus_message_get_path(_msg);
-  char *command = NULL;
-  char *option = NULL;
+  const char *command = NULL;
+  const char *option = NULL;
+  DBusMessageIter args;
   if (!dbus_message_iter_init(_msg, &args))
-     esyslog("dbus2vdr: SVDRPCommand: message misses a command");
+     esyslog("dbus2vdr: %s.SVDRPCommand: message misses an argument for the command", DBUS_VDR_PLUGIN_INTERFACE);
   else {
-     if (dbus_message_iter_get_arg_type(&args) != DBUS_TYPE_STRING)
-        esyslog("dbus2vdr: SVDRPCommand: 'command' argument is not a string");
-     else
-        dbus_message_iter_get_basic(&args, &command);
-     if (!dbus_message_iter_next(&args))
-        isyslog("dbus2vdr: SVDRPCommand: command '%s' has no option", command);
-     else {
-        if (dbus_message_iter_get_arg_type(&args) != DBUS_TYPE_STRING)
-           esyslog("dbus2vdr: SVDRPCommand: 'option' argument is not string");
-        else
-           dbus_message_iter_get_basic(&args, &option);
-        }
+     int rc = cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &command);
+     if (rc < 0)
+        esyslog("dbus2vdr: %s.SVDRPCommand: 'command' argument is not a string", DBUS_VDR_PLUGIN_INTERFACE);
+     else if (rc == 0)
+        isyslog("dbus2vdr: %s.SVDRPCommand: command '%s' has no option", DBUS_VDR_PLUGIN_INTERFACE, command);
+     else if (cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &option) < 0)
+        esyslog("dbus2vdr: %s.SVDRPCommand: 'option' argument is not string", DBUS_VDR_PLUGIN_INTERFACE);
      }
 
   dbus_int32_t replyCode = 500;
@@ -57,8 +52,8 @@ void cDBusMessagePlugin::SVDRPCommand()
         cPlugin *plugin = cPluginManager::GetPlugin(pluginName + 9);
         if (plugin != NULL) {
            if (option == NULL)
-              option = &empty;
-           isyslog("dbus2vdr: invoking PLUG %s %s %s", plugin->Name(), command, option);
+              option = "";
+           isyslog("dbus2vdr: invoking %s.SVDRPCommand(\"%s\", \"%s\")", plugin->Name(), command, option);
            replyCode = 900;
            cString s = plugin->SVDRPCommand(command, option, replyCode);
            if (*s) {
@@ -76,22 +71,52 @@ void cDBusMessagePlugin::SVDRPCommand()
   dbus_message_iter_init_append(reply, &args);
 
   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &replyCode))
-     esyslog("dbus2vdr: SVDRPCommand: out of memory!"); 
+     esyslog("dbus2vdr: %s.SVDRPCommand: out of memory while appending the reply-code", DBUS_VDR_PLUGIN_INTERFACE);
 
   if (*replyMessage == NULL)
-     replyMessage = &empty;
+     replyMessage = "";
   const char *message = *replyMessage;
   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &message))
-     esyslog("dbus2vdr: SVDRPCommand: out of memory!"); 
+     esyslog("dbus2vdr: %s.SVDRPCommand: out of memory while appending the reply-message", DBUS_VDR_PLUGIN_INTERFACE);
 
   dbus_uint32_t serial = 0;
   if (!dbus_connection_send(_conn, reply, &serial))
-     esyslog("dbus2vdr: SVDRPCommand: out of memory!"); 
+     esyslog("dbus2vdr: %s.SVDRPCommand: out of memory while sending the reply", DBUS_VDR_PLUGIN_INTERFACE);
   dbus_message_unref(reply);
 }
 
-void cDBusMessagePlugin::Service()
+void cDBusMessagePlugin::Service(void)
 {
+  const char *pluginName = dbus_message_get_path(_msg);
+  const char *id = NULL;
+  const char *data = NULL;
+  DBusMessageIter args;
+  if (!dbus_message_iter_init(_msg, &args))
+     esyslog("dbus2vdr: %s.Service: message misses an argument for the id", DBUS_VDR_PLUGIN_INTERFACE);
+  else {
+     int rc = cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &id);
+     if (rc < 0)
+        esyslog("dbus2vdr: %s.Service: 'id' argument is not a string", DBUS_VDR_PLUGIN_INTERFACE);
+     else if (rc == 0)
+        isyslog("dbus2vdr: %s.Service: id '%s' has no data", DBUS_VDR_PLUGIN_INTERFACE, id);
+     else if (cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &data) < 0)
+        esyslog("dbus2vdr: %s.Service: 'data' argument is not string", DBUS_VDR_PLUGIN_INTERFACE);
+     }
+
+  if ((pluginName != NULL) && (id != NULL)) {
+     if ((strlen(pluginName) > 9) && (strncmp(pluginName, "/Plugins/", 9) == 0)) {
+        cPlugin *plugin = cPluginManager::GetPlugin(pluginName + 9);
+        if (plugin != NULL) {
+           if (data == NULL)
+              data = "";
+           isyslog("dbus2vdr: invoking %s.Service(\"%s\", \"%s\")", plugin->Name(), id, data);
+           if (!plugin->Service(id, (void*)data))
+              esyslog("dbus2vdr: %s.Service(\"%s\", \"%s\") returns false", plugin->Name(), id, data);
+           }
+        }
+     }
+
+  cDBusHelper::SendVoidReply(_conn, _msg);
 }
 
 

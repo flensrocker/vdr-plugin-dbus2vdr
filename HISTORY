@@ -14,3 +14,11 @@ VDR Plugin 'dbus2vdr' Revision History
 
 - refactoring of message dispatcher to make it easier to add
   new interfaces
+
+2011-03-22: Version 0.0.1c
+
+- add call to Service method of plugins
+
+2011-03-22: Version 0.0.2
+
+- add new interface for reading epg-data from a file

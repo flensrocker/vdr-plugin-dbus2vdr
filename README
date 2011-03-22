@@ -19,13 +19,23 @@ Implemented features
 --------------------
 
 - send SVDRP commands to plugins
-
   dbus-send --session --type=method_call --dest=de.tvdr.vdr \
             --print-reply /Plugins/<pluginname> \
             de.tvdr.vdr.plugin.SVDRPCommand string:'command' string:'parameter'
 
 If the SVDRP command doesn't take a parameter you can ommit it or pass an empty string.
 
-TODO
-----
-- call "Service" method of plugins
+- call Service method of plugins
+  dbus-send --session --type=method_call --dest=de.tvdr.vdr \
+            --print-reply /Plugins/<pluginname> \
+            de.tvdr.vdr.plugin.Service string:'id' string:'data'
+
+- read EPG data from file
+  dbus-send --session --type=method_call --dest=de.tvdr.vdr \
+            --print-reply /EPG \
+            de.tvdr.vdr.epg.PutFile string:'/path/to/epg/data'
+
+Notes to myself
+---------------
+to use dbus in a ssh-shell:
+look at ~/.dbus/session-bus/`dbus-uuidgen-get`-... and export DBUS_SESSION_BUS_ADDRESS

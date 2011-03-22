@@ -6,12 +6,13 @@
  * $Id$
  */
 
+#include "epg.h"
 #include "plugin.h"
 #include "monitor.h"
 
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "0.0.1b";
+static const char *VERSION        = "0.0.2";
 static const char *DESCRIPTION    = "expose methods for controlling vdr via DBus";
 static const char *MAINMENUENTRY  = NULL;
 
@@ -74,6 +75,7 @@ bool cPluginDbus2vdr::Initialize(void)
 bool cPluginDbus2vdr::Start(void)
 {
   // Start any background activities the plugin shall perform.
+  new cDBusDispatcherEPG;
   new cDBusDispatcherPlugin;
   cDBusMonitor::StartMonitor();
   return true;
