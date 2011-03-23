@@ -8,28 +8,7 @@
 
 
 class cDBusMessage;
-
-class cDBusMessageHandler : public cThread, cListObject
-{
-public:
-  virtual ~cDBusMessageHandler(void);
-
-  static void NewHandler(cDBusMessage *msg);
-  static void DeleteHandler(void);
-
-protected:
-  virtual void Action(void);
-
-  cDBusMessage *_msg;
-
-private:
-  static cMutex   _listMutex;
-  static cCondVar _listCondVar;
-  static cList<cDBusMessageHandler> _activeHandler;
-  static cList<cDBusMessageHandler> _finishedHandler;
-
-  cDBusMessageHandler(cDBusMessage *msg);
-};
+class cDBusMessageHandler;
 
 class cDBusMessageDispatcher : public cListObject
 {

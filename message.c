@@ -1,8 +1,33 @@
 #include "message.h"
 
 
+// ----- cDBusMessageHandler: Thead which handles one cDBusMessage ------------
+
+class cDBusMessageHandler : public cThread, cListObject
+{
+public:
+  virtual ~cDBusMessageHandler(void);
+
+  static void NewHandler(cDBusMessage *msg);
+  static void DeleteHandler(void);
+
+protected:
+  virtual void Action(void);
+
+  cDBusMessage *_msg;
+
+private:
+  static cMutex   _listMutex;
+  static cCondVar _listCondVar;
+  static cList<cDBusMessageHandler> _activeHandler;
+  static cList<cDBusMessageHandler> _finishedHandler;
+
+  cDBusMessageHandler(cDBusMessage *msg);
+};
+
+
 cMutex cDBusMessageHandler::_listMutex;
-cCondVar cDBusMessageHandler::_listCondVar;
+cCondVar cDBusMessageHandler::_listCondVar; // broadcast on moving handler from active to finished list
 cList<cDBusMessageHandler> cDBusMessageHandler::_activeHandler;
 cList<cDBusMessageHandler> cDBusMessageHandler::_finishedHandler;
 
@@ -61,6 +86,8 @@ void cDBusMessageHandler::Action(void)
   _listCondVar.Broadcast();
 }
 
+// ----- cDBusMessageDispatcher -----------------------------------------------
+
 cList<cDBusMessageDispatcher> cDBusMessageDispatcher::_dispatcher;
 
 bool cDBusMessageDispatcher::Dispatch(DBusConnection* conn, DBusMessage* msg)
@@ -97,6 +124,8 @@ cDBusMessageDispatcher::~cDBusMessageDispatcher(void)
 {
   isyslog("dbus2vdr: deleting message dispatcher for interface %s", _interface);
 }
+
+// ----- cDBusMessage: base class for dbus messages ---------------------------
 
 cDBusMessage::cDBusMessage(DBusConnection *conn, DBusMessage *msg)
 :_conn(conn)
