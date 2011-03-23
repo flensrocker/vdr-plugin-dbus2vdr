@@ -1,5 +1,6 @@
 #include "monitor.h"
 #include "common.h"
+#include "helper.h"
 #include "plugin.h"
 
 #include <dbus/dbus.h>
@@ -66,10 +67,16 @@ void cDBusMonitor::Action(void)
         DBusMessage *msg = dbus_connection_pop_message(conn);
         if (msg == NULL)
            continue;
+        if (strcmp(dbus_message_get_destination(msg), DBUS_VDR_BUSNAME) != 0) {
+           dbus_message_unref(msg);
+           continue;
+           }
         isyslog("dbus2vdr: new message, object %s, interface %s, member %s", dbus_message_get_path(msg), dbus_message_get_interface(msg), dbus_message_get_member(msg));
         if (!cDBusMessageDispatcher::Dispatch(conn, msg)) {
            isyslog("dbus2vdr: don't know what to do...");
+           cDBusHelper::SendReply(conn, msg, -1, "unknown message");
            dbus_message_unref(msg);
            }
         }
+  dbus_connection_unref(conn);
 }
