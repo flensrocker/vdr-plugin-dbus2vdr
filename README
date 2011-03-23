@@ -2,9 +2,9 @@ This is a "plugin" for the Video Disk Recorder (VDR).
 
 Written by:                  Lars Hanisch <dvb@flensrocker.de>
 
-Project's homepage:          <not assigned>
+Project's homepage:          https://github.com/flensrocker/vdr-plugin-dbus2vdr
 
-Latest version available at: <not assigned>
+Latest version available at: git://github.com/flensrocker/vdr-plugin-dbus2vdr.git
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -20,26 +20,31 @@ Installation
 dbus2vdr will use the system bus so your box has to be configured that the user
 in which context your vdr is running is allowed to connect to it.
 Copy the de.tvdr.vdr.conf file to /etc/dbus-1/system.d and adjust it to your needs.
+It is prepared that only the user 'vdr' can own the used destination and every user
+can call its methods.
+
+In the bin-directory you find a helper script for sending dbus messages to the vdr.
+Instead of calling:
+  dbus-send --system --type=method_call --dest=de.tvdr.vdr \
+            --print-reply /Plugins/<pluginname> \
+            de.tvdr.vdr.plugin.SVDRPCommand string:'command' string:'parameter'
+
+you can call:
+  vdr-dbus-send.sh /Plugins/<pluginname> plugin.SVDRPCommand string:'command' string:'parameter'
 
 Implemented features
 --------------------
 
 - send SVDRP commands to plugins
-  dbus-send --system --type=method_call --dest=de.tvdr.vdr \
-            --print-reply /Plugins/<pluginname> \
-            de.tvdr.vdr.plugin.SVDRPCommand string:'command' string:'parameter'
+  vdr-dbus-send.sh /Plugins/<pluginname> plugin.SVDRPCommand string:'command' string:'parameter'
 
 If the SVDRP command doesn't take a parameter you can ommit it or pass an empty string.
 
 - call Service method of plugins
-  dbus-send --system --type=method_call --dest=de.tvdr.vdr \
-            --print-reply /Plugins/<pluginname> \
-            de.tvdr.vdr.plugin.Service string:'id' string:'data'
+  vdr-dbus-send.sh /Plugins/<pluginname> plugin.Service string:'id' string:'data'
 
 - read EPG data from file
-  dbus-send --system --type=method_call --dest=de.tvdr.vdr \
-            --print-reply /EPG \
-            de.tvdr.vdr.epg.PutFile string:'/path/to/epg/data'
+  vdr-dbus-send.sh /EPG epg.PutFile string:'/path/to/epg/data'
 
 How to implement new interfaces
 -------------------------------
