@@ -13,13 +13,22 @@ int  cDBusHelper::GetNextArg(DBusMessageIter& args, int type, void *value)
   return 0;
 }
 
-void  cDBusHelper::SendVoidReply(DBusConnection *conn, DBusMessage *msg)
+void  cDBusHelper::SendReply(DBusConnection *conn, DBusMessage *msg, int  returncode, const char *message)
 {
-  if ((conn == NULL) || (msg == NULL))
-     return;
   DBusMessage *reply = dbus_message_new_method_return(msg);
+  DBusMessageIter args;
+  dbus_message_iter_init_append(reply, &args);
+
+  if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &returncode))
+     esyslog("dbus2vdr: SendReply: out of memory while appending the return-code");
+
+  if (message != NULL) {
+     if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &message))
+        esyslog("dbus2vdr: SendReply: out of memory while appending the reply-message");
+     }
+
   dbus_uint32_t serial = 0;
   if (!dbus_connection_send(conn, reply, &serial))
-     esyslog("dbus2vdr: out of memory while sending the reply");
+     esyslog("dbus2vdr: SendReply: out of memory while sending the reply");
   dbus_message_unref(reply);
 }

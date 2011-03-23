@@ -11,6 +11,7 @@ public:
    ///< returns -1 on error or type mismatch
    ///<          0 on success and this was the last argument
    ///<          1 on success and there are arguments left
-  static void SendVoidReply(DBusConnection *conn, DBusMessage *msg);
+
+  static void SendReply(DBusConnection *conn, DBusMessage *msg, int  returncode, const char *message);
 };
 #endif

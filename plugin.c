@@ -110,13 +110,17 @@ void cDBusMessagePlugin::Service(void)
            if (data == NULL)
               data = "";
            isyslog("dbus2vdr: invoking %s.Service(\"%s\", \"%s\")", plugin->Name(), id, data);
-           if (!plugin->Service(id, (void*)data))
-              esyslog("dbus2vdr: %s.Service(\"%s\", \"%s\") returns false", plugin->Name(), id, data);
+           if (!plugin->Service(id, (void*)data)) {
+              cString message = cString::sprintf("%s.Service(\"%s\", \"%s\") returns false", plugin->Name(), id, data);
+              esyslog("dbus2vdr: %s", *message);
+              cDBusHelper::SendReply(_conn, _msg, -1, *message);
+              return;
+              }
            }
         }
      }
 
-  cDBusHelper::SendVoidReply(_conn, _msg);
+  cDBusHelper::SendReply(_conn, _msg, 0, NULL);
 }
 
 

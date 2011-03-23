@@ -38,15 +38,20 @@ void cDBusMessageEPG::PutFile(void)
   if (filename != NULL) {
      FILE *f = fopen(filename, "r");
      if (f) {
+        cString message = cString::sprintf("start reading epg data from %s", filename);
+        cDBusHelper::SendReply(_conn, _msg, 0, *message);
         if (cSchedules::Read(f))
            cSchedules::Cleanup(true);
         fclose(f);
         }
-     else
+     else {
         esyslog("dbus2vdr: %s.PutFile: error opening %s", DBUS_VDR_EPG_INTERFACE, filename);
+        cString message = cString::sprintf("error opening %s", filename);
+        cDBusHelper::SendReply(_conn, _msg, -2, *message);
+        }
      }
-
-  cDBusHelper::SendVoidReply(_conn, _msg);
+  else
+     cDBusHelper::SendReply(_conn, _msg, -1, "no filename");
 }
 
 
