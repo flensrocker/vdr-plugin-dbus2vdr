@@ -41,6 +41,16 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
             --print-reply /EPG \
             de.tvdr.vdr.epg.PutFile string:'/path/to/epg/data'
 
+How to implement new interfaces
+-------------------------------
+- add the interface name to common.h
+- create a subclass of cDBusMessageDispatcher and pass the interface name
+  to its base constructor
+- return subclasses of cDBusMessage in its CreateMessage method depending
+  on object path, method name etc.
+- add your code to the Process method of your cDBusMessage classes
+- add a 'new cDBusDispatcherYourName' to cPluginDbus2vdr::Start
+
 Notes to myself
 ---------------
 to use dbus in a ssh-shell:
