@@ -26,3 +26,7 @@ VDR Plugin 'dbus2vdr' Revision History
 2011-03-22: Version 0.0.2a
 
 - use system bus, not session bus
+
+2011-03-29: Version 0.0.2b
+
+- add new interface for getting infos about the next timer

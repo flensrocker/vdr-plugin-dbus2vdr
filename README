@@ -46,6 +46,18 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
 - read EPG data from file
   vdr-dbus-send.sh /EPG epg.PutFile string:'/path/to/epg/data'
 
+- get infos about the next timer
+  vdr-dbus-send.sh /Timers timer.Next [string:'option']
+
+  If the 'option' is omitted, 'abs' or 'rel' a reply code and a string like "SVDRP NEXT" is returned.
+  With the option 'verbose' the following is returned:
+    int32   reply code
+    int32   timer id
+    int32   'rel' seconds
+    int32   starttime in seconds since epoch (time_t format)
+    int32   stoptime in seconds since epoch (time_t format)
+    string  title of the event
+  
 How to implement new interfaces
 -------------------------------
 - add the interface name to common.h

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $# -lt 3 ]
+if [ $# -lt 2 ]
 then
   echo "usage: $0 objectpath interface.method [arguments]"
   exit 1
