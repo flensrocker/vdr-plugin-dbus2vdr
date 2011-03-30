@@ -19,9 +19,11 @@ private:
 
 protected:
   virtual cDBusMessage *CreateMessage(DBusConnection* conn, DBusMessage* msg) = 0;
+  virtual bool          OnIntrospect(cString &Data) { return false; }
 
 public:
   static bool Dispatch(DBusConnection* conn, DBusMessage* msg);
+  static bool Introspect(cString &Data);
   static void Shutdown(void);
 
   cDBusMessageDispatcher(const char *interface);

@@ -120,7 +120,7 @@ void cDBusMessagePlugin::Service(void)
         }
      }
 
-  cDBusHelper::SendReply(_conn, _msg, 0, NULL);
+  cDBusHelper::SendReply(_conn, _msg, 0, "");
 }
 
 
@@ -145,4 +145,28 @@ cDBusMessage *cDBusDispatcherPlugin::CreateMessage(DBusConnection* conn, DBusMes
      return new cDBusMessagePlugin(cDBusMessagePlugin::dmpService, conn, msg);
 
   return NULL;
+}
+
+bool          cDBusDispatcherPlugin::OnIntrospect(cString &Data)
+{
+  Data =
+  "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
+  "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
+  "<node>\n"
+  "  <interface name=\""DBUS_VDR_PLUGIN_INTERFACE"\">\n"
+  "    <method name=\"SVDRPCommand\">\n"
+  "      <arg name=\"command\"   type=\"s\" direction=\"in\"/>\n"
+  "      <arg name=\"option\"    type=\"s\" direction=\"in\"/>\n"
+  "      <arg name=\"replycode\" type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"message\"   type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"Service\">\n"
+  "      <arg name=\"id\"        type=\"s\" direction=\"in\"/>\n"
+  "      <arg name=\"data\"      type=\"s\" direction=\"in\"/>\n"
+  "      <arg name=\"replycode\" type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"message\"   type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "  </interface>\n"
+  "</node>\n";
+  return true;
 }

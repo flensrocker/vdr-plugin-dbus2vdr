@@ -30,3 +30,5 @@ VDR Plugin 'dbus2vdr' Revision History
 2011-03-29: Version 0.0.2b
 
 - add new interface for getting infos about the next timer
+- rework monitor loop to work with introspection (needed for
+  python binding)

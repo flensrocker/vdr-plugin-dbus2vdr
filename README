@@ -47,17 +47,28 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
   vdr-dbus-send.sh /EPG epg.PutFile string:'/path/to/epg/data'
 
 - get infos about the next timer
-  vdr-dbus-send.sh /Timers timer.Next [string:'option']
+  vdr-dbus-send.sh /Timers timer.Next
 
-  If the 'option' is omitted, 'abs' or 'rel' a reply code and a string like "SVDRP NEXT" is returned.
-  With the option 'verbose' the following is returned:
+  The following is returned:
     int32   reply code
     int32   timer id
-    int32   'rel' seconds
+    int32   'rel' seconds (see SVDRP NEXT REL)
     int32   starttime in seconds since epoch (time_t format)
     int32   stoptime in seconds since epoch (time_t format)
     string  title of the event
-  
+
+Using the Python binding
+------------------------
+First, I don't know Python at all, I just copy code fragments from the Python Binding Tutorial [1]
+and replace the sample strings with dbus2vdr related ones. I hope everybody familiar with Python
+will know what to do...
+
+  import dbus
+  bus = dbus.SystemBus()
+  Timers = bus.get_object('de.tvdr.vdr', '/Timers')
+  props = Timers.Next(dbus_interface = 'de.tvdr.vdr.timer')
+  # props is now a tuple with data like mentioned above
+
 How to implement new interfaces
 -------------------------------
 - add the interface name to common.h
@@ -65,6 +76,7 @@ How to implement new interfaces
   to its base constructor
 - return subclasses of cDBusMessage in its CreateMessage method depending
   on object path, method name etc.
+- return introspection data in OnIntrospect
 - add your code to the Process method of your cDBusMessage classes
 - add a 'new cDBusDispatcherYourName' to cPluginDbus2vdr::Start
 
@@ -72,3 +84,7 @@ Notes to myself
 ---------------
 to use dbus in a ssh-shell:
 look at ~/.dbus/session-bus/`dbus-uuidgen-get`-... and export DBUS_SESSION_BUS_ADDRESS
+
+Links
+-----
+[1] http://dbus.freedesktop.org/doc/dbus-python/doc/tutorial.txt

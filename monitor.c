@@ -67,11 +67,25 @@ void cDBusMonitor::Action(void)
         DBusMessage *msg = dbus_connection_pop_message(conn);
         if (msg == NULL)
            continue;
-        if (strcmp(dbus_message_get_destination(msg), DBUS_VDR_BUSNAME) != 0) {
+        const char *object = dbus_message_get_path(msg);
+        const char *interface = dbus_message_get_interface(msg);
+        const char *member = dbus_message_get_member(msg);
+        if ((object == NULL) || (interface == NULL) || (member == NULL)) {
            dbus_message_unref(msg);
            continue;
            }
-        isyslog("dbus2vdr: new message, object %s, interface %s, member %s", dbus_message_get_path(msg), dbus_message_get_interface(msg), dbus_message_get_member(msg));
+        
+        isyslog("dbus2vdr: new message, object %s, interface %s, member %s", object, interface, member);
+        if (strcmp(interface, "org.freedesktop.DBus.Introspectable") == 0) {
+           isyslog("dbus2vdr: introspect object %s with %s", dbus_message_get_path(msg), dbus_message_get_member(msg));
+           cString data( "");
+           if (!cDBusMessageDispatcher::Introspect(data))
+              esyslog("dbus2vdr: can't introspect object %s", dbus_message_get_path(msg));
+           cDBusHelper::SendReply(conn, msg, *data);
+           dbus_message_unref(msg);
+           continue;
+           }
+
         if (!cDBusMessageDispatcher::Dispatch(conn, msg)) {
            isyslog("dbus2vdr: don't know what to do...");
            cDBusHelper::SendReply(conn, msg, -1, "unknown message");

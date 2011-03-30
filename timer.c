@@ -26,60 +26,45 @@ void cDBusMessageTimer::Process(void)
 
 void cDBusMessageTimer::Next(void)
 {
-  const char *option = NULL;
-  DBusMessageIter args;
-  if (!dbus_message_iter_init(_msg, &args))
-     isyslog("dbus2vdr: %s.Next: no option given", DBUS_VDR_TIMER_INTERFACE);
-  else {
-     if (cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &option) < 0)
-        esyslog("dbus2vdr: %s.SVDRPCommand: option is not a string", DBUS_VDR_TIMER_INTERFACE);
-     }
-
+  int returncode = 250;
+  int number = -1;
+  int seconds = 0;
+  time_t start = 0;
+  time_t stop = 0;
+  const char *title = "";
   cTimer *t = Timers.GetNextActiveTimer();
   if (t) {
-     time_t start = t->StartTime();
-     int number = t->Index() + 1;
-     if (option == NULL)
-        cDBusHelper::SendReply(_conn, _msg, 250, *cString::sprintf("%d %s", number, *TimeToString(start)));
-     else if (strcasecmp(option, "ABS") == 0)
-        cDBusHelper::SendReply(_conn, _msg, 250, *cString::sprintf("%d %ld", number, start));
-     else if (strcasecmp(option, "REL") == 0)
-        cDBusHelper::SendReply(_conn, _msg, 250, *cString::sprintf("%d %ld", number, start - time(NULL)));
-     else if (strcasecmp(option, "VERBOSE") == 0) {
-        DBusMessage *reply = dbus_message_new_method_return(_msg);
-        DBusMessageIter args;
-        dbus_message_iter_init_append(reply, &args);
-        int returncode = 250;
-        if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &returncode))
-           esyslog("dbus2vdr: %s.Next: out of memory while appending the return-code", DBUS_VDR_TIMER_INTERFACE);
-        if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &number))
-           esyslog("dbus2vdr: %s.Next: out of memory while appending the number", DBUS_VDR_TIMER_INTERFACE);
-        int seconds = start - time(NULL);
-        if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &seconds))
-           esyslog("dbus2vdr: %s.Next: out of memory while appending the seconds", DBUS_VDR_TIMER_INTERFACE);
-        if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &start))
-           esyslog("dbus2vdr: %s.Next: out of memory while appending the start time", DBUS_VDR_TIMER_INTERFACE);
-        time_t stop = t->StopTime();
-        if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &stop))
-           esyslog("dbus2vdr: %s.Next: out of memory while appending the stop time", DBUS_VDR_TIMER_INTERFACE);
-        const cEvent *e = t->Event();
-        const char *title = "";
-        if ((e != NULL) && (e->Title() != NULL))
-           title = e->Title();
-        if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &title))
-           esyslog("dbus2vdr: %s.Next: out of memory while appending the title", DBUS_VDR_TIMER_INTERFACE);
-
-        dbus_uint32_t serial = 0;
-        if (!dbus_connection_send(_conn, reply, &serial))
-           esyslog("dbus2vdr: %s.Next: out of memory while sending the reply", DBUS_VDR_TIMER_INTERFACE);
-        dbus_message_unref(reply);
-        return;
-        }
-     else
-        cDBusHelper::SendReply(_conn, _msg, 501, *cString::sprintf("Unknown option: \"%s\"", option));
+     start = t->StartTime();
+     number = t->Index() + 1;
+     seconds = start - time(NULL);
+     stop = t->StopTime();
+     const cEvent *e = t->Event();
+     if ((e != NULL) && (e->Title() != NULL))
+        title = e->Title();
      }
   else
-     cDBusHelper::SendReply(_conn, _msg, 550, "No active timers");
+     returncode = 550;
+
+  DBusMessage *reply = dbus_message_new_method_return(_msg);
+  DBusMessageIter args;
+  dbus_message_iter_init_append(reply, &args);
+  if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &returncode))
+     esyslog("dbus2vdr: %s.Next: out of memory while appending the return-code", DBUS_VDR_TIMER_INTERFACE);
+  if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &number))
+     esyslog("dbus2vdr: %s.Next: out of memory while appending the number", DBUS_VDR_TIMER_INTERFACE);
+  if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &seconds))
+     esyslog("dbus2vdr: %s.Next: out of memory while appending the seconds", DBUS_VDR_TIMER_INTERFACE);
+  if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &start))
+     esyslog("dbus2vdr: %s.Next: out of memory while appending the start time", DBUS_VDR_TIMER_INTERFACE);
+  if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &stop))
+     esyslog("dbus2vdr: %s.Next: out of memory while appending the stop time", DBUS_VDR_TIMER_INTERFACE);
+  if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &title))
+     esyslog("dbus2vdr: %s.Next: out of memory while appending the title", DBUS_VDR_TIMER_INTERFACE);
+
+  dbus_uint32_t serial = 0;
+  if (!dbus_connection_send(_conn, reply, &serial))
+     esyslog("dbus2vdr: %s.Next: out of memory while sending the reply", DBUS_VDR_TIMER_INTERFACE);
+  dbus_message_unref(reply);
 }
 
 
@@ -105,4 +90,24 @@ cDBusMessage *cDBusDispatcherTimer::CreateMessage(DBusConnection* conn, DBusMess
      return new cDBusMessageTimer(cDBusMessageTimer::dmtNext, conn, msg);
 
   return NULL;
+}
+
+bool          cDBusDispatcherTimer::OnIntrospect(cString &Data)
+{
+  Data =
+  "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
+  "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
+  "<node>\n"
+  "  <interface name=\""DBUS_VDR_TIMER_INTERFACE"\">\n"
+  "    <method name=\"Next\">\n"
+  "      <arg name=\"replycode\" type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"number\"    type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"seconds\"   type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"start\"     type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"stop\"      type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"title\"     type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "  </interface>\n"
+  "</node>\n";
+  return true;
 }

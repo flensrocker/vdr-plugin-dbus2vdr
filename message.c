@@ -107,6 +107,15 @@ bool cDBusMessageDispatcher::Dispatch(DBusConnection* conn, DBusMessage* msg)
   return false;
 }
 
+bool cDBusMessageDispatcher::Introspect(cString &Data)
+{
+  for (cDBusMessageDispatcher *d = _dispatcher.First(); d; d = _dispatcher.Next(d)) {
+      if (d->OnIntrospect(Data))
+         return true;
+      }
+  return false;
+}
+
 void cDBusMessageDispatcher::Shutdown(void)
 {
   cDBusMessageHandler::DeleteHandler();
