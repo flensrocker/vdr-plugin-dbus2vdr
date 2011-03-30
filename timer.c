@@ -33,12 +33,13 @@ void cDBusMessageTimer::Next(void)
   time_t stop = 0;
   const char *title = "";
   cTimer *t = Timers.GetNextActiveTimer();
+  const cEvent *e;
   if (t) {
      start = t->StartTime();
      number = t->Index() + 1;
      seconds = start - time(NULL);
      stop = t->StopTime();
-     const cEvent *e = t->Event();
+     e = t->Event();
      if ((e != NULL) && (e->Title() != NULL))
         title = e->Title();
      }
@@ -54,9 +55,11 @@ void cDBusMessageTimer::Next(void)
      esyslog("dbus2vdr: %s.Next: out of memory while appending the number", DBUS_VDR_TIMER_INTERFACE);
   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &seconds))
      esyslog("dbus2vdr: %s.Next: out of memory while appending the seconds", DBUS_VDR_TIMER_INTERFACE);
-  if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &start))
+  dbus_uint64_t tmp = start;
+  if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_UINT64, &tmp))
      esyslog("dbus2vdr: %s.Next: out of memory while appending the start time", DBUS_VDR_TIMER_INTERFACE);
-  if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &stop))
+  tmp = stop;
+  if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_UINT64, &tmp))
      esyslog("dbus2vdr: %s.Next: out of memory while appending the stop time", DBUS_VDR_TIMER_INTERFACE);
   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &title))
      esyslog("dbus2vdr: %s.Next: out of memory while appending the title", DBUS_VDR_TIMER_INTERFACE);
@@ -103,8 +106,8 @@ bool          cDBusDispatcherTimer::OnIntrospect(cString &Data)
   "      <arg name=\"replycode\" type=\"i\" direction=\"out\"/>\n"
   "      <arg name=\"number\"    type=\"i\" direction=\"out\"/>\n"
   "      <arg name=\"seconds\"   type=\"i\" direction=\"out\"/>\n"
-  "      <arg name=\"start\"     type=\"i\" direction=\"out\"/>\n"
-  "      <arg name=\"stop\"      type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"start\"     type=\"t\" direction=\"out\"/>\n"
+  "      <arg name=\"stop\"      type=\"t\" direction=\"out\"/>\n"
   "      <arg name=\"title\"     type=\"s\" direction=\"out\"/>\n"
   "    </method>\n"
   "  </interface>\n"

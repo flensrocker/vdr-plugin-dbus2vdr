@@ -50,11 +50,11 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
   vdr-dbus-send.sh /Timers timer.Next
 
   The following is returned:
-    int32   reply code
-    int32   timer id
+    int32   reply code (250 for success, 550 on error)
+    int32   timer id (-1 if there's no timer at all)
     int32   'rel' seconds (see SVDRP NEXT REL)
-    int32   starttime in seconds since epoch (time_t format)
-    int32   stoptime in seconds since epoch (time_t format)
+    uint64  starttime in seconds since epoch (time_t format)
+    uint64  stoptime in seconds since epoch (time_t format)
     string  title of the event
 
 Using the Python binding
