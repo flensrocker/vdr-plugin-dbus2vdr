@@ -147,8 +147,10 @@ cDBusMessage *cDBusDispatcherPlugin::CreateMessage(DBusConnection* conn, DBusMes
   return NULL;
 }
 
-bool          cDBusDispatcherPlugin::OnIntrospect(cString &Data)
+bool          cDBusDispatcherPlugin::OnIntrospect(DBusMessage *msg, cString &Data)
 {
+  if (strncmp(dbus_message_get_path(msg), "/Plugins/", 9) != 0)
+     return false;
   Data =
   "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
   "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"

@@ -32,7 +32,7 @@ public:
 
 protected:
   virtual cDBusMessage *CreateMessage(DBusConnection* conn, DBusMessage* msg);
-  virtual bool          OnIntrospect(cString &Data);
+  virtual bool          OnIntrospect(DBusMessage *msg, cString &Data);
 };
 
 #endif

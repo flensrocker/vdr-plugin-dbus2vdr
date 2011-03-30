@@ -107,10 +107,10 @@ bool cDBusMessageDispatcher::Dispatch(DBusConnection* conn, DBusMessage* msg)
   return false;
 }
 
-bool cDBusMessageDispatcher::Introspect(cString &Data)
+bool cDBusMessageDispatcher::Introspect(DBusMessage *msg, cString &Data)
 {
   for (cDBusMessageDispatcher *d = _dispatcher.First(); d; d = _dispatcher.Next(d)) {
-      if (d->OnIntrospect(Data))
+      if (d->OnIntrospect(msg, Data))
          return true;
       }
   return false;

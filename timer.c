@@ -95,8 +95,10 @@ cDBusMessage *cDBusDispatcherTimer::CreateMessage(DBusConnection* conn, DBusMess
   return NULL;
 }
 
-bool          cDBusDispatcherTimer::OnIntrospect(cString &Data)
+bool          cDBusDispatcherTimer::OnIntrospect(DBusMessage *msg, cString &Data)
 {
+  if (strcmp(dbus_message_get_path(msg), "/Timers") != 0)
+     return false;
   Data =
   "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
   "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"

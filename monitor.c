@@ -79,7 +79,7 @@ void cDBusMonitor::Action(void)
         if (strcmp(interface, "org.freedesktop.DBus.Introspectable") == 0) {
            isyslog("dbus2vdr: introspect object %s with %s", dbus_message_get_path(msg), dbus_message_get_member(msg));
            cString data( "");
-           if (!cDBusMessageDispatcher::Introspect(data))
+           if (!cDBusMessageDispatcher::Introspect(msg, data))
               esyslog("dbus2vdr: can't introspect object %s", dbus_message_get_path(msg));
            cDBusHelper::SendReply(conn, msg, *data);
            dbus_message_unref(msg);
