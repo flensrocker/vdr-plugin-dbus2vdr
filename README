@@ -62,6 +62,9 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
   vdr-dbus-send.sh /Remote remote.Disable
   vdr-dbus-send.sh /Remote remote.Status
 
+- hit a key
+  vdr-dbus-send.sh /Remote remote.HitKey string:'Menu'
+
 Using the Python binding
 ------------------------
 First, I don't know Python at all, I just copy code fragments from the Python Binding Tutorial [1]

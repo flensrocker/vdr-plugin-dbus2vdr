@@ -32,3 +32,7 @@ VDR Plugin 'dbus2vdr' Revision History
 - add new interface for getting infos about the next timer
 - rework monitor loop to work with introspection (needed for
   python binding)
+
+2011-04-20: Version 0.0.2e
+
+- add new interface for the remote (enable, disable, hitkey)
