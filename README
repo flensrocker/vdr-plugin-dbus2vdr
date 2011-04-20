@@ -57,6 +57,11 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
     uint64  stoptime in seconds since epoch (time_t format)
     string  title of the event
 
+- enable/disable the remote
+  vdr-dbus-send.sh /Remote remote.Enable
+  vdr-dbus-send.sh /Remote remote.Disable
+  vdr-dbus-send.sh /Remote remote.Status
+
 Using the Python binding
 ------------------------
 First, I don't know Python at all, I just copy code fragments from the Python Binding Tutorial [1]
