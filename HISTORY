@@ -36,3 +36,7 @@ VDR Plugin 'dbus2vdr' Revision History
 2011-04-20: Version 0.0.2e
 
 - add new interface for the remote (enable, disable, hitkey)
+
+2011-04-27: Version 0.0.2f
+
+- add CallPlugin to remote interface

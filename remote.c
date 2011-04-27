@@ -2,6 +2,7 @@
 #include "common.h"
 #include "helper.h"
 
+#include <vdr/plugin.h>
 #include <vdr/remote.h>
 
 
@@ -18,6 +19,9 @@ cDBusMessageRemote::~cDBusMessageRemote(void)
 void cDBusMessageRemote::Process(void)
 {
   switch (_action) {
+    case dmrCallPlugin:
+      CallPlugin();
+      break;
     case dmrEnable:
       Enable();
       break;
@@ -31,6 +35,42 @@ void cDBusMessageRemote::Process(void)
       HitKey();
       break;
     }
+}
+
+void cDBusMessageRemote::CallPlugin(void)
+{
+  const char *pluginName = NULL;
+  DBusMessageIter args;
+  if (!dbus_message_iter_init(_msg, &args))
+     esyslog("dbus2vdr: %s.CallPlugin: message misses an argument for the keyName", DBUS_VDR_REMOTE_INTERFACE);
+  else {
+     int rc = cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &pluginName);
+     if (rc < 0)
+        esyslog("dbus2vdr: %s.CallPlugin: 'pluginName' argument is not a string", DBUS_VDR_REMOTE_INTERFACE);
+     }
+
+  dbus_int32_t replyCode = 550;
+  cString replyMessage;
+  if (pluginName) {
+     // The parameter of cRemote::CallPlugin has to be static,
+     // since it's stored by vdr and used later.
+     // Hence this workaround to get a 'long-life' pointer to a string with the same content without storing it.
+     cPlugin *plugin = cPluginManager::GetPlugin(pluginName);
+     if (plugin) {
+        if (cRemote::CallPlugin(plugin->Name())) {
+           replyCode = 250;
+           replyMessage = cString::sprintf("plugin %s called", pluginName);
+           }
+        else
+           replyMessage = cString::sprintf("plugin %s not called, another call is pending", pluginName);
+        }
+     else
+        replyMessage = cString::sprintf("plugin %s not found", pluginName);
+     }
+  else
+     replyMessage = "name of plugin to be called is missing";
+
+  cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
 }
 
 void cDBusMessageRemote::Enable(void)
@@ -112,6 +152,9 @@ cDBusMessage *cDBusDispatcherRemote::CreateMessage(DBusConnection* conn, DBusMes
   if ((object == NULL) || (strcmp(object, "/Remote") != 0))
      return NULL;
 
+  if (dbus_message_is_method_call(msg, DBUS_VDR_REMOTE_INTERFACE, "CallPlugin"))
+     return new cDBusMessageRemote(cDBusMessageRemote::dmrCallPlugin, conn, msg);
+
   if (dbus_message_is_method_call(msg, DBUS_VDR_REMOTE_INTERFACE, "Enable"))
      return new cDBusMessageRemote(cDBusMessageRemote::dmrEnable, conn, msg);
 
@@ -136,21 +179,26 @@ bool          cDBusDispatcherRemote::OnIntrospect(DBusMessage *msg, cString &Dat
   "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
   "<node>\n"
   "  <interface name=\""DBUS_VDR_REMOTE_INTERFACE"\">\n"
+  "    <method name=\"CallPlugin\">\n"
+  "      <arg name=\"pluginName\" type=\"s\" direction=\"in\"/>\n"
+  "      <arg name=\"replycode\"  type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"message\"    type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
   "    <method name=\"Enable\">\n"
-  "      <arg name=\"replycode\" type=\"i\" direction=\"out\"/>\n"
-  "      <arg name=\"message\"   type=\"s\" direction=\"out\"/>\n"
+  "      <arg name=\"replycode\"  type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"message\"    type=\"s\" direction=\"out\"/>\n"
   "    </method>\n"
   "    <method name=\"Disable\">\n"
-  "      <arg name=\"replycode\" type=\"i\" direction=\"out\"/>\n"
-  "      <arg name=\"message\"   type=\"s\" direction=\"out\"/>\n"
+  "      <arg name=\"replycode\"  type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"message\"    type=\"s\" direction=\"out\"/>\n"
   "    </method>\n"
   "    <method name=\"Status\">\n"
-  "      <arg name=\"status\"    type=\"b\" direction=\"out\"/>\n"
+  "      <arg name=\"status\"     type=\"b\" direction=\"out\"/>\n"
   "    </method>\n"
   "    <method name=\"HitKey\">\n"
-  "      <arg name=\"keyName\"   type=\"s\" direction=\"in\"/>\n"
-  "      <arg name=\"replycode\" type=\"i\" direction=\"out\"/>\n"
-  "      <arg name=\"message\"   type=\"s\" direction=\"out\"/>\n"
+  "      <arg name=\"keyName\"    type=\"s\" direction=\"in\"/>\n"
+  "      <arg name=\"replycode\"  type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"message\"    type=\"s\" direction=\"out\"/>\n"
   "    </method>\n"
   "  </interface>\n"
   "</node>\n";
