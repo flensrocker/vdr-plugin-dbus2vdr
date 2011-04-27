@@ -40,3 +40,8 @@ VDR Plugin 'dbus2vdr' Revision History
 2011-04-27: Version 0.0.2f
 
 - add CallPlugin to remote interface
+
+2011-04-27: Version 0.0.2g
+
+- add new recording interface, for now only an update of the
+  recording list can be triggered
