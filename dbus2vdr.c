@@ -11,11 +11,12 @@
 #include "monitor.h"
 #include "recording.h"
 #include "remote.h"
+#include "skin.h"
 #include "timer.h"
 
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "0.0.2g";
+static const char *VERSION        = "0.0.2h";
 static const char *DESCRIPTION    = "expose methods for controlling vdr via DBus";
 static const char *MAINMENUENTRY  = NULL;
 
@@ -82,6 +83,7 @@ bool cPluginDbus2vdr::Start(void)
   new cDBusDispatcherPlugin;
   new cDBusDispatcherRecording;
   new cDBusDispatcherRemote;
+  new cDBusDispatcherSkin;
   new cDBusDispatcherTimer;
   cDBusMonitor::StartMonitor();
   return true;

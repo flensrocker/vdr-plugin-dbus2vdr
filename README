@@ -71,6 +71,9 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
 - trigger an update of the list of recordings
   vdr-dbus-send.sh /Recording recording.Update
 
+- display a message at the OSD
+  vdr-dbus-send.sh /Skin skin.QueueMessage string:'message text'
+
 Using the Python binding
 ------------------------
 First, I don't know Python at all, I just copy code fragments from the Python Binding Tutorial [1]

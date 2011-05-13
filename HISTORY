@@ -45,3 +45,8 @@ VDR Plugin 'dbus2vdr' Revision History
 
 - add new recording interface, for now only an update of the
   recording list can be triggered
+
+2011-05-13: Version 0.0.2h
+
+- add new skin interface with "QueueMessage" to display a message
+  on the OSD (thanks to Holger Schvestka)
