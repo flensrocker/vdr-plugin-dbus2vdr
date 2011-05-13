@@ -84,9 +84,9 @@ bool          cDBusDispatcherSkin::OnIntrospect(DBusMessage *msg, cString &Data)
   "<node>\n"
   "  <interface name=\""DBUS_VDR_SKIN_INTERFACE"\">\n"
   "    <method name=\"QueueMessage\">\n"
-  "      <arg name=\"messageText\"    type=\"s\" direction=\"in\"/>\n"
-  "      <arg name=\"replycode\"      type=\"i\" direction=\"out\"/>\n"
-  "      <arg name=\"message\"        type=\"s\" direction=\"out\"/>\n"
+  "      <arg name=\"messageText\"  type=\"s\" direction=\"in\"/>\n"
+  "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"
   "    </method>\n"
   "  </interface>\n"
   "</node>\n";

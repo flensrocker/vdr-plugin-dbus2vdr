@@ -65,8 +65,8 @@ bool          cDBusDispatcherRecording::OnIntrospect(DBusMessage *msg, cString &
   "<node>\n"
   "  <interface name=\""DBUS_VDR_RECORDING_INTERFACE"\">\n"
   "    <method name=\"Update\">\n"
-  "      <arg name=\"replycode\"  type=\"i\" direction=\"out\"/>\n"
-  "      <arg name=\"message\"    type=\"s\" direction=\"out\"/>\n"
+  "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"
   "    </method>\n"
   "  </interface>\n"
   "</node>\n";

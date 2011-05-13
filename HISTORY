@@ -50,3 +50,7 @@ VDR Plugin 'dbus2vdr' Revision History
 
 - add new skin interface with "QueueMessage" to display a message
   on the OSD (thanks to Holger Schvestka)
+
+2011-05-13: Version 0.0.2i
+
+- add ClearEPG to EPG interface
