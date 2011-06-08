@@ -114,7 +114,9 @@ void cDBusMessageEPG::ClearEPG(void)
                }
            if (Schedule) {
               Schedule->Cleanup(INT_MAX);
+              #if APIVERSNUM >= 10711
               cEitFilter::SetDisableUntil(time(NULL) + eitDisableTime);
+              #endif
               cString replyMessage = cString::sprintf("EPG data of channel \"%s\" cleared", channel);
               cDBusHelper::SendReply(_conn, _msg, 250, *replyMessage);
               }
@@ -134,7 +136,9 @@ void cDBusMessageEPG::ClearEPG(void)
      }
   else {
      cSchedules::ClearAll();
+     #if APIVERSNUM >= 10711
      cEitFilter::SetDisableUntil(time(NULL) + eitDisableTime);
+     #endif
      cDBusHelper::SendReply(_conn, _msg, 250, "EPG data cleared");
      }
 }

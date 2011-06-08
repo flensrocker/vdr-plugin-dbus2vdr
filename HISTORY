@@ -54,3 +54,7 @@ VDR Plugin 'dbus2vdr' Revision History
 2011-05-13: Version 0.0.2i
 
 - add ClearEPG to EPG interface
+
+2011-06-08:
+
+- use cEITFilter::SetDisableUntil only if vdr >= 1.7.11
