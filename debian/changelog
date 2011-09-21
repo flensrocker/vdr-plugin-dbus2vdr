@@ -1,0 +1,60 @@
+vdr-plugin-dbus2vdr (0.0.2i-0yavdr8~natty) natty; urgency=medium
+
+  * rebuild
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Mon, 05 Sep 2011 18:06:50 +0200
+
+vdr-plugin-dbus2vdr (0.0.2i-0yavdr7~natty) natty; urgency=medium
+
+  * rebuild
+
+ -- Marco Scholl <develop@marco-scholl.de>  Thu, 25 Aug 2011 17:48:48 +0200
+
+vdr-plugin-dbus2vdr (0.0.2i-0yavdr6~natty) natty; urgency=low
+
+  * rebuild
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Thu, 18 Aug 2011 19:58:28 +0200
+
+vdr-plugin-dbus2vdr (0.0.2i-0yavdr5~natty) natty; urgency=low
+
+  * rebuild
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Wed, 15 Jun 2011 13:38:49 +0200
+
+vdr-plugin-dbus2vdr (0.0.2i-0yavdr4~natty) natty; urgency=low
+
+  * rebuild
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Tue, 14 Jun 2011 20:37:22 +0200
+
+vdr-plugin-dbus2vdr (0.0.2i-0yavdr3~natty) natty; urgency=low
+
+  * rebuild
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Wed, 25 May 2011 13:48:16 +0200
+
+vdr-plugin-dbus2vdr (0.0.2i-0yavdr2~natty) natty; urgency=low
+
+  * rebuild
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Sun, 22 May 2011 22:49:31 +0200
+
+vdr-plugin-dbus2vdr (0.0.2i-0yavdr1~natty) natty; urgency=medium
+
+  * New upstream release
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Wed, 20 Apr 2011 23:32:49 +0200
+
+vdr-plugin-dbus2vdr (0.0.2c-1yavdr1~lucid) lucid; urgency=low
+
+  * install missing de.tvdr.vdr.conf to etc/dbus-1/system.d
+  * dbus-client.py -> examples
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Tue, 05 Apr 2011 22:20:15 +0200
+
+vdr-plugin-dbus2vdr (0.0.2c-0yavdr0~luicd) lucid; urgency=low
+
+  * Initial release
+
+ -- Holger Schvestka <hotzenplotz5@gmx.de>  Wed, 30 Mar 2011 21:00:02 +0100

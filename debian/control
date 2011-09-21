@@ -1,0 +1,16 @@
+Source: vdr-plugin-dbus2vdr
+Section: video
+Priority: extra
+Maintainer: Holger Schvestka <hotzenplotz5@gmx.de>
+Build-Depends: cdbs, debhelper (>= 7), vdr-dev (>= 1.7.17), libdbus-1-dev
+Standards-Version: 3.9.1
+Homepage: http://home.versanet.de/~lhanisch/
+
+Package: vdr-plugin-dbus2vdr
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${vdr:Depends}
+Description: A VDR plugin, control VDR via DBus
+ This VDR-plugin will expose some methods via DBus to control the vdr
+
+ 
+
