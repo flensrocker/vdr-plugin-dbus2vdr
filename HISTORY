@@ -58,3 +58,7 @@ VDR Plugin 'dbus2vdr' Revision History
 2011-06-08:
 
 - use cEITFilter::SetDisableUntil only if vdr >= 1.7.11
+
+2011-09-22: Version 0.0.2j
+
+- process NameAcquired signal auf DBus

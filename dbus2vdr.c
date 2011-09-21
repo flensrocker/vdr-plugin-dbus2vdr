@@ -16,7 +16,7 @@
 
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "0.0.2i";
+static const char *VERSION        = "0.0.2j";
 static const char *DESCRIPTION    = "expose methods for controlling vdr via DBus";
 static const char *MAINMENUENTRY  = NULL;
 

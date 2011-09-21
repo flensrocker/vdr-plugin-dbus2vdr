@@ -76,11 +76,29 @@ void cDBusMonitor::Action(void)
            }
         
         isyslog("dbus2vdr: new message, object %s, interface %s, member %s", object, interface, member);
+        if ((strcmp(interface, "org.freedesktop.DBus") == 0)
+         && (strcmp(object, "/org/freedesktop/DBus") == 0)
+         && (strcmp(member, "NameAcquired") == 0)) {
+          const char *name = NULL;
+          DBusMessageIter args;
+          if (!dbus_message_iter_init(msg, &args))
+             esyslog("dbus2vdr: NameAcquired: message misses an argument for the name");
+          else {
+             if (cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &name) < 0)
+                esyslog("dbus2vdr: NameAcquired: 'name' argument is not a string");
+             }
+           if (name != NULL)
+              isyslog("dbus2vdr: NameAcquired: get ownership of name %s", name);
+           cDBusHelper::SendReply(conn, msg, "");
+           dbus_message_unref(msg);
+           continue;
+           }
+
         if (strcmp(interface, "org.freedesktop.DBus.Introspectable") == 0) {
-           isyslog("dbus2vdr: introspect object %s with %s", dbus_message_get_path(msg), dbus_message_get_member(msg));
+           isyslog("dbus2vdr: introspect object %s with %s", object, member);
            cString data( "");
            if (!cDBusMessageDispatcher::Introspect(msg, data))
-              esyslog("dbus2vdr: can't introspect object %s", dbus_message_get_path(msg));
+              esyslog("dbus2vdr: can't introspect object %s", object);
            cDBusHelper::SendReply(conn, msg, *data);
            dbus_message_unref(msg);
            continue;
