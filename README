@@ -77,6 +77,9 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
 - display a message at the OSD
   vdr-dbus-send.sh /Skin skin.QueueMessage string:'message text'
 
+- ask vdr if it is ready for shutdown
+  vdr-dbus-send.sh /Shutdown shutdown.ConfirmShutdown
+
 Using the Python binding
 ------------------------
 First, I don't know Python at all, I just copy code fragments from the Python Binding Tutorial [1]
