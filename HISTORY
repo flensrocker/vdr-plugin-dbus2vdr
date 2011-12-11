@@ -68,3 +68,7 @@ VDR Plugin 'dbus2vdr' Revision History
 - add new shutdown interface with "ConfirmShutdown"
   returns a reply code of 250 if the user is inactive
   and vdr has nothing to do in the near future
+
+2011-12-11: Version 0.0.3a
+
+- make "ConfirmShutdown" a bit more talkative

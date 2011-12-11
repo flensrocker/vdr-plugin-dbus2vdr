@@ -79,6 +79,15 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
 
 - ask vdr if it is ready for shutdown
   vdr-dbus-send.sh /Shutdown shutdown.ConfirmShutdown
+  possible reply codes:
+    250: vdr is ready for shutdown
+    550: vdr is not ready for shutdown (unknown reason)
+    901: user is active
+    902: cutter is active
+    903: recording is active
+    904: recording is active in the near future
+    905: some plugin is active
+    906: some plugin will wakeup vdr in the near future
 
 Using the Python binding
 ------------------------
