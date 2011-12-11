@@ -2,7 +2,11 @@
 #include "common.h"
 #include "helper.h"
 
+#include <vdr/cutter.h>
+#include <vdr/menu.h>
+#include <vdr/plugin.h>
 #include <vdr/shutdown.h>
+#include <vdr/timers.h>
 
 
 cDBusMessageShutdown::cDBusMessageShutdown(cDBusMessageShutdown::eAction action, DBusConnection* conn, DBusMessage* msg)
@@ -26,10 +30,55 @@ void cDBusMessageShutdown::Process(void)
 
 void cDBusMessageShutdown::ConfirmShutdown(void)
 {
-  if (ShutdownHandler.IsUserInactive() && ShutdownHandler.ConfirmShutdown(false))
-     cDBusHelper::SendReply(_conn, _msg, 250, "vdr is ready for shutdown");
-  else
+  // this is nearly a copy of vdr's cShutdownHandler::ConfirmShutdown
+  // if the original changes take this into account
+
+  if (!ShutdownHandler.IsUserInactive()) {
+     cDBusHelper::SendReply(_conn, _msg, 901, "user is active");
+     return;
+     }
+
+  if (cCutter::Active()) {
+     cDBusHelper::SendReply(_conn, _msg, 902, "cutter is active");
+     return;
+     }
+
+  cTimer *timer = Timers.GetNextActiveTimer();
+  time_t Next = timer ? timer->StartTime() : 0;
+  time_t Delta = timer ? Next - time(NULL) : 0;
+  if (cRecordControls::Active() || (Next && Delta <= 0)) {
+     // VPS recordings in timer end margin may cause Delta <= 0
+     cDBusHelper::SendReply(_conn, _msg, 903, "recording is active");
+     return;
+     }
+  else if (Next && Delta <= Setup.MinEventTimeout * 60) {
+     // Timer within Min Event Timeout
+     cDBusHelper::SendReply(_conn, _msg, 904, "recording is active in the near future");
+     return;
+     }
+
+  if (cPluginManager::Active(NULL)) {
+     cDBusHelper::SendReply(_conn, _msg, 905, "some plugin is active");
+     return;
+     }
+
+  cPlugin *Plugin = cPluginManager::GetNextWakeupPlugin();
+  Next = Plugin ? Plugin->WakeupTime() : 0;
+  Delta = Next ? Next - time(NULL) : 0;
+  if (Next && Delta <= Setup.MinEventTimeout * 60) {
+     // Plugin wakeup within Min Event Timeout
+     cString buf = cString::sprintf("plugin %s wakes up in %ld min", Plugin->Name(), Delta / 60);
+     cDBusHelper::SendReply(_conn, _msg, 906, *buf);
+     return;
+     }
+
+  // insanity check: ask vdr again, if implementation of ConfirmShutdown has changed...
+  if (!ShutdownHandler.ConfirmShutdown(false)) {
      cDBusHelper::SendReply(_conn, _msg, 550, "vdr is not ready for shutdown");
+     return;
+     }
+
+  cDBusHelper::SendReply(_conn, _msg, 250, "vdr is ready for shutdown");
 }
 
 
