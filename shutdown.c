@@ -73,7 +73,7 @@ void cDBusMessageShutdown::ConfirmShutdown(void)
      }
 
   // insanity check: ask vdr again, if implementation of ConfirmShutdown has changed...
-  if (!ShutdownHandler.ConfirmShutdown(false)) {
+  if (cRemote::Enabled() && !ShutdownHandler.ConfirmShutdown(false)) {
      cDBusHelper::SendReply(_conn, _msg, 550, "vdr is not ready for shutdown");
      return;
      }

@@ -72,3 +72,8 @@ VDR Plugin 'dbus2vdr' Revision History
 2011-12-11: Version 0.0.3a
 
 - make "ConfirmShutdown" a bit more talkative
+
+2011-12-14: Version 0.0.3b
+
+- don't call vdr's ConfirmShutdown if remote is disabled
+  that would always return false
