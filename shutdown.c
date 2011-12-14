@@ -5,6 +5,7 @@
 #include <vdr/cutter.h>
 #include <vdr/menu.h>
 #include <vdr/plugin.h>
+#include <vdr/remote.h>
 #include <vdr/shutdown.h>
 #include <vdr/timers.h>
 
