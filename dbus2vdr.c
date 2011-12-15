@@ -6,6 +6,8 @@
  * $Id$
  */
 
+#include <getopt.h>
+
 #include "epg.h"
 #include "plugin.h"
 #include "monitor.h"
@@ -17,7 +19,7 @@
 
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "0.0.3b";
+static const char *VERSION        = "0.0.3c";
 static const char *DESCRIPTION    = "expose methods for controlling vdr via DBus";
 static const char *MAINMENUENTRY  = NULL;
 
@@ -61,13 +63,35 @@ cPluginDbus2vdr::~cPluginDbus2vdr()
 
 const char *cPluginDbus2vdr::CommandLineHelp(void)
 {
-  // Return a string that describes all known command line options.
-  return NULL;
+  return "  --shutdown-hooks=/path/to/dir/with/shutdown-hooks\n"
+         "    directory with shutdown-hooks to be called by ConfirmShutdown\n"
+         "    usually it's /usr/share/vdr/shutdown-hooks";
 }
 
 bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
 {
-  // Implement command line argument processing here if applicable.
+  static struct option options[] =
+  {
+    {"shutdown-hooks", required_argument, 0, 's'},
+    {0, 0, 0, 0}
+  };
+
+  while (true) {
+        int option_index = 0;
+        int c = getopt_long(argc, argv, "s:", options, &option_index);
+        if (c == -1)
+           break;
+        switch (c) {
+          case 's':
+           {
+             if (optarg != NULL) {
+                isyslog("dbus2vdr: use shutdown-hooks in %s", optarg);
+                cDBusMessageShutdown::SetShutdownHooksDir(optarg);
+                }
+             break;
+           }
+          }
+        }
   return true;
 }
 

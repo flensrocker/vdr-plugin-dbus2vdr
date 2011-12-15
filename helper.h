@@ -2,6 +2,7 @@
 #define __DBUS2VDR_HELPER_H
 
 #include <dbus/dbus.h>
+#include <vdr/thread.h>
 
 
 class cDBusHelper
@@ -14,5 +15,19 @@ public:
 
   static void SendReply(DBusConnection *conn, DBusMessage *msg, int  returncode, const char *message);
   static void SendReply(DBusConnection *conn, DBusMessage *msg, const char *message);
+};
+
+// copy of vdr's cPipe but returns exit code of child on Close
+class cExitPipe
+{
+private:
+  pid_t pid;
+  FILE *f;
+public:
+  cExitPipe(void);
+  ~cExitPipe();
+  operator FILE* () { return f; }
+  bool Open(const char *Command, const char *Mode);
+  int Close(void);
 };
 #endif

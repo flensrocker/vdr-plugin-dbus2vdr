@@ -11,12 +11,16 @@ friend class cDBusDispatcherShutdown;
 public:
   enum eAction { dmsConfirmShutdown };
 
+  static void SetShutdownHooksDir(const char *Dir);
+
   virtual ~cDBusMessageShutdown(void);
 
 protected:
   virtual void Process(void);
 
 private:
+  static cString  _shutdownHooksDir;
+
   cDBusMessageShutdown(eAction action, DBusConnection* conn, DBusMessage* msg);
   void ConfirmShutdown(void);
 

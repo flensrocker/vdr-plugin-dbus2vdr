@@ -77,3 +77,7 @@ VDR Plugin 'dbus2vdr' Revision History
 
 - don't call vdr's ConfirmShutdown if remote is disabled
   that would always return false
+
+2011-12-15: Version 0.0.3c
+
+- add commandline argument: --shutdown-hooks=/path/to/vdr/shutdown-hooks

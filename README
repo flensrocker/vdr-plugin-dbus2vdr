@@ -32,6 +32,12 @@ Instead of calling:
 you can call:
   vdr-dbus-send.sh /Plugins/<pluginname> plugin.SVDRPCommand string:'command' string:'parameter'
 
+Commandline Arguments
+---------------------
+-s, --shutdown-hooks=/path/to/shutdown-hooks
+        uses all files in the given directory as shutdown-hooks
+        usually it's /usr/share/vdr/shutdown-hooks
+
 Implemented features
 --------------------
 
@@ -88,6 +94,13 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
     904: recording is active in the near future
     905: some plugin is active
     906: some plugin will wakeup vdr in the near future
+    990: (reply message contains SHUTDOWNCMD)
+    991: (reply message contains TRY_AGAIN of the shutdown-hooks)
+    992: (reply message contains ABORT_MESSAGE of the shutdown-hooks)
+    999: shutdown-hook returned a non-zero exit code
+
+  You may shutdown vdr on reply codes 250 and 990.
+  If SHUTDOWNCMD is given use this command for shutdown.
 
 Using the Python binding
 ------------------------
