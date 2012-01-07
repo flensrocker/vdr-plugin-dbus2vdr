@@ -9,7 +9,7 @@ class cDBusMessageEPG : public cDBusMessage
 friend class cDBusDispatcherEPG;
 
 public:
-  enum eAction { dmePutFile, dmeClearEPG };
+  enum eAction { dmeClearEPG, dmePutEntry, dmePutFile };
 
   virtual ~cDBusMessageEPG(void);
 
@@ -18,8 +18,9 @@ protected:
 
 private:
   cDBusMessageEPG(eAction action, DBusConnection* conn, DBusMessage* msg);
-  void PutFile(void);
   void ClearEPG(void);
+  void PutEntry(void);
+  void PutFile(void);
 
   eAction _action;
 };

@@ -6,6 +6,7 @@
 
 #include <vdr/eit.h>
 #include <vdr/epg.h>
+#include <vdr/svdrp.h>
 
 
 cDBusMessageEPG::cDBusMessageEPG(cDBusMessageEPG::eAction action, DBusConnection* conn, DBusMessage* msg)
@@ -21,43 +22,16 @@ cDBusMessageEPG::~cDBusMessageEPG(void)
 void cDBusMessageEPG::Process(void)
 {
   switch (_action) {
-    case dmePutFile:
-      PutFile();
-      break;
     case dmeClearEPG:
       ClearEPG();
       break;
+    case dmePutEntry:
+      PutEntry();
+      break;
+    case dmePutFile:
+      PutFile();
+      break;
     }
-}
-
-void cDBusMessageEPG::PutFile(void)
-{
-  const char *filename = NULL;
-  DBusMessageIter args;
-  if (!dbus_message_iter_init(_msg, &args))
-     esyslog("dbus2vdr: %s.PutFile: message misses an argument for the filename", DBUS_VDR_EPG_INTERFACE);
-  else {
-     if (cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &filename) < 0)
-        esyslog("dbus2vdr: %s.PutFile: 'filename' argument is not a string", DBUS_VDR_EPG_INTERFACE);
-     }
-
-  if (filename != NULL) {
-     FILE *f = fopen(filename, "r");
-     if (f) {
-        cString message = cString::sprintf("start reading epg data from %s", filename);
-        cDBusHelper::SendReply(_conn, _msg, 0, *message);
-        if (cSchedules::Read(f))
-           cSchedules::Cleanup(true);
-        fclose(f);
-        }
-     else {
-        esyslog("dbus2vdr: %s.PutFile: error opening %s", DBUS_VDR_EPG_INTERFACE, filename);
-        cString message = cString::sprintf("error opening %s", filename);
-        cDBusHelper::SendReply(_conn, _msg, -2, *message);
-        }
-     }
-  else
-     cDBusHelper::SendReply(_conn, _msg, -1, "no filename");
 }
 
 void cDBusMessageEPG::ClearEPG(void)
@@ -143,6 +117,61 @@ void cDBusMessageEPG::ClearEPG(void)
      }
 }
 
+void cDBusMessageEPG::PutEntry(void)
+{
+  DBusMessageIter args;
+  if (!dbus_message_iter_init(_msg, &args)) {
+     cDBusHelper::SendReply(_conn, _msg, 501, "no lines for the epg entry given");
+     return;
+     }
+
+  cPUTEhandler *handler = new cPUTEhandler();
+  if (handler->Status() == 354) {
+     const char *item = NULL;
+     while (cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &item) >= 0) {
+           dsyslog("dbus2vdr: %s.PutEntry: item = %s", DBUS_VDR_EPG_INTERFACE, item);
+           dsyslog("dbus2vdr: %s.PutEntry: status = %d, message = %s", DBUS_VDR_EPG_INTERFACE, handler->Status(), handler->Message());
+           if (!handler->Process(item))
+              break;
+           }
+     dsyslog("dbus2vdr: %s.PutEntry: status = %d, message = %s", DBUS_VDR_EPG_INTERFACE, handler->Status(), handler->Message());
+     if (handler->Status() == 354)
+        handler->Process(".");
+     }
+  cDBusHelper::SendReply(_conn, _msg, handler->Status(), handler->Message());
+  delete handler;
+}
+
+void cDBusMessageEPG::PutFile(void)
+{
+  const char *filename = NULL;
+  DBusMessageIter args;
+  if (!dbus_message_iter_init(_msg, &args))
+     esyslog("dbus2vdr: %s.PutFile: message misses an argument for the filename", DBUS_VDR_EPG_INTERFACE);
+  else {
+     if (cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &filename) < 0)
+        esyslog("dbus2vdr: %s.PutFile: 'filename' argument is not a string", DBUS_VDR_EPG_INTERFACE);
+     }
+
+  if (filename != NULL) {
+     FILE *f = fopen(filename, "r");
+     if (f) {
+        cString message = cString::sprintf("start reading epg data from %s", filename);
+        cDBusHelper::SendReply(_conn, _msg, 0, *message);
+        if (cSchedules::Read(f))
+           cSchedules::Cleanup(true);
+        fclose(f);
+        }
+     else {
+        esyslog("dbus2vdr: %s.PutFile: error opening %s", DBUS_VDR_EPG_INTERFACE, filename);
+        cString message = cString::sprintf("error opening %s", filename);
+        cDBusHelper::SendReply(_conn, _msg, -2, *message);
+        }
+     }
+  else
+     cDBusHelper::SendReply(_conn, _msg, -1, "no filename");
+}
+
 
 cDBusDispatcherEPG::cDBusDispatcherEPG(void)
 :cDBusMessageDispatcher(DBUS_VDR_EPG_INTERFACE)
@@ -162,11 +191,14 @@ cDBusMessage *cDBusDispatcherEPG::CreateMessage(DBusConnection* conn, DBusMessag
   if ((object == NULL) || (strcmp(object, "/EPG") != 0))
      return NULL;
 
-  if (dbus_message_is_method_call(msg, DBUS_VDR_EPG_INTERFACE, "PutFile"))
-     return new cDBusMessageEPG(cDBusMessageEPG::dmePutFile, conn, msg);
-
   if (dbus_message_is_method_call(msg, DBUS_VDR_EPG_INTERFACE, "ClearEPG"))
      return new cDBusMessageEPG(cDBusMessageEPG::dmeClearEPG, conn, msg);
+
+  if (dbus_message_is_method_call(msg, DBUS_VDR_EPG_INTERFACE, "PutEntry"))
+     return new cDBusMessageEPG(cDBusMessageEPG::dmePutEntry, conn, msg);
+
+  if (dbus_message_is_method_call(msg, DBUS_VDR_EPG_INTERFACE, "PutFile"))
+     return new cDBusMessageEPG(cDBusMessageEPG::dmePutFile, conn, msg);
 
   return NULL;
 }
@@ -180,14 +212,19 @@ bool          cDBusDispatcherEPG::OnIntrospect(DBusMessage *msg, cString &Data)
   "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
   "<node>\n"
   "  <interface name=\""DBUS_VDR_EPG_INTERFACE"\">\n"
-  "    <method name=\"PutFile\">\n"
-  "      <arg name=\"filename\"       type=\"s\" direction=\"in\"/>\n"
-  "      <arg name=\"replycode\"      type=\"i\" direction=\"out\"/>\n"
-  "      <arg name=\"replymessage\"   type=\"s\" direction=\"out\"/>\n"
-  "    </method>\n"
   "    <method name=\"ClearEPG\">\n"
   "      <arg name=\"channel\"        type=\"s\" direction=\"in\"/>\n"
   "      <arg name=\"eitdisabletime\" type=\"i\" direction=\"in\"/>\n"
+  "      <arg name=\"replycode\"      type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\"   type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"PutEntry\">\n"
+  "      <arg name=\"entryline\"      type=\"s\" direction=\"in\"/>\n"
+  "      <arg name=\"replycode\"      type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\"   type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"PutFile\">\n"
+  "      <arg name=\"filename\"       type=\"s\" direction=\"in\"/>\n"
   "      <arg name=\"replycode\"      type=\"i\" direction=\"out\"/>\n"
   "      <arg name=\"replymessage\"   type=\"s\" direction=\"out\"/>\n"
   "    </method>\n"

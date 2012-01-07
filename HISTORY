@@ -81,3 +81,7 @@ VDR Plugin 'dbus2vdr' Revision History
 2011-12-15: Version 0.0.3c
 
 - add commandline argument: --shutdown-hooks=/path/to/vdr/shutdown-hooks
+
+2012-01-07: Version 0.0.3d
+
+- add PutEntry to EPG interface
