@@ -20,7 +20,7 @@
 #include <vdr/plugin.h>
 
 static const char *VERSION        = "0.0.3e";
-static const char *DESCRIPTION    = "expose methods for controlling vdr via DBus";
+static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
 class cPluginDbus2vdr : public cPlugin {
@@ -30,7 +30,7 @@ public:
   cPluginDbus2vdr(void);
   virtual ~cPluginDbus2vdr();
   virtual const char *Version(void) { return VERSION; }
-  virtual const char *Description(void) { return DESCRIPTION; }
+  virtual const char *Description(void) { return tr(DESCRIPTION); }
   virtual const char *CommandLineHelp(void);
   virtual bool ProcessArgs(int argc, char *argv[]);
   virtual bool Initialize(void);
