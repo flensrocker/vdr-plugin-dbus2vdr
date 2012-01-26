@@ -20,7 +20,7 @@
 
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "0.0.3f";
+static const char *VERSION        = "0.0.3g";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 

@@ -95,3 +95,7 @@ VDR Plugin 'dbus2vdr' Revision History
 2012-01-26: Version 0.0.3f
 
 - add new setup interface with "Set" and "Get" for selected parameters
+
+2012-01-26: Version 0.0.3g
+
+- add "List" to setup interface
