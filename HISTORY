@@ -91,3 +91,7 @@ VDR Plugin 'dbus2vdr' Revision History
 - epg.c: correct introspection data for PutEntry
 - Makefile: add WANT_I18N (thanks to Christian Ruppert)
 - Makefile: don't override "directory environment" (thanks to Christian Ruppert)
+
+2012-01-26: Version 0.0.3f
+
+- add new setup interface with "Set" and "Get" for selected parameters

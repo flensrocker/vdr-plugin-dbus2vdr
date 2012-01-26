@@ -115,6 +115,13 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
   You may shutdown vdr on reply codes 250 and 990.
   If SHUTDOWNCMD is given use this command for shutdown.
 
+- get parameters from setup.conf
+  vdr-dbus-send.sh /Setup setup.Get string:'MinUserInactivity'
+
+- set parameters to setup.conf
+  vdr-dbus-send.sh /Setup setup.Set string:'MinUserInactivity' int32:0
+  (look at setup.c for the supported parameters)
+
 Using the Python binding
 ------------------------
 First, I don't know Python at all, I just copy code fragments from the Python Binding Tutorial [1]
