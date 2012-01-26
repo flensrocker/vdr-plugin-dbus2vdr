@@ -97,6 +97,9 @@ cDBusMessageSetup::~cDBusMessageSetup(void)
 void cDBusMessageSetup::Process(void)
 {
   switch (_action) {
+    case dmsList:
+      List();
+      break;
     case dmsGet:
       Get();
       break;
@@ -104,6 +107,56 @@ void cDBusMessageSetup::Process(void)
       Set();
       break;
     }
+}
+
+void cDBusMessageSetup::List(void)
+{
+  DBusMessage *reply = dbus_message_new_method_return(_msg);
+  DBusMessageIter args;
+  DBusMessageIter array;
+  DBusMessageIter element;
+  DBusMessageIter variant;
+  dbus_message_iter_init_append(reply, &args);
+  if (!dbus_message_iter_open_container(&args, DBUS_TYPE_ARRAY, "(sv)", &array))
+     esyslog("dbus2vdr: %s.List: can't open array container", DBUS_VDR_SETUP_INTERFACE);
+  for (cSetupBinding *b = _bindings.First(); b; b = _bindings.Next(b)) {
+      if (!dbus_message_iter_open_container(&array, DBUS_TYPE_STRUCT, NULL, &element))
+         esyslog("dbus2vdr: %s.List: can't open struct container", DBUS_VDR_SETUP_INTERFACE);
+      if (!dbus_message_iter_append_basic(&element, DBUS_TYPE_STRING, &b->Name))
+         esyslog("dbus2vdr: %s.List: out of memory while appending the key name", DBUS_VDR_SETUP_INTERFACE);
+      switch (b->Type) {
+       case cSetupBinding::dstString:
+        {
+         if (!dbus_message_iter_open_container(&element, DBUS_TYPE_VARIANT, "s", &variant))
+            esyslog("dbus2vdr: %s.List: can't open variant container", DBUS_VDR_SETUP_INTERFACE);
+         const char *str = (const char*)b->Value;
+         if (!dbus_message_iter_append_basic(&variant, DBUS_TYPE_STRING, &str))
+            esyslog("dbus2vdr: %s.List: out of memory while appending the string value", DBUS_VDR_SETUP_INTERFACE);
+         break;
+        }
+       case cSetupBinding::dstInt32:
+        {
+         if (!dbus_message_iter_open_container(&element, DBUS_TYPE_VARIANT, "i", &variant))
+            esyslog("dbus2vdr: %s.List: can't open variant container", DBUS_VDR_SETUP_INTERFACE);
+         int i32 = *(int*)(b->Value);
+         if (!dbus_message_iter_append_basic(&variant, DBUS_TYPE_INT32, &i32))
+            esyslog("dbus2vdr: %s.List: out of memory while appending the integer value", DBUS_VDR_SETUP_INTERFACE);
+         break;
+        }
+       }
+       if (!dbus_message_iter_close_container(&element, &variant))
+          esyslog("dbus2vdr: %s.List: can't close variant container", DBUS_VDR_SETUP_INTERFACE);
+       if (!dbus_message_iter_close_container(&array, &element))
+          esyslog("dbus2vdr: %s.List: can't close struct container", DBUS_VDR_SETUP_INTERFACE);
+      }
+  if (!dbus_message_iter_close_container(&args, &array))
+     esyslog("dbus2vdr: %s.List: can't close array container", DBUS_VDR_SETUP_INTERFACE);
+
+  dbus_uint32_t serial = 0;
+  if (!dbus_connection_send(_conn, reply, &serial))
+     esyslog("dbus2vdr: %s.List: out of memory while sending the reply", DBUS_VDR_SETUP_INTERFACE);
+  dbus_message_unref(reply);
+  return;
 }
 
 void cDBusMessageSetup::Get(void)
@@ -250,6 +303,9 @@ cDBusMessage *cDBusDispatcherSetup::CreateMessage(DBusConnection* conn, DBusMess
   if ((object == NULL) || (strcmp(object, "/Setup") != 0))
      return NULL;
 
+  if (dbus_message_is_method_call(msg, DBUS_VDR_SETUP_INTERFACE, "List"))
+     return new cDBusMessageSetup(cDBusMessageSetup::dmsList, conn, msg);
+
   if (dbus_message_is_method_call(msg, DBUS_VDR_SETUP_INTERFACE, "Get"))
      return new cDBusMessageSetup(cDBusMessageSetup::dmsGet, conn, msg);
 
@@ -268,6 +324,9 @@ bool          cDBusDispatcherSetup::OnIntrospect(DBusMessage *msg, cString &Data
   "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
   "<node>\n"
   "  <interface name=\""DBUS_VDR_SETUP_INTERFACE"\">\n"
+  "    <method name=\"List\">\n"
+  "      <arg name=\"key_value_list\" type=\"a(sv)\" direction=\"out\"/>\n"
+  "    </method>\n"
   "    <method name=\"Get\">\n"
   "      <arg name=\"name\"         type=\"s\" direction=\"in\"/>\n"
   "      <arg name=\"value\"        type=\"v\" direction=\"out\"/>\n"

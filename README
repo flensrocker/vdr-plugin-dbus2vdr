@@ -115,6 +115,9 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
   You may shutdown vdr on reply codes 250 and 990.
   If SHUTDOWNCMD is given use this command for shutdown.
 
+- list all supported parameters from setup.conf
+  vdr-dbus-send.sh /Setup setup.List
+
 - get parameters from setup.conf
   vdr-dbus-send.sh /Setup setup.Get string:'MinUserInactivity'
 
