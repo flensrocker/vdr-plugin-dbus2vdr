@@ -18,9 +18,10 @@
 #include "skin.h"
 #include "timer.h"
 
+#include <vdr/osdbase.h>
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "0.0.3g";
+static const char *VERSION        = "0.0.3h";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -150,7 +151,7 @@ time_t cPluginDbus2vdr::WakeupTime(void)
 cOsdObject *cPluginDbus2vdr::MainMenuAction(void)
 {
   // Perform the action when selected from the main VDR menu.
-  return NULL;
+  return cDBusDispatcherRemote::MainMenuAction;
 }
 
 cMenuSetupPage *cPluginDbus2vdr::SetupMenu(void)

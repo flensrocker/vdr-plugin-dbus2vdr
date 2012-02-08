@@ -6,6 +6,70 @@
 #include <vdr/remote.h>
 
 
+class cDbusSelectMenu : public cOsdMenu
+{
+private:
+  DBusConnection *_conn;
+  bool _selected;
+
+  void SendSelectedItem(int item)
+  {
+    if (cDBusDispatcherRemote::MainMenuAction != this)
+       return;
+
+    DBusMessage *msg = dbus_message_new_signal("/Remote", DBUS_VDR_REMOTE_INTERFACE, "AskUserSelect");
+    if (msg == NULL) { 
+       esyslog("dbus2vdr: can't create signal");
+       return;
+       }
+
+    dbus_uint32_t serial = 0;
+    const char *title = Title();
+    DBusMessageIter args;
+    dbus_message_iter_init_append(msg, &args);
+    if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &title))
+       esyslog("dbus2vdr: can't add title to signal");
+    else if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &item))
+       esyslog("dbus2vdr: can't add selected item to signal");
+    else if (!dbus_connection_send(_conn, msg, &serial))
+       esyslog("dbus2vdr: can't send signal");
+    else
+       dbus_connection_flush(_conn);
+    dbus_message_unref(msg);
+  }
+
+public:
+ cDbusSelectMenu(DBusConnection* conn, const char *title)
+  :cOsdMenu(title)
+  ,_conn(conn)
+  ,_selected(false) 
+ {
+ }
+
+ virtual ~cDbusSelectMenu(void)
+ {
+   if (!_selected) {
+      isyslog("dbus2vdr: selected nothing");
+      SendSelectedItem(-1);
+      }
+   cDBusDispatcherRemote::MainMenuAction = NULL;
+ }
+
+ virtual eOSState ProcessKey(eKeys Key)
+ {
+   int state = cOsdMenu::ProcessKey(Key);
+   if (state > os_User) {
+      _selected = true;
+      int item = state - os_User - 1;
+      isyslog("dbus2vdr: select item %d", item);
+      SendSelectedItem(item);
+      return osEnd;
+      }
+   return (eOSState)state;
+ }
+};
+
+
 cDBusMessageRemote::cDBusMessageRemote(cDBusMessageRemote::eAction action, DBusConnection* conn, DBusMessage* msg)
 :cDBusMessage(conn, msg)
 ,_action(action)
@@ -33,6 +97,9 @@ void cDBusMessageRemote::Process(void)
       break;
     case dmrHitKey:
       HitKey();
+      break;
+    case dmrAskUser:
+      AskUser();
       break;
     }
 }
@@ -134,6 +201,55 @@ void cDBusMessageRemote::HitKey(void)
 }
 
 
+void cDBusMessageRemote::AskUser(void)
+{
+  if (cDBusDispatcherRemote::MainMenuAction != NULL) {
+     cDBusHelper::SendReply(_conn, _msg, 550, "another selection menu already open");
+     return;
+     }
+
+  cDbusSelectMenu *menu = NULL;
+  DBusMessageIter args;
+  if (!dbus_message_iter_init(_msg, &args))
+     esyslog("dbus2vdr: %s.HitKey: message misses an argument for the keyName", DBUS_VDR_REMOTE_INTERFACE);
+  else {
+     const char *item = NULL;
+     int i = 0;
+     while (cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &item) >= 0) {
+           if (menu == NULL)
+              menu = new cDbusSelectMenu(_conn, item);
+           else {
+              menu->Add(new cOsdItem(item, (eOSState)(osUser1 + i)));
+              i++;
+              }
+           }
+     }
+
+  if (menu == NULL) {
+     cDBusHelper::SendReply(_conn, _msg, 501, "no title for selection menu given");
+     return;
+     }
+
+  if (menu->Count() == 0) {
+     delete menu;
+     cDBusHelper::SendReply(_conn, _msg, 501, "no items for selection menu given");
+     return;
+     }
+
+  cDBusDispatcherRemote::MainMenuAction = menu;
+  if (!cRemote::CallPlugin("dbus2vdr")) {
+     cDBusDispatcherRemote::MainMenuAction = NULL;
+     delete menu;
+     cDBusHelper::SendReply(_conn, _msg, 550, "can't display selection menu");
+     return;
+     }
+
+  cDBusHelper::SendReply(_conn, _msg, 250, "display selection menu");
+}
+
+
+cOsdObject *cDBusDispatcherRemote::MainMenuAction = NULL;
+
 cDBusDispatcherRemote::cDBusDispatcherRemote(void)
 :cDBusMessageDispatcher(DBUS_VDR_REMOTE_INTERFACE)
 {
@@ -166,6 +282,9 @@ cDBusMessage *cDBusDispatcherRemote::CreateMessage(DBusConnection* conn, DBusMes
 
   if (dbus_message_is_method_call(msg, DBUS_VDR_REMOTE_INTERFACE, "HitKey"))
      return new cDBusMessageRemote(cDBusMessageRemote::dmrHitKey, conn, msg);
+
+  if (dbus_message_is_method_call(msg, DBUS_VDR_REMOTE_INTERFACE, "AskUser"))
+     return new cDBusMessageRemote(cDBusMessageRemote::dmrAskUser, conn, msg);
 
   return NULL;
 }
@@ -200,7 +319,22 @@ bool          cDBusDispatcherRemote::OnIntrospect(DBusMessage *msg, cString &Dat
   "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
   "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"
   "    </method>\n"
+  "    <method name=\"AskUser\">\n"
+  "      <arg name=\"title\"        type=\"s\"  direction=\"in\"/>\n"
+  "      <arg name=\"items\"        type=\"as\" direction=\"in\"/>\n"
+  "      <arg name=\"replycode\"    type=\"i\"  direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\" type=\"s\"  direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <signal name=\"AskUserSelect\">\n"
+  "      <arg name=\"title\"        type=\"s\"/>\n"
+  "      <arg name=\"index\"        type=\"i\"/>\n"
+  "    </signal>\n"
   "  </interface>\n"
   "</node>\n";
   return true;
+}
+
+void          cDBusDispatcherRemote::OnStop(void)
+{
+  MainMenuAction = NULL;
 }

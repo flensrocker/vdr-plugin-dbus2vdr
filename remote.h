@@ -3,13 +3,15 @@
 
 #include "message.h"
 
+#include <vdr/osdbase.h>
+
 
 class cDBusMessageRemote : public cDBusMessage
 {
 friend class cDBusDispatcherRemote;
 
 public:
-  enum eAction { dmrCallPlugin, dmrEnable, dmrDisable, dmrStatus, dmrHitKey };
+  enum eAction { dmrCallPlugin, dmrEnable, dmrDisable, dmrStatus, dmrHitKey, dmrAskUser };
 
   virtual ~cDBusMessageRemote(void);
 
@@ -23,6 +25,7 @@ private:
   void Disable(void);
   void Status(void);
   void HitKey(void);
+  void AskUser(void);
 
   eAction _action;
 };
@@ -30,12 +33,15 @@ private:
 class cDBusDispatcherRemote : public cDBusMessageDispatcher
 {
 public:
+  static cOsdObject *MainMenuAction;
+
   cDBusDispatcherRemote(void);
   virtual ~cDBusDispatcherRemote(void);
 
 protected:
   virtual cDBusMessage *CreateMessage(DBusConnection* conn, DBusMessage* msg);
   virtual bool          OnIntrospect(DBusMessage *msg, cString &Data);
+  virtual void          OnStop(void);
 };
 
 #endif
