@@ -99,3 +99,7 @@ VDR Plugin 'dbus2vdr' Revision History
 2012-01-26: Version 0.0.3g
 
 - add "List" to setup interface
+
+2012-02-08: Version 0.0.3h
+
+- add "AskUser" to remote interface
