@@ -11,10 +11,16 @@
 
 
 cString  cDBusMessageShutdown::_shutdownHooksDir;
+cString  cDBusMessageShutdown::_shutdownHooksWrapper;
 
 void cDBusMessageShutdown::SetShutdownHooksDir(const char *Dir)
 {
   _shutdownHooksDir = cString( Dir);
+}
+
+void cDBusMessageShutdown::SetShutdownHooksWrapper(const char *Wrapper)
+{
+  _shutdownHooksWrapper = cString( Wrapper);
 }
 
 cDBusMessageShutdown::cDBusMessageShutdown(cDBusMessageShutdown::eAction action, DBusConnection* conn, DBusMessage* msg)
@@ -115,102 +121,93 @@ void cDBusMessageShutdown::ConfirmShutdown(void)
      return;
      }
 
-  if (((*_shutdownHooksDir) != NULL) && (strlen(*_shutdownHooksDir) > 0)) {
-     cStringList hooks;
-     cReadDir rd(*_shutdownHooksDir);
-     while (struct dirent *file = rd.Next()) {
-           if ((strcmp(file->d_name, ".") != 0) && (strcmp(file->d_name, "..") != 0))
-              hooks.Append(strdup(file->d_name));
+  if (((*_shutdownHooksDir) != NULL) && (strlen(*_shutdownHooksDir) > 0)
+   && ((*_shutdownHooksWrapper) != NULL) && (strlen(*_shutdownHooksWrapper) > 0)) {
+     if (NextPlugin && (!Next || Next > NextPlugin)) {
+        Next = NextPlugin;
+        timer = NULL;
+        }
+     Delta = Next ? Next - Now : 0;
+
+     char *tmp;
+     if (Next && timer)
+        tmp = strdup(*cString::sprintf("%ld %ld %d \"%s\" %d", Next, Delta, timer->Channel()->Number(), *strescape(timer->File(), "\\\"$"), false));
+     else if (Next && Plugin)
+        tmp = strdup(*cString::sprintf("%ld %ld %d \"%s\" %d", Next, Delta, 0, Plugin->Name(), false));
+     else
+        tmp = strdup(*cString::sprintf("%ld %ld %d \"%s\" %d", Next, Delta, 0, "", false));
+     cString params = strescape(tmp, "\\\"");
+
+     cString shutdowncmd;
+     cString cmd = cString::sprintf("%s %s \"%s\"", *_shutdownHooksWrapper, *_shutdownHooksDir, *params);
+     if (access(*_shutdownHooksWrapper, X_OK) != 0)
+        cmd = cString::sprintf("/bin/sh %s %s \"%s\"", *_shutdownHooksWrapper, *_shutdownHooksDir, *params);
+     isyslog("dbus2vdr: calling shutdown-hook-wrapper %s", *cmd);
+     tmp = NULL;
+     cExitPipe p;
+     int ret = -1;
+     if (p.Open(*cmd, "r")) {
+        int l = 0;
+        int c;
+        while ((c = fgetc(p)) != EOF) {
+              if (l % 20 == 0) {
+                 if (char *NewBuffer = (char *)realloc(tmp, l + 21))
+                    tmp = NewBuffer;
+                 else {
+                    esyslog("dbus2vdr: out of memory");
+                    break;
+                    }
+                 }
+              tmp[l++] = char(c);
+              }
+        if (tmp)
+           tmp[l] = 0;
+        ret = p.Close();
+        }
+     else
+        esyslog("dbus2vdr: can't open pipe for command '%s'", *cmd);
+
+     cString result(stripspace(tmp), true); // for automatic free
+     isyslog("dbus2vdr: result(%d) = %s", ret, *result);
+     if (ret != 0) {
+        if (*result) {
+           static const char *message = "ABORT_MESSAGE=\"";
+           if ((strlen(*result) > strlen(message)) && startswith(*result, message)) {
+              cString abort_message = tmp + strlen(message);
+              abort_message.Truncate(-1);
+              SendReply(_conn, _msg, 992, *abort_message, ret);
+              return;
+              }
            }
-     if (hooks.Size() > 0) {
-        if (NextPlugin && (!Next || Next > NextPlugin)) {
-           Next = NextPlugin;
-           timer = NULL;
+        SendReply(_conn, _msg, 999, "shutdown-hook returned a non-zero exit code", ret);
+        return;
+        }
+
+     if (*result) {
+        static const char *message = "TRY_AGAIN=\"";
+        if ((strlen(*result) > strlen(message)) && startswith(*result, message)) {
+           cString s_try_again = tmp + strlen(message);
+           s_try_again.Truncate(-1);
+           if ((strlen(*s_try_again) > 0) && isnumber(*s_try_again)) {
+              int try_again = strtol(s_try_again, NULL, 10);
+              if (try_again > 0) {
+                 SendReply(_conn, _msg, 991, *s_try_again);
+                 return;
+                 }
+              }
            }
-        Delta = Next ? Next - Now : 0;
+        }
 
-        cString params;
-        if (Next && timer)
-           params = cString::sprintf("%ld %ld %d \"%s\" %d", Next, Delta, timer->Channel()->Number(), *strescape(timer->File(), "\\\"$"), false);
-        else if (Next && Plugin)
-           params = cString::sprintf("%ld %ld %d \"%s\" %d", Next, Delta, 0, Plugin->Name(), false);
-        else
-           params = cString::sprintf("%ld %ld %d \"%s\" %d", Next, Delta, 0, "", false);
-
-        hooks.Sort();
-        cString shutdowncmd;
-        for (int i = 0; i < hooks.Size(); i++) {
-            cString cmd = cString::sprintf("%s/%s %s", *_shutdownHooksDir, hooks[i], *params);
-            if (access(*cmd, X_OK) != 0)
-               cmd = cString::sprintf("/bin/sh %s/%s %s", *_shutdownHooksDir, hooks[i], *params);
-            isyslog("dbus2vdr: asking shutdown-hook %s", *cmd);
-            char *tmp = NULL;
-            cExitPipe p;
-            int ret = -1;
-            if (p.Open(*cmd, "r")) {
-               int l = 0;
-               int c;
-               while ((c = fgetc(p)) != EOF) {
-                     if (l % 20 == 0) {
-                        if (char *NewBuffer = (char *)realloc(tmp, l + 21))
-                           tmp = NewBuffer;
-                        else {
-                           esyslog("dbus2vdr: out of memory");
-                           break;
-                           }
-                        }
-                     tmp[l++] = char(c);
-                     }
-               if (tmp)
-                  tmp[l] = 0;
-               ret = p.Close();
-               }
-            else
-               esyslog("dbus2vdr: can't open pipe for command '%s'", *cmd);
-
-            cString result(stripspace(tmp), true); // for automatic free
-            isyslog("dbus2vdr: result(%d) = %s", ret, *result);
-            if (ret != 0) {
-               if (*result) {
-                  static const char *message = "ABORT_MESSAGE=\"";
-                  if ((strlen(*result) > strlen(message)) && startswith(*result, message)) {
-                     cString abort_message = tmp + strlen(message);
-                     abort_message.Truncate(-1);
-                     SendReply(_conn, _msg, 992, *abort_message, ret);
-                     return;
-                     }
-                  }
-               SendReply(_conn, _msg, 999, "shutdown-hook returned a non-zero exit code", ret);
-               return;
-               }
-
-            if (*result) {
-               static const char *message = "TRY_AGAIN=\"";
-               if ((strlen(*result) > strlen(message)) && startswith(*result, message)) {
-                  cString s_try_again = tmp + strlen(message);
-                  s_try_again.Truncate(-1);
-                  if ((strlen(*s_try_again) > 0) && isnumber(*s_try_again)) {
-                     int try_again = strtol(s_try_again, NULL, 10);
-                     if (try_again > 0) {
-                        SendReply(_conn, _msg, 991, *s_try_again);
-                        return;
-                        }
-                     }
-                  }
-               }
-
-            if (*result) {
-               static const char *message = "SHUTDOWNCMD=\"";
-               if ((strlen(*result) > strlen(message)) && startswith(*result, message)) {
-                  shutdowncmd = tmp + strlen(message);
-                  shutdowncmd.Truncate(-1);
-                  }
-               }
-            }
-        if (*shutdowncmd && (strlen(*shutdowncmd) > 0)) {
-           SendReply(_conn, _msg, 990, *shutdowncmd, 0, *params);
-           return;
+     if (*result) {
+        static const char *message = "SHUTDOWNCMD=\"";
+        if ((strlen(*result) > strlen(message)) && startswith(*result, message)) {
+           shutdowncmd = tmp + strlen(message);
+           shutdowncmd.Truncate(-1);
            }
+        }
+     if (*shutdowncmd && (strlen(*shutdowncmd) > 0)) {
+        SendReply(_conn, _msg, 990, *shutdowncmd, 0, *params);
+        return;
         }
      }
 

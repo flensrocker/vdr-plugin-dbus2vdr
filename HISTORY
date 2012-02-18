@@ -103,3 +103,8 @@ VDR Plugin 'dbus2vdr' Revision History
 2012-02-08: Version 0.0.3h
 
 - add "AskUser" to remote interface
+
+2012-02-19: Version 0.0.3i
+
+- shutdown-wrapper is a wrapper which tests the shutdown-hooks
+  set its SUID bit if needed

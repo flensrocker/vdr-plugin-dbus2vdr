@@ -45,6 +45,8 @@ Commandline Arguments
 -s, --shutdown-hooks=/path/to/shutdown-hooks
         uses all files in the given directory as shutdown-hooks
         usually it's /usr/share/vdr/shutdown-hooks
+-w, --shutdown-hooks-wrapper=/path/to/shutdown-hooks-wrapper
+        path to a program that will call the shutdown-hooks with suid
 
 Implemented features
 --------------------
@@ -121,6 +123,8 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
 
   You may shutdown vdr on reply codes 250 and 990.
   If SHUTDOWNCMD is given use this command for shutdown.
+  'shutdown-wrapper' is a tool which calls the shutdown-hooks.
+  If the hooks need elevated privileges set the SUID bit of the wrapper accordingly.
 
 - list all supported parameters from setup.conf
   vdr-dbus-send.sh /Setup setup.List

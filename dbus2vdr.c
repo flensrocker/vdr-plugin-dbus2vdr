@@ -21,7 +21,7 @@
 #include <vdr/osdbase.h>
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "0.0.3h";
+static const char *VERSION        = "0.0.3i";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -67,7 +67,9 @@ const char *cPluginDbus2vdr::CommandLineHelp(void)
 {
   return "  --shutdown-hooks=/path/to/dir/with/shutdown-hooks\n"
          "    directory with shutdown-hooks to be called by ConfirmShutdown\n"
-         "    usually it's /usr/share/vdr/shutdown-hooks";
+         "    usually it's /usr/share/vdr/shutdown-hooks\n"
+         "  --shutdown-hooks-wrapper=/path/to/shutdown-hooks-wrapper\n"
+         "    path to a program that will call the shutdown-hooks with suid";
 }
 
 bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
@@ -75,12 +77,13 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
   static struct option options[] =
   {
     {"shutdown-hooks", required_argument, 0, 's'},
+    {"shutdown-hooks-wrapper", required_argument, 0, 'w'},
     {0, 0, 0, 0}
   };
 
   while (true) {
         int option_index = 0;
-        int c = getopt_long(argc, argv, "s:", options, &option_index);
+        int c = getopt_long(argc, argv, "s:w:", options, &option_index);
         if (c == -1)
            break;
         switch (c) {
@@ -89,6 +92,14 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
              if (optarg != NULL) {
                 isyslog("dbus2vdr: use shutdown-hooks in %s", optarg);
                 cDBusMessageShutdown::SetShutdownHooksDir(optarg);
+                }
+             break;
+           }
+          case 'w':
+           {
+             if (optarg != NULL) {
+                isyslog("dbus2vdr: use shutdown-hooks-wrapper %s", optarg);
+                cDBusMessageShutdown::SetShutdownHooksWrapper(optarg);
                 }
              break;
            }
