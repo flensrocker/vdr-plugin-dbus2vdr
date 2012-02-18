@@ -12,6 +12,7 @@ public:
   enum eAction { dmsConfirmShutdown };
 
   static void SetShutdownHooksDir(const char *Dir);
+  static void SetShutdownHooksWrapper(const char *Wrapper);
 
   virtual ~cDBusMessageShutdown(void);
 
@@ -20,6 +21,7 @@ protected:
 
 private:
   static cString  _shutdownHooksDir;
+  static cString  _shutdownHooksWrapper;
 
   cDBusMessageShutdown(eAction action, DBusConnection* conn, DBusMessage* msg);
   void ConfirmShutdown(void);

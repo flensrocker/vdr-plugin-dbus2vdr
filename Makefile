@@ -56,6 +56,7 @@ DEFINES += -D_GNU_SOURCE -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
 ### The object files (add further files here):
 
 OBJS = $(PLUGIN).o epg.o helper.o message.o monitor.o plugin.o recording.o remote.o setup.o shutdown.o skin.o timer.o
+SWOBJS = libvdr-exitpipe.o libvdr-i18n.o libvdr-thread.o libvdr-tools.o shutdown-wrapper.o
 
 ### The main target:
 
@@ -87,7 +88,7 @@ I18Npot   = $(PODIR)/$(PLUGIN).pot
 %.mo: %.po
 	msgfmt -c -o $@ $<
 
-$(I18Npot): $(wildcard *.c)
+$(I18Npot): $(patsubst %.o,%.c,$(OBJS))
 	xgettext -C -cTRANSLATORS --no-wrap --no-location -k -ktr -ktrNOOP --package-name=vdr-$(PLUGIN) --package-version=$(VERSION) --msgid-bugs-address='<see README>' -o $@ $^
 
 %.po: $(I18Npot)
@@ -104,7 +105,10 @@ i18n: $(I18Nmsgs) $(I18Npot)
 
 ### Targets:
 
-libvdr-$(PLUGIN).so: $(OBJS)
+shutdown-wrapper: $(SWOBJS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(SWOBJS) -ljpeg -lrt -pthread -o $@
+
+libvdr-$(PLUGIN).so: $(OBJS) shutdown-wrapper
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared $(OBJS) $(LDADD) -o $@
 	@cp --remove-destination $@ $(LIBDIR)/$@.$(APIVERSION)
 
@@ -117,4 +121,5 @@ dist: $(I18Npo) clean
 	@echo Distribution package created as $(PACKAGE).tgz
 
 clean:
-	@-rm -f $(OBJS) $(DEPFILE) *.so *.tgz core* *~ $(PODIR)/*.mo $(PODIR)/*.pot
+	@-rm -f $(OBJS) $(SWOBJS) shutdown-wrapper $(DEPFILE) *.so *.tgz core* *~ $(PODIR)/*.mo $(PODIR)/*.pot
+
