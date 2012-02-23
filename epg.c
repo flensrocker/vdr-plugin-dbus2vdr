@@ -31,6 +31,12 @@ void cDBusMessageEPG::Process(void)
     case dmePutFile:
       PutFile();
       break;
+    case dmeNow:
+      GetEntries(dmmPresent);
+      break;
+    case dmeNext:
+      GetEntries(dmmFollowing);
+      break;
     }
 }
 
@@ -172,6 +178,167 @@ void cDBusMessageEPG::PutFile(void)
      cDBusHelper::SendReply(_conn, _msg, -1, "no filename");
 }
 
+static void sAddEvent(DBusMessageIter &array, const cEvent &event)
+{
+  const char *c;
+  dbus_uint32_t tu32;
+  dbus_uint64_t tu64;
+  int ti;
+  dbus_bool_t tb;
+
+  DBusMessageIter arr;
+  if (!dbus_message_iter_open_container(&array, DBUS_TYPE_ARRAY, "(sv)", &arr))
+     esyslog("dbus2vdr: sAddEvent: can't open array container");
+
+  cString cid = event.ChannelID().ToString();
+  c = *cid;
+  cDBusHelper::AddKeyValue(arr, "ChannelID", DBUS_TYPE_STRING, DBUS_TYPE_STRING_AS_STRING, &c);
+
+  tu32 = event.EventID();
+  cDBusHelper::AddKeyValue(arr, "EventID", DBUS_TYPE_UINT32, DBUS_TYPE_UINT32_AS_STRING, &tu32);
+
+  c = event.Title();
+  if (c != NULL)
+     cDBusHelper::AddKeyValue(arr, "Title", DBUS_TYPE_STRING, DBUS_TYPE_STRING_AS_STRING, &c);
+
+  c = event.ShortText();
+  if (c != NULL)
+     cDBusHelper::AddKeyValue(arr, "ShortText", DBUS_TYPE_STRING, DBUS_TYPE_STRING_AS_STRING, &c);
+
+  c = event.Description();
+  if (c != NULL)
+     cDBusHelper::AddKeyValue(arr, "Description", DBUS_TYPE_STRING, DBUS_TYPE_STRING_AS_STRING, &c);
+
+  tu64 = event.StartTime();
+  cDBusHelper::AddKeyValue(arr, "StartTime", DBUS_TYPE_UINT64, DBUS_TYPE_UINT64_AS_STRING, &tu64);
+
+  tu64 = event.EndTime();
+  cDBusHelper::AddKeyValue(arr, "EndTime", DBUS_TYPE_UINT64, DBUS_TYPE_UINT64_AS_STRING, &tu64);
+
+  tu64 = event.Duration();
+  cDBusHelper::AddKeyValue(arr, "Duration", DBUS_TYPE_UINT64, DBUS_TYPE_UINT64_AS_STRING, &tu64);
+
+  tu64 = event.Vps();
+  cDBusHelper::AddKeyValue(arr, "Vps", DBUS_TYPE_UINT64, DBUS_TYPE_UINT64_AS_STRING, &tu64);
+
+  ti = event.RunningStatus();
+  cDBusHelper::AddKeyValue(arr, "RunningStatus", DBUS_TYPE_INT32, DBUS_TYPE_INT32_AS_STRING, &ti);
+
+  ti = event.ParentalRating();
+  cDBusHelper::AddKeyValue(arr, "ParentalRating", DBUS_TYPE_INT32, DBUS_TYPE_INT32_AS_STRING, &ti);
+
+  tb = event.HasTimer();
+  cDBusHelper::AddKeyValue(arr, "HasTimer", DBUS_TYPE_BOOLEAN, DBUS_TYPE_BOOLEAN_AS_STRING, &tb);
+
+  for (int i = 0; i < MaxEventContents; i++) {
+      tu32 = event.Contents(i);
+      if (tu32 != 0) {
+         cDBusHelper::AddKeyValue(arr, *cString::sprintf("ContentID[%d]", i), DBUS_TYPE_UINT32, DBUS_TYPE_UINT32_AS_STRING, &tu32);
+         c = cEvent::ContentToString(tu32);
+         cDBusHelper::AddKeyValue(arr, *cString::sprintf("Content[%d]", i), DBUS_TYPE_STRING, DBUS_TYPE_STRING_AS_STRING, &c);
+         }
+      }
+
+  if (!dbus_message_iter_close_container(&array, &arr))
+     esyslog("dbus2vdr: sAddEvent: can't close array container");
+}
+
+static bool sGetChannel(DBusMessageIter &args, const char **input, cChannel **channel)
+{
+  *channel = NULL;
+  *input = NULL;
+  if (cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, input) >= 0) {
+     if (isnumber(*input))
+        *channel = Channels.GetByNumber(strtol(*input, NULL, 10));
+     else
+        *channel = Channels.GetByChannelID(tChannelID::FromString(*input));
+     if (*channel == NULL)
+        return false;
+     }
+  return true;
+}
+
+void cDBusMessageEPG::GetEntries(eMode mode)
+{
+  cChannel *channel = NULL;
+  DBusMessageIter args;
+  if (dbus_message_iter_init(_msg, &args)) {
+     const char *c = NULL;
+     if (!sGetChannel(args, &c, &channel)) {
+        cString reply = cString::sprintf("channel \"%s\" not defined", c);
+        esyslog("dbus2vdr: %s.GetEntries: %s", DBUS_VDR_EPG_INTERFACE, *reply);
+        cDBusHelper::SendReply(_conn, _msg, 501, *reply);
+        return;
+        }
+     }
+
+  cSchedulesLock sl(false, 1000);
+  if (!sl.Locked()) {
+     cDBusHelper::SendReply(_conn, _msg, 550, "got no lock on schedules");
+     return;
+     }
+
+  const cSchedules *scheds = cSchedules::Schedules(sl);
+  if (scheds == NULL) {
+     cDBusHelper::SendReply(_conn, _msg, 550, "got no schedules");
+     return;
+     }
+
+  DBusMessage *reply = dbus_message_new_method_return(_msg);
+  DBusMessageIter rargs;
+  dbus_message_iter_init_append(reply, &rargs);
+
+  int returncode = 250;
+  if (!dbus_message_iter_append_basic(&rargs, DBUS_TYPE_INT32, &returncode))
+     esyslog("dbus2vdr: %s.GetEntries: out of memory while appending the return-code", DBUS_VDR_EPG_INTERFACE);
+
+  const char *message = "";
+  if (!dbus_message_iter_append_basic(&rargs, DBUS_TYPE_STRING, &message))
+     esyslog("dbus2vdr: %s.GetEntries: out of memory while appending the reply-message", DBUS_VDR_EPG_INTERFACE);
+
+  DBusMessageIter array;
+  if (!dbus_message_iter_open_container(&rargs, DBUS_TYPE_ARRAY, "a(sv)", &array))
+     esyslog("dbus2vdr: %s.GetEntries: can't open array container", DBUS_VDR_EPG_INTERFACE);
+
+  bool next = false;
+  if (channel == NULL) {
+     channel = Channels.First();
+     next = true;
+     }
+
+  while (channel) {
+        const cSchedule *s = scheds->GetSchedule(channel, false);
+        if (s != NULL) {
+           const cEvent *e = NULL;
+           switch (mode) {
+             case dmmPresent:
+               e = s->GetPresentEvent();
+               break;
+             case dmmFollowing:
+               e = s->GetFollowingEvent();
+               break;
+             default:
+               e = NULL;
+               break;
+             }
+           if (e != NULL)
+              sAddEvent(array, *e);
+           }
+        if (next)
+           channel = Channels.Next(channel);
+        else
+           break;
+        }
+
+  if (!dbus_message_iter_close_container(&rargs, &array))
+     esyslog("dbus2vdr: %s.GetEntries: can't close array container", DBUS_VDR_EPG_INTERFACE);
+
+  dbus_uint32_t serial = 0;
+  if (!dbus_connection_send(_conn, reply, &serial))
+     esyslog("dbus2vdr: SendReply: out of memory while sending the reply");
+  dbus_message_unref(reply);
+}
+
 
 cDBusDispatcherEPG::cDBusDispatcherEPG(void)
 :cDBusMessageDispatcher(DBUS_VDR_EPG_INTERFACE)
@@ -200,6 +367,12 @@ cDBusMessage *cDBusDispatcherEPG::CreateMessage(DBusConnection* conn, DBusMessag
   if (dbus_message_is_method_call(msg, DBUS_VDR_EPG_INTERFACE, "PutFile"))
      return new cDBusMessageEPG(cDBusMessageEPG::dmePutFile, conn, msg);
 
+  if (dbus_message_is_method_call(msg, DBUS_VDR_EPG_INTERFACE, "Now"))
+     return new cDBusMessageEPG(cDBusMessageEPG::dmeNow, conn, msg);
+
+  if (dbus_message_is_method_call(msg, DBUS_VDR_EPG_INTERFACE, "Next"))
+     return new cDBusMessageEPG(cDBusMessageEPG::dmeNext, conn, msg);
+
   return NULL;
 }
 
@@ -227,6 +400,18 @@ bool          cDBusDispatcherEPG::OnIntrospect(DBusMessage *msg, cString &Data)
   "      <arg name=\"filename\"       type=\"s\" direction=\"in\"/>\n"
   "      <arg name=\"replycode\"      type=\"i\" direction=\"out\"/>\n"
   "      <arg name=\"replymessage\"   type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"Now\">\n"
+  "      <arg name=\"channel\"        type=\"s\"  direction=\"in\"/>\n"
+  "      <arg name=\"replycode\"      type=\"i\"  direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\"   type=\"s\"  direction=\"out\"/>\n"
+  "      <arg name=\"event_list\"     type=\"aa(sv)\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"Next\">\n"
+  "      <arg name=\"channel\"        type=\"s\"  direction=\"in\"/>\n"
+  "      <arg name=\"replycode\"      type=\"i\"  direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\"   type=\"s\"  direction=\"out\"/>\n"
+  "      <arg name=\"event_list\"     type=\"aa(sv)\" direction=\"out\"/>\n"
   "    </method>\n"
   "  </interface>\n"
   "</node>\n";

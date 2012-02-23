@@ -8,6 +8,9 @@
 class cDBusHelper
 {
 public:
+  static void AddArg(DBusMessageIter &args, int type, void *value);
+  static void AddKeyValue(DBusMessageIter &array, const char *key, int type, const char *vtype, void *value);
+
   static int  GetNextArg(DBusMessageIter &args, int type, void *value);
    ///< returns -1 on error or type mismatch
    ///<          0 on success and this was the last argument

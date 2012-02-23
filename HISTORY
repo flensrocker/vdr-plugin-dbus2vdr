@@ -108,3 +108,7 @@ VDR Plugin 'dbus2vdr' Revision History
 
 - shutdown-wrapper is a wrapper which tests the shutdown-hooks
   set its SUID bit if needed
+
+2012-02-23: Version 0.0.3j
+
+- add "Now" and "Next" to EPG interface

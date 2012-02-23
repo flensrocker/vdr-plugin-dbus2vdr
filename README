@@ -70,6 +70,27 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
 - read EPG data from file
   vdr-dbus-send.sh /EPG epg.PutFile string:'/path/to/epg/data'
 
+- get current or next event of given or all channels
+  vdr-dbus-send.sh /EPG epg.Now [string:'channel']
+  vdr-dbus-send.sh /EPG epg.Next [string:'channel']
+
+  The events are returned as an array of structs.
+  Each struct contains a string as a key and a variant as its value.
+  Possible keys and their variant type are:
+  ChannelID      string
+  EventID        uint32
+  Title          string
+  ShortText      string
+  Description    string
+  StartTime      uint64
+  EndTime        uint64
+  Duration       uint64
+  Vps            uint64
+  RunningStatus  int32
+  ParentalRating int32
+  ContentID[i]   int32  (0 <= i <= MaxEventContents)
+  Content[i]     string (0 <= i <= MaxEventContents)
+
 - get infos about the next timer
   vdr-dbus-send.sh /Timers timer.Next
 
