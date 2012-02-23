@@ -5,6 +5,31 @@
 #include <unistd.h>
 
 
+void cDBusHelper::AddArg(DBusMessageIter &args, int type, void *value)
+{
+  if (value == NULL)
+     return;
+  if (!dbus_message_iter_append_basic(&args, type, value))
+     esyslog("dbus2vdr: AddArg: out of memory while appending argument");
+}
+
+void cDBusHelper::AddKeyValue(DBusMessageIter &array, const char *key, int type, const char *vtype, void *value)
+{
+  DBusMessageIter element;
+  DBusMessageIter variant;
+
+  if (!dbus_message_iter_open_container(&array, DBUS_TYPE_STRUCT, NULL, &element))
+     esyslog("dbus2vdr: AddKeyValue: can't open struct container");
+  AddArg(element, DBUS_TYPE_STRING, &key);
+  if (!dbus_message_iter_open_container(&element, DBUS_TYPE_VARIANT, vtype, &variant))
+     esyslog("dbus2vdr: AddKeyValue: can't open variant container");
+  AddArg(variant, type, value);
+  if (!dbus_message_iter_close_container(&element, &variant))
+     esyslog("dbus2vdr: AddKeyValue: can't close variant container");
+  if (!dbus_message_iter_close_container(&array, &element))
+     esyslog("dbus2vdr: AddKeyValue: can't close struct container");
+}
+
 int  cDBusHelper::GetNextArg(DBusMessageIter& args, int type, void *value)
 {
   if (dbus_message_iter_get_arg_type(&args) != type)
