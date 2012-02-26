@@ -47,6 +47,9 @@ Commandline Arguments
         usually it's /usr/share/vdr/shutdown-hooks
 -w, --shutdown-hooks-wrapper=/path/to/shutdown-hooks-wrapper
         path to a program that will call the shutdown-hooks with suid
+-o, --osd
+        dbus2vdr will create an OSD provider which dumps the osd to
+        png-files (not finished yet)
 
 Implemented features
 --------------------
