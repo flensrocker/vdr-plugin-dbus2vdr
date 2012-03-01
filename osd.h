@@ -9,6 +9,11 @@ class cDBusOsd : public cOsd
 private:
   friend class cDBusOsdProvider;
 
+  static int   osd_number;
+  int          osd_index;
+  int          counter;
+  cStringList  filenames;
+
 protected:
   cDBusOsd(int Left, int Top, uint Level);
   // virtual void SetActive(bool On) { cOsd::SetActive(On); }
@@ -21,7 +26,7 @@ public:
   // virtual void DrawImage(const cPoint &Point, const cImage &Image);
   // virtual void DrawImage(const cPoint &Point, int ImageHandle);
   // virtual eOsdError CanHandleAreas(const tArea *Areas, int NumAreas) { return cOsd::CanHandleAreas(Areas, NumAreas); }
-  virtual eOsdError SetAreas(const tArea *Areas, int NumAreas);
+  // virtual eOsdError SetAreas(const tArea *Areas, int NumAreas);
 
   // virtual void SaveRegion(int x1, int y1, int x2, int y2);
   // virtual void RestoreRegion(void);

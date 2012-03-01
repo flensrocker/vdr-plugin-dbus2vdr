@@ -1,63 +1,82 @@
 #include "osd.h"
 
+#include <sys/time.h>
+
 #include <png++/image.hpp>
 #include <png++/rgba_pixel.hpp>
 
 #include <vdr/videodir.h>
 
+//#define DBUSOSDDIR "/tmp/dbus2vdr"
+#define DBUSOSDDIR VideoDirectory
+
+
+int   cDBusOsd::osd_number = 0;
 
 cDBusOsd::cDBusOsd(int Left, int Top, uint Level)
  : cOsd(Left, Top, Level)
+ ,osd_index(osd_number++)
+ ,counter(0)
 {
-  isyslog("dbus2vdr: new osd %d, %d, %d", Left, Top, Level);
+  isyslog("dbus2vdr: new osd %d: %d, %d, %d", osd_index, Left, Top, Level);
 }
 
 cDBusOsd::~cDBusOsd()
 {
-  isyslog("dbus2vdr: delete osd");
-}
-
-eOsdError cDBusOsd::SetAreas(const tArea *Areas, int NumAreas)
-{
-  for (int i = 0; i < NumAreas; i++)
-      isyslog("dbus2vdr: osd area %d = %d %d %d %d %d", i, Areas[i].x1, Areas[i].y1, Areas[i].x2, Areas[i].y2, Areas[i].bpp);
-  return cOsd::SetAreas(Areas, NumAreas);
-}
-
-static png::rgba_pixel tColor2png_pixel(tColor Color)
-{
-  return png::rgba_pixel((Color >> 16) & 0xff, (Color >> 8) & 0xff, Color & 0xff, (Color >> 24) & 0xff);
+  isyslog("dbus2vdr: delete osd %d", osd_index);
+  for (int i = 0; i < filenames.Size(); i++)
+      RemoveFileOrDir(filenames[i], false);
 }
 
 void cDBusOsd::Flush(void)
 {
-  static int counter = 0;
-  png::image<png::rgba_pixel> result(Left() + Width() + 1, Top() + Height() + 1);
+  if (!Active())
+      return;
+
+  struct timeval start;
+  struct timeval end;
+  struct timezone timeZone;
+  gettimeofday(&start, &timeZone);
 
   bool write = false;
-  LOCK_PIXMAPS;
-  while (cPixmapMemory *pm = RenderPixmaps()) {
-        write = true;
-        int w = pm->ViewPort().Width();
-        int h = pm->ViewPort().Height();
-        // int d = w * sizeof(tColor);
-        // MyOsdDrawPixmap(Left() + pm->ViewPort().X(), Top() + pm->ViewPort().Y(), pm->Data(), w, h, h * d);
-        const tColor *data = (const tColor *)pm->Data();
-        for (int y = 0; y < h ; y++) {
-            int py = Top() + pm->ViewPort().Y() + y;
-            for (int x = 0; x < w; x++) {
-                int px = Left() + pm->ViewPort().X() + x;
-                result[py][px] = tColor2png_pixel(data[x + y * w]);
-                }
-            }
-        delete pm;
-        }
+  if (IsTrueColor()) {
+    LOCK_PIXMAPS;
+    int left = Left();
+    int top = Top();
+    const cRect* vp;
+    int vx, vy, vw, vh;
+    int x, y;
+    const uint8_t *pixel;
+    png::image<png::rgba_pixel> *pngfile;
+    while (cPixmapMemory *pm = RenderPixmaps()) {
+          write = true;
+          vp = &pm->ViewPort();
+          vx = vp->X();
+          vy = vp->Y();
+          vw = vp->Width();
+          vh = vp->Height();
+          pixel = pm->Data();
+          pngfile = new png::image<png::rgba_pixel>(vw, vh);
+          for (y = 0; y < vh ; y++) {
+              for (x = 0; x < vw; x++) {
+                  (*pngfile)[y][x] = png::rgba_pixel(pixel[2], pixel[1], pixel[0], pixel[3]);
+                  pixel += 4;
+                  }
+              }
+          cString filename = cString::sprintf("%s/dbusosd-%04x-%04x-%d-%d-%d-%d.png", DBUSOSDDIR, osd_index, counter, left, top, vx, vy);
+          pngfile->write(*filename);
+          filenames.Append(strdup(*filename));
+          counter++;
+          delete pngfile;
+          delete pm;
+          }
+  }
 
   if (write) {
-     cString filename = cString::sprintf("%s/dbusosd-%08x.png", VideoDirectory, counter);
-     isyslog("dbus2vdr: flush osd to %s", *filename);
-     result.write(*filename);
-     counter++;
+     gettimeofday(&end, &timeZone);
+     int timeNeeded = end.tv_usec - start.tv_usec;
+     timeNeeded += (end.tv_sec - start.tv_sec) * 1000000;
+     isyslog("dbus2vdr: flushing osd %d needed %d\n", osd_index, timeNeeded);
      }
 }
 
