@@ -12,7 +12,7 @@ private:
   static int   osd_number;
   int          osd_index;
   int          counter;
-  cStringList  filenames;
+  cString      osd_dir;
 
 protected:
   cDBusOsd(int Left, int Top, uint Level);

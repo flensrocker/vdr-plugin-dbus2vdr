@@ -18,14 +18,16 @@ cDBusOsd::cDBusOsd(int Left, int Top, uint Level)
  ,osd_index(osd_number++)
  ,counter(0)
 {
-  isyslog("dbus2vdr: new osd %d: %d, %d, %d", osd_index, Left, Top, Level);
+  osd_dir = cString::sprintf("%s/dbusosd-%04x", DBUSOSDDIR, osd_index);
+  if (!MakeDirs(*osd_dir, true))
+     esyslog("dbus2vdr: can't create %s", *osd_dir);
+  isyslog("dbus2vdr: new osd %s: %d, %d, %d", *osd_dir, Left, Top, Level);
 }
 
 cDBusOsd::~cDBusOsd()
 {
-  isyslog("dbus2vdr: delete osd %d", osd_index);
-  for (int i = 0; i < filenames.Size(); i++)
-      RemoveFileOrDir(filenames[i], false);
+  isyslog("dbus2vdr: delete osd %s", *osd_dir);
+  RemoveFileOrDir(*osd_dir, false);
 }
 
 void cDBusOsd::Flush(void)
@@ -63,9 +65,8 @@ void cDBusOsd::Flush(void)
                   pixel += 4;
                   }
               }
-          cString filename = cString::sprintf("%s/dbusosd-%04x-%04x-%d-%d-%d-%d.png", DBUSOSDDIR, osd_index, counter, left, top, vx, vy);
+          cString filename = cString::sprintf("%s/%04x-%d-%d-%d-%d.png", *osd_dir, counter, left, top, vx, vy);
           pngfile->write(*filename);
-          filenames.Append(strdup(*filename));
           counter++;
           delete pngfile;
           delete pm;
