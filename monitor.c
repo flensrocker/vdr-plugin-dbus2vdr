@@ -3,24 +3,28 @@
 #include "helper.h"
 #include "plugin.h"
 
-#include <dbus/dbus.h>
-
 #include <vdr/tools.h>
 
 
+cMutex cDBusMonitor::_mutex;
 cDBusMonitor *cDBusMonitor::_monitor = NULL;
 
 
 cDBusMonitor::cDBusMonitor(void)
 {
+  _conn = NULL;
 }
 
 cDBusMonitor::~cDBusMonitor(void)
 {
+  if (_conn != NULL)
+     dbus_connection_unref(_conn);
+  _conn = NULL;
 }
 
 void cDBusMonitor::StartMonitor(void)
 {
+  cMutexLock lock(&_mutex);
   if (_monitor != NULL)
      return;
   _monitor = new cDBusMonitor;
@@ -30,6 +34,7 @@ void cDBusMonitor::StartMonitor(void)
 
 void cDBusMonitor::StopMonitor(void)
 {
+  cMutexLock lock(&_mutex);
   if (_monitor == NULL)
      return;
   _monitor->Cancel(5);
@@ -37,19 +42,35 @@ void cDBusMonitor::StopMonitor(void)
   _monitor = NULL;
 }
 
+bool cDBusMonitor::SendSignal(DBusMessage *msg)
+{
+  cMutexLock lock(&_mutex);
+  if ((_monitor == NULL) || (_monitor->_conn == NULL))
+     return false;
+
+  dbus_uint32_t serial = 0;
+  if (!dbus_connection_send(_monitor->_conn, msg, &serial)) { 
+     esyslog("dbus2vdr: out of memory while sending signal"); 
+     return false;
+     }
+  dbus_connection_flush(_monitor->_conn);
+  dbus_message_unref(msg);
+  return true;
+}
+
 void cDBusMonitor::Action(void)
 {
   DBusError err;
   dbus_error_init(&err);
-  DBusConnection* conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
+  _conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
   if (dbus_error_is_set(&err)) {
      esyslog("dbus2vdr: connection error: %s", err.message);
      dbus_error_free(&err);
      }
-  if (conn == NULL)
+  if (_conn == NULL)
      return;
 
-  int ret = dbus_bus_request_name(conn, DBUS_VDR_BUSNAME, DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
+  int ret = dbus_bus_request_name(_conn, DBUS_VDR_BUSNAME, DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
   if (dbus_error_is_set(&err)) {
      esyslog("dbus2vdr: name error: %s", err.message);
      dbus_error_free(&err);
@@ -61,10 +82,10 @@ void cDBusMonitor::Action(void)
 
   isyslog("dbus2vdr: monitor started on bus %s", DBUS_VDR_BUSNAME);
   while (true) {
-        dbus_connection_read_write(conn, 1000);
+        dbus_connection_read_write(_conn, 1000);
         if (!Running())
            break;
-        DBusMessage *msg = dbus_connection_pop_message(conn);
+        DBusMessage *msg = dbus_connection_pop_message(_conn);
         if (msg == NULL)
            continue;
         const char *object = dbus_message_get_path(msg);
@@ -89,7 +110,7 @@ void cDBusMonitor::Action(void)
              }
            if (name != NULL)
               isyslog("dbus2vdr: NameAcquired: get ownership of name %s", name);
-           cDBusHelper::SendReply(conn, msg, "");
+           cDBusHelper::SendReply(_conn, msg, "");
            dbus_message_unref(msg);
            continue;
            }
@@ -99,18 +120,17 @@ void cDBusMonitor::Action(void)
            cString data( "");
            if (!cDBusMessageDispatcher::Introspect(msg, data))
               esyslog("dbus2vdr: can't introspect object %s", object);
-           cDBusHelper::SendReply(conn, msg, *data);
+           cDBusHelper::SendReply(_conn, msg, *data);
            dbus_message_unref(msg);
            continue;
            }
 
-        if (!cDBusMessageDispatcher::Dispatch(conn, msg)) {
+        if (!cDBusMessageDispatcher::Dispatch(_conn, msg)) {
            isyslog("dbus2vdr: don't know what to do...");
-           cDBusHelper::SendReply(conn, msg, -1, "unknown message");
+           cDBusHelper::SendReply(_conn, msg, -1, "unknown message");
            dbus_message_unref(msg);
            }
         }
   cDBusMessageDispatcher::Stop();
   isyslog("dbus2vdr: monitor stopped on bus %s", DBUS_VDR_BUSNAME);
-  dbus_connection_unref(conn);
 }

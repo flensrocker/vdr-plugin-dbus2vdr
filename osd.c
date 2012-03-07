@@ -1,5 +1,8 @@
 #include "osd.h"
 
+#include "common.h"
+#include "monitor.h"
+
 #include <sys/time.h>
 
 #include <png++/image.hpp>
@@ -7,8 +10,8 @@
 
 #include <vdr/videodir.h>
 
-//#define DBUSOSDDIR "/tmp/dbus2vdr"
-#define DBUSOSDDIR VideoDirectory
+#define DBUSOSDDIR "/tmp/dbus2vdr"
+//#define DBUSOSDDIR VideoDirectory
 
 
 int   cDBusOsd::osd_number = 0;
@@ -22,10 +25,21 @@ cDBusOsd::cDBusOsd(int Left, int Top, uint Level)
   if (!MakeDirs(*osd_dir, true))
      esyslog("dbus2vdr: can't create %s", *osd_dir);
   isyslog("dbus2vdr: new osd %s: %d, %d, %d", *osd_dir, Left, Top, Level);
+  DBusMessage *msg = dbus_message_new_signal("/OSD", DBUS_VDR_OSD_INTERFACE, "Open");
+  if (msg != NULL) {
+     if (cDBusMonitor::SendSignal(msg))
+        msg = NULL;
+     if (msg != NULL)
+        dbus_message_unref(msg);
+     }
 }
 
 cDBusOsd::~cDBusOsd()
 {
+  DBusMessage *msg = dbus_message_new_signal("/OSD", DBUS_VDR_OSD_INTERFACE, "Close");
+  if ((msg != NULL) && !cDBusMonitor::SendSignal(msg))
+     dbus_message_unref(msg);
+
   isyslog("dbus2vdr: delete osd %s", *osd_dir);
   RemoveFileOrDir(*osd_dir, false);
 }
@@ -67,6 +81,28 @@ void cDBusOsd::Flush(void)
               }
           cString filename = cString::sprintf("%s/%04x-%d-%d-%d-%d.png", *osd_dir, counter, left, top, vx, vy);
           pngfile->write(*filename);
+
+          DBusMessage *msg = dbus_message_new_signal("/OSD", DBUS_VDR_OSD_INTERFACE, "Display");
+          if (msg != NULL) {
+             DBusMessageIter args;
+             dbus_message_iter_init_append(msg, &args);
+             const char *data = *filename;
+             if (dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &data)) {
+                if (dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &left)) {
+                   if (dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &top)) {
+                      if (dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &vx)) {
+                         if (dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &vy)) {
+                            if (cDBusMonitor::SendSignal(msg))
+                               msg = NULL;
+                            }
+                         }
+                      }
+                   }
+                }
+             if (msg != NULL)
+                dbus_message_unref(msg);
+             }
+
           counter++;
           delete pngfile;
           delete pm;
