@@ -27,8 +27,17 @@ cDBusOsd::cDBusOsd(int Left, int Top, uint Level)
   isyslog("dbus2vdr: new osd %s: %d, %d, %d", *osd_dir, Left, Top, Level);
   DBusMessage *msg = dbus_message_new_signal("/OSD", DBUS_VDR_OSD_INTERFACE, "Open");
   if (msg != NULL) {
-     if (cDBusMonitor::SendSignal(msg))
-        msg = NULL;
+     DBusMessageIter args;
+     dbus_message_iter_init_append(msg, &args);
+     const char *data = *osd_dir;
+     if (dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &data)) {
+        if (dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &Left)) {
+           if (dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &Top)) {
+              if (cDBusMonitor::SendSignal(msg))
+                 msg = NULL;
+              }
+           }
+        }
      if (msg != NULL)
         dbus_message_unref(msg);
      }
@@ -37,8 +46,17 @@ cDBusOsd::cDBusOsd(int Left, int Top, uint Level)
 cDBusOsd::~cDBusOsd()
 {
   DBusMessage *msg = dbus_message_new_signal("/OSD", DBUS_VDR_OSD_INTERFACE, "Close");
-  if ((msg != NULL) && !cDBusMonitor::SendSignal(msg))
-     dbus_message_unref(msg);
+  if (msg != NULL) {
+     DBusMessageIter args;
+     dbus_message_iter_init_append(msg, &args);
+     const char *data = *osd_dir;
+     if (dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &data)) {
+        if (cDBusMonitor::SendSignal(msg))
+           msg = NULL;
+        }
+     if (msg != NULL)
+        dbus_message_unref(msg);
+     }
 
   isyslog("dbus2vdr: delete osd %s", *osd_dir);
   RemoveFileOrDir(*osd_dir, false);
