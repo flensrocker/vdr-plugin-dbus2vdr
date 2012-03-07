@@ -22,6 +22,12 @@ cDBusMessageEPG::~cDBusMessageEPG(void)
 void cDBusMessageEPG::Process(void)
 {
   switch (_action) {
+    case dmeDisableScanner:
+      DisableScanner();
+      break;
+    case dmeEnableScanner:
+      EnableScanner();
+      break;
     case dmeClearEPG:
       ClearEPG();
       break;
@@ -40,6 +46,41 @@ void cDBusMessageEPG::Process(void)
     }
 }
 
+void cDBusMessageEPG::DisableScanner(void)
+{
+#if APIVERSNUM >= 10711
+  int eitDisableTime = 3600; // one hour should be ok as a default
+  DBusMessageIter args;
+  if (dbus_message_iter_init(_msg, &args)) {
+     if (dbus_message_iter_get_arg_type(&args) == DBUS_TYPE_INT32) {
+        int s = 0;
+        cDBusHelper::GetNextArg(args, DBUS_TYPE_INT32, &s);
+        if (s > 0)
+           eitDisableTime = s;
+        }
+     }
+  cString msg = cString::sprintf("EIT scanner disabled for %d sseconds", eitDisableTime);
+  isyslog("dbus2vdr: %s.DisableScanner: %s", DBUS_VDR_EPG_INTERFACE, *msg);
+  cEitFilter::SetDisableUntil(time(NULL) + eitDisableTime);
+  cDBusHelper::SendReply(_conn, _msg, 250, *msg);
+#else
+  esyslog("dbus2vdr: %s.DisableScanner: you need at least vdr 1.7.11", DBUS_VDR_EPG_INTERFACE);
+  cDBusHelper::SendReply(_conn, _msg, 550, "you need at least vdr 1.7.11");
+#endif
+}
+
+void cDBusMessageEPG::EnableScanner(void)
+{
+#if APIVERSNUM >= 10711
+  isyslog("dbus2vdr: %s.EnableScanner: EIT scanner enabled", DBUS_VDR_EPG_INTERFACE);
+  cEitFilter::SetDisableUntil(0);
+  cDBusHelper::SendReply(_conn, _msg, 250, "EIT scanner enabled");
+#else
+  esyslog("dbus2vdr: %s.EnableScanner: you need at least vdr 1.7.11", DBUS_VDR_EPG_INTERFACE);
+  cDBusHelper::SendReply(_conn, _msg, 550, "you need at least vdr 1.7.11");
+#endif
+}
+
 void cDBusMessageEPG::ClearEPG(void)
 {
   const char *channel = NULL;
@@ -54,7 +95,7 @@ void cDBusMessageEPG::ClearEPG(void)
             cDBusHelper::GetNextArg(args, DBUS_TYPE_INT32, &s);
             if (s > 0) {
                eitDisableTime = s;
-               esyslog("dbus2vdr: %s.ClearEPG: using %d seconds as EIT disable timeout", DBUS_VDR_EPG_INTERFACE, eitDisableTime);
+               isyslog("dbus2vdr: %s.ClearEPG: using %d seconds as EIT disable timeout", DBUS_VDR_EPG_INTERFACE, eitDisableTime);
                }
             }
          }
@@ -358,6 +399,12 @@ cDBusMessage *cDBusDispatcherEPG::CreateMessage(DBusConnection* conn, DBusMessag
   if ((object == NULL) || (strcmp(object, "/EPG") != 0))
      return NULL;
 
+  if (dbus_message_is_method_call(msg, DBUS_VDR_EPG_INTERFACE, "DisableScanner"))
+     return new cDBusMessageEPG(cDBusMessageEPG::dmeDisableScanner, conn, msg);
+
+  if (dbus_message_is_method_call(msg, DBUS_VDR_EPG_INTERFACE, "EnableScanner"))
+     return new cDBusMessageEPG(cDBusMessageEPG::dmeEnableScanner, conn, msg);
+
   if (dbus_message_is_method_call(msg, DBUS_VDR_EPG_INTERFACE, "ClearEPG"))
      return new cDBusMessageEPG(cDBusMessageEPG::dmeClearEPG, conn, msg);
 
@@ -385,6 +432,15 @@ bool          cDBusDispatcherEPG::OnIntrospect(DBusMessage *msg, cString &Data)
   "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
   "<node>\n"
   "  <interface name=\""DBUS_VDR_EPG_INTERFACE"\">\n"
+  "    <method name=\"DisableScanner\">\n"
+  "      <arg name=\"eitdisabletime\" type=\"i\" direction=\"in\"/>\n"
+  "      <arg name=\"replycode\"      type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\"   type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"EnableScanner\">\n"
+  "      <arg name=\"replycode\"      type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\"   type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
   "    <method name=\"ClearEPG\">\n"
   "      <arg name=\"channel\"        type=\"s\" direction=\"in\"/>\n"
   "      <arg name=\"eitdisabletime\" type=\"i\" direction=\"in\"/>\n"
