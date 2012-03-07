@@ -59,6 +59,12 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
 - call Service method of plugins
   vdr-dbus-send.sh /Plugins/<pluginname> plugin.Service string:'id' string:'data'
 
+- disable EIT scanner with timeout (default: 3600)
+  vdr-dbus-send.sh /EPG epg.DisableScanner int32:3600
+
+- enable EIT scanner
+  vdr-dbus-send.sh /EPG epg.EnableScanner
+
 - clear EPG data with optional value for inactivity timeout of eit-scanner (default: 10)
   vdr-dbus-send.sh /EPG epg.ClearEPG string:'channel' int32:10
 
