@@ -4,18 +4,23 @@
 #include <vdr/osd.h>
 
 
+class cDBusOsdProvider;
+
 class cDBusOsd : public cOsd
 {
 private:
   friend class cDBusOsdProvider;
 
   static int   osd_number;
+
+  cDBusOsdProvider& provider;
+
   int          osd_index;
-  int          counter;
   cString      osd_dir;
+  int          counter;
 
 protected:
-  cDBusOsd(int Left, int Top, uint Level);
+  cDBusOsd(cDBusOsdProvider& Provider, int Left, int Top, uint Level);
   // virtual void SetActive(bool On) { cOsd::SetActive(On); }
 
 public:
@@ -55,8 +60,28 @@ public:
        ///<        }
 };
 
-class cDBusOsdProvider : public cOsdProvider
+class cDbusOsdMsg : public cListObject
 {
+public:
+  const char *action;
+  cString     file;
+  int         top, left, vx, vy;
+
+  cDbusOsdMsg(const char *Action, const cString& File, int Top, int Left, int Vx, int Vy)
+   :action(Action),file(File),top(Top),left(Left),vx(Vx),vy(Vy)
+  {
+  }
+
+  virtual ~cDbusOsdMsg(void);
+};
+
+class cDBusOsdProvider : public cOsdProvider, public cThread
+{
+private:
+  cMutex             msgMutex;
+  cCondVar           msgCond;
+  cList<cDbusOsdMsg> msgQueue;
+
 protected:
   virtual cOsd *CreateOsd(int Left, int Top, uint Level);
   virtual bool ProvidesTrueColor(void) { return true; }
@@ -64,9 +89,13 @@ protected:
   // virtual int StoreImageData(const cImage &Image);
   // virtual void DropImageData(int ImageHandle);
 
+  virtual void Action(void);
+
 public:
   cDBusOsdProvider(void);
   virtual ~cDBusOsdProvider();
+
+  void SendMessage(cDbusOsdMsg *Msg);
 };
 
 #endif
