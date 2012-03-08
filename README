@@ -47,10 +47,12 @@ Commandline Arguments
         usually it's /usr/share/vdr/shutdown-hooks
 -w, --shutdown-hooks-wrapper=/path/to/shutdown-hooks-wrapper
         path to a program that will call the shutdown-hooks with suid
+-o, --osd
+        creates an OSD provider which will save the OSD as PNG files
+        (see comments below at section "OSD")
 
 Implemented features
 --------------------
-
 - send SVDRP commands to plugins
   vdr-dbus-send.sh /Plugins/<pluginname> plugin.SVDRPCommand string:'command' string:'parameter'
 
@@ -162,6 +164,40 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
 - set parameters to setup.conf
   vdr-dbus-send.sh /Setup setup.Set string:'MinUserInactivity' int32:0
   (look at setup.c for the supported parameters)
+
+OSD
+---
+If started with the parameter "--osd" dbus2vdr will create an OSD provider.
+If you have another output plugin running, this is not recommended since it may
+override its OSD provider. For now it's just for fun (or a headless vdr).
+If the vdr opens an OSD, dbus2vdr will dump the pixmap to an PNG file and signals this.
+Every change at the OSD will generate another PNG and signal. If the OSD closes all
+files will be deleted.
+Every image between "Open" and "Close" has to be displayed on top of its predecessors.
+
+interface: de.tvdr.vdr.osd
+path: /OSD
+
+signal: Open
+parameter: osd-id   (string, actually the path where the PNGs will be stored)
+           left     (int32, left position of OSD)
+           top      (int32, top position of OSD)
+
+signal: Display
+parameter: filename (string)
+           left     (int32)
+           top      (int32)
+           vx       (int32, x-coordinate of dirty part relative to left)
+           vy       (int32, y-coordinate of dirty part relative to top)
+
+signal: Close
+parameter: osd-id   (string)
+
+You can watch the signals with (or write your own program):
+  dbus-monitor --system "type='signal',sender='de.tvdr.vdr',interface='de.tvdr.vdr.osd'"
+
+Since the DBus signals are not really "fast" the files may not exist anymore if you
+receive them.
 
 Using the Python binding
 ------------------------

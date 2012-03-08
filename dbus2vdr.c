@@ -11,6 +11,7 @@
 #include "epg.h"
 #include "plugin.h"
 #include "monitor.h"
+#include "osd.h"
 #include "recording.h"
 #include "remote.h"
 #include "setup.h"
@@ -21,13 +22,15 @@
 #include <vdr/osdbase.h>
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "0.0.3k";
+static const char *VERSION        = "0.0.4";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
 class cPluginDbus2vdr : public cPlugin {
 private:
   // Add any member variables or functions you may need here.
+  bool enable_osd;
+
 public:
   cPluginDbus2vdr(void);
   virtual ~cPluginDbus2vdr();
@@ -56,6 +59,7 @@ cPluginDbus2vdr::cPluginDbus2vdr(void)
   // Initialize any member variables here.
   // DON'T DO ANYTHING ELSE THAT MAY HAVE SIDE EFFECTS, REQUIRE GLOBAL
   // VDR OBJECTS TO EXIST OR PRODUCE ANY OUTPUT!
+  enable_osd = false;
 }
 
 cPluginDbus2vdr::~cPluginDbus2vdr()
@@ -69,7 +73,9 @@ const char *cPluginDbus2vdr::CommandLineHelp(void)
          "    directory with shutdown-hooks to be called by ConfirmShutdown\n"
          "    usually it's /usr/share/vdr/shutdown-hooks\n"
          "  --shutdown-hooks-wrapper=/path/to/shutdown-hooks-wrapper\n"
-         "    path to a program that will call the shutdown-hooks with suid";
+         "    path to a program that will call the shutdown-hooks with suid\n"
+         "  --osd\n"
+         "    creates an OSD provider which will save the OSD as PNG files";
 }
 
 bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
@@ -78,15 +84,21 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
   {
     {"shutdown-hooks", required_argument, 0, 's'},
     {"shutdown-hooks-wrapper", required_argument, 0, 'w'},
+    {"osd", no_argument, 0, 'o'},
     {0, 0, 0, 0}
   };
 
   while (true) {
         int option_index = 0;
-        int c = getopt_long(argc, argv, "s:w:", options, &option_index);
+        int c = getopt_long(argc, argv, "os:w:", options, &option_index);
         if (c == -1)
            break;
         switch (c) {
+          case 'o':
+           {
+            enable_osd = true;
+            break;
+           }
           case 's':
            {
              if (optarg != NULL) {
@@ -126,6 +138,10 @@ bool cPluginDbus2vdr::Start(void)
   new cDBusDispatcherSkin;
   new cDBusDispatcherTimer;
   cDBusMonitor::StartMonitor();
+  if (enable_osd) {
+     new cDBusDispatcherOSD;
+     new cDBusOsdProvider();
+     }
   return true;
 }
 
