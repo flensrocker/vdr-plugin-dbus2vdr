@@ -13,6 +13,7 @@ cDBusMonitor *cDBusMonitor::_monitor = NULL;
 cDBusMonitor::cDBusMonitor(void)
 {
   _conn = NULL;
+  started = false;
 }
 
 cDBusMonitor::~cDBusMonitor(void)
@@ -28,8 +29,11 @@ void cDBusMonitor::StartMonitor(void)
   if (_monitor != NULL)
      return;
   _monitor = new cDBusMonitor;
-  if (_monitor)
+  if (_monitor) {
      _monitor->Start();
+     while (!_monitor->started)
+           cCondWait::SleepMs(10);
+     }
 }
 
 void cDBusMonitor::StopMonitor(void)
@@ -67,8 +71,10 @@ void cDBusMonitor::Action(void)
      esyslog("dbus2vdr: connection error: %s", err.message);
      dbus_error_free(&err);
      }
-  if (_conn == NULL)
+  if (_conn == NULL) {
+     started = true;
      return;
+     }
 
   int ret = dbus_bus_request_name(_conn, DBUS_VDR_BUSNAME, DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
   if (dbus_error_is_set(&err)) {
@@ -77,9 +83,11 @@ void cDBusMonitor::Action(void)
      }
   if (ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
      esyslog("dbus2vdr: not primary owner for bus %s", DBUS_VDR_BUSNAME);
+     started = true;
      return;
      }
 
+  started = true;
   isyslog("dbus2vdr: monitor started on bus %s", DBUS_VDR_BUSNAME);
   while (true) {
         dbus_connection_read_write(_conn, 1000);

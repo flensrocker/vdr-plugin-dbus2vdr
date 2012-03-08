@@ -22,7 +22,7 @@
 #include <vdr/osdbase.h>
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "0.0.3k-osd";
+static const char *VERSION        = "0.0.4";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -75,7 +75,7 @@ const char *cPluginDbus2vdr::CommandLineHelp(void)
          "  --shutdown-hooks-wrapper=/path/to/shutdown-hooks-wrapper\n"
          "    path to a program that will call the shutdown-hooks with suid\n"
          "  --osd\n"
-         "    creates an OSD provider which will save the OSD as a png-file";
+         "    creates an OSD provider which will save the OSD as PNG files";
 }
 
 bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])

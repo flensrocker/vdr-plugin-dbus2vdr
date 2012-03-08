@@ -116,3 +116,7 @@ VDR Plugin 'dbus2vdr' Revision History
 2012-03-07: Version 0.0.3k
 
 - add "DisableScanner" and "EnableScanner" to EPG interface
+
+2012-03-08: Version 0.0.4
+
+- add OSD interface

@@ -67,10 +67,10 @@ class cDbusOsdMsg : public cListObject
 public:
   const char *action;
   cString     file;
-  int         top, left, vx, vy;
+  int         left, top, vx, vy;
 
-  cDbusOsdMsg(const char *Action, const cString& File, int Top, int Left, int Vx, int Vy)
-   :action(Action),file(File),top(Top),left(Left),vx(Vx),vy(Vy)
+  cDbusOsdMsg(const char *Action, const cString& File, int Left, int Top, int Vx, int Vy)
+   :action(Action),file(File),left(Left),top(Top),vx(Vx),vy(Vy)
   {
   }
 
