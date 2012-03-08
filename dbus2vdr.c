@@ -138,8 +138,10 @@ bool cPluginDbus2vdr::Start(void)
   new cDBusDispatcherSkin;
   new cDBusDispatcherTimer;
   cDBusMonitor::StartMonitor();
-  if (enable_osd)
+  if (enable_osd) {
+     new cDBusDispatcherOSD;
      new cDBusOsdProvider();
+     }
   return true;
 }
 

@@ -1,6 +1,8 @@
 #ifndef __DBUS2VDR_OSD_H
 #define __DBUS2VDR_OSD_H
 
+#include "message.h"
+
 #include <vdr/osd.h>
 
 
@@ -96,6 +98,17 @@ public:
   virtual ~cDBusOsdProvider();
 
   void SendMessage(cDbusOsdMsg *Msg);
+};
+
+class cDBusDispatcherOSD : public cDBusMessageDispatcher
+{
+public:
+  cDBusDispatcherOSD(void);
+  virtual ~cDBusDispatcherOSD(void);
+
+protected:
+  virtual cDBusMessage *CreateMessage(DBusConnection* conn, DBusMessage* msg);
+  virtual bool          OnIntrospect(DBusMessage *msg, cString &Data);
 };
 
 #endif

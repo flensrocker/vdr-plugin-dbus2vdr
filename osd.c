@@ -37,13 +37,14 @@ void cDBusOsd::Flush(void)
 {
   if (!cOsd::Active())
       return;
-
+/*
   struct timeval start;
   struct timeval end;
   struct timezone timeZone;
   gettimeofday(&start, &timeZone);
-
   bool write = false;
+*/
+
   if (IsTrueColor()) {
     LOCK_PIXMAPS;
     int left = Left();
@@ -54,7 +55,7 @@ void cDBusOsd::Flush(void)
     const uint8_t *pixel;
     png::image<png::rgba_pixel> *pngfile;
     while (cPixmapMemory *pm = RenderPixmaps()) {
-          write = true;
+          //write = true;
           vp = &pm->ViewPort();
           vx = vp->X();
           vy = vp->Y();
@@ -77,13 +78,14 @@ void cDBusOsd::Flush(void)
           delete pm;
           }
   }
-
+/*
   if (write) {
      gettimeofday(&end, &timeZone);
      int timeNeeded = end.tv_usec - start.tv_usec;
      timeNeeded += (end.tv_sec - start.tv_sec) * 1000000;
      isyslog("dbus2vdr: flushing osd %d needed %d\n", osd_index, timeNeeded);
      }
+*/
 }
 
 
@@ -121,20 +123,29 @@ void cDBusOsdProvider::Action(void)
            if (msg != NULL) {
               DBusMessageIter args;
               dbus_message_iter_init_append(msg, &args);
+
+              bool msgOk= true;
+              bool display= (strcmp(dbmsg->action, "Display") == 0);
+
+              // osdid or filename for every signal
               const char *file = *dbmsg->file;
-              if (dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &file)) {
-                 if (dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &dbmsg->left)) {
-                    if (dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &dbmsg->top)) {
-                       if (dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &dbmsg->vx)) {
-                          if (dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &dbmsg->vy)) {
-                             if (cDBusMonitor::SendSignal(msg))
-                                msg = NULL;
-                             }
-                          }
-                       }
+              if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &file))
+                 msgOk = false;
+              else if (display || (strcmp(dbmsg->action, "Open") == 0)) { // top and left only for Open and Display
+                 if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &dbmsg->left))
+                    msgOk = false;
+                 else if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &dbmsg->top))
+                    msgOk = false;
+                 else if (display) { // vx and vy only for Display
+                    if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &dbmsg->vx))
+                       msgOk = false;
+                    else if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &dbmsg->vy))
+                       msgOk = false;
                     }
                  }
-              if (msg != NULL)
+              if (msgOk && cDBusMonitor::SendSignal(msg))
+                 msg = NULL;
+              else
                  dbus_message_unref(msg);
               }
            delete dbmsg;
@@ -159,4 +170,55 @@ cDbusOsdMsg::~cDbusOsdMsg(void)
      isyslog("dbus2vdr: deleting osd files at %s", *file);
      RemoveFileOrDir(*file, false);
      }
+}
+
+
+cDBusDispatcherOSD::cDBusDispatcherOSD(void)
+:cDBusMessageDispatcher(DBUS_VDR_OSD_INTERFACE)
+{
+}
+
+cDBusDispatcherOSD::~cDBusDispatcherOSD(void)
+{
+}
+
+cDBusMessage *cDBusDispatcherOSD::CreateMessage(DBusConnection* conn, DBusMessage* msg)
+{
+  if ((conn == NULL) || (msg == NULL))
+     return NULL;
+
+  const char *object = dbus_message_get_path(msg);
+  if ((object == NULL) || (strcmp(object, "/OSD") != 0))
+     return NULL;
+
+  return NULL;
+}
+
+bool          cDBusDispatcherOSD::OnIntrospect(DBusMessage *msg, cString &Data)
+{
+  if (strcmp(dbus_message_get_path(msg), "/OSD") != 0)
+     return false;
+  Data =
+  "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
+  "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
+  "<node>\n"
+  "  <interface name=\""DBUS_VDR_OSD_INTERFACE"\">\n"
+  "    <signal name=\"Open\">\n"
+  "      <arg name=\"osdid\"  type=\"s\"/>\n"
+  "      <arg name=\"top\"    type=\"i\"/>\n"
+  "      <arg name=\"left\"   type=\"i\"/>\n"
+  "    </signal>\n"
+  "    <signal name=\"Display\">\n"
+  "      <arg name=\"filename\"  type=\"s\"/>\n"
+  "      <arg name=\"top\"       type=\"i\"/>\n"
+  "      <arg name=\"left\"      type=\"i\"/>\n"
+  "      <arg name=\"vx\"        type=\"i\"/>\n"
+  "      <arg name=\"vy\"        type=\"i\"/>\n"
+  "    </signal>\n"
+  "    <signal name=\"Close\">\n"
+  "      <arg name=\"osdid\"  type=\"s\"/>\n"
+  "    </signal>\n"
+  "  </interface>\n"
+  "</node>\n";
+  return true;
 }
