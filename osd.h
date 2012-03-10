@@ -79,7 +79,11 @@ public:
 
 class cDBusOsdProvider : public cOsdProvider, public cThread
 {
+friend class cDBusMessageOsd;
+
 private:
+  static cDBusOsdProvider *_provider;
+
   cMutex             msgMutex;
   cCondVar           msgCond;
   cList<cDbusOsdMsg> msgQueue;
@@ -100,11 +104,31 @@ public:
   void SendMessage(cDbusOsdMsg *Msg);
 };
 
-class cDBusDispatcherOSD : public cDBusMessageDispatcher
+class cDBusMessageOsd : public cDBusMessage
+{
+friend class cDBusDispatcherOsd;
+
+public:
+  enum eAction { dmoCreateProvider, dmoDeleteProvider };
+
+  virtual ~cDBusMessageOsd(void);
+
+protected:
+  virtual void Process(void);
+
+private:
+  cDBusMessageOsd(eAction action, DBusConnection* conn, DBusMessage* msg);
+  void CreateProvider(void);
+  void DeleteProvider(void);
+
+  eAction _action;
+};
+
+class cDBusDispatcherOsd : public cDBusMessageDispatcher
 {
 public:
-  cDBusDispatcherOSD(void);
-  virtual ~cDBusDispatcherOSD(void);
+  cDBusDispatcherOsd(void);
+  virtual ~cDBusDispatcherOsd(void);
 
 protected:
   virtual cDBusMessage *CreateMessage(DBusConnection* conn, DBusMessage* msg);

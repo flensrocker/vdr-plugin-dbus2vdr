@@ -9,17 +9,17 @@
 #include <vdr/svdrp.h>
 
 
-cDBusMessageEPG::cDBusMessageEPG(cDBusMessageEPG::eAction action, DBusConnection* conn, DBusMessage* msg)
+cDBusMessageEpg::cDBusMessageEpg(cDBusMessageEpg::eAction action, DBusConnection* conn, DBusMessage* msg)
 :cDBusMessage(conn, msg)
 ,_action(action)
 {
 }
 
-cDBusMessageEPG::~cDBusMessageEPG(void)
+cDBusMessageEpg::~cDBusMessageEpg(void)
 {
 }
 
-void cDBusMessageEPG::Process(void)
+void cDBusMessageEpg::Process(void)
 {
   switch (_action) {
     case dmeDisableScanner:
@@ -46,7 +46,7 @@ void cDBusMessageEPG::Process(void)
     }
 }
 
-void cDBusMessageEPG::DisableScanner(void)
+void cDBusMessageEpg::DisableScanner(void)
 {
 #if APIVERSNUM >= 10711
   int eitDisableTime = 3600; // one hour should be ok as a default
@@ -69,7 +69,7 @@ void cDBusMessageEPG::DisableScanner(void)
 #endif
 }
 
-void cDBusMessageEPG::EnableScanner(void)
+void cDBusMessageEpg::EnableScanner(void)
 {
 #if APIVERSNUM >= 10711
   isyslog("dbus2vdr: %s.EnableScanner: EIT scanner enabled", DBUS_VDR_EPG_INTERFACE);
@@ -81,7 +81,7 @@ void cDBusMessageEPG::EnableScanner(void)
 #endif
 }
 
-void cDBusMessageEPG::ClearEPG(void)
+void cDBusMessageEpg::ClearEPG(void)
 {
   const char *channel = NULL;
   int eitDisableTime = 10; // seconds until EIT processing is enabled again after a CLRE command
@@ -164,7 +164,7 @@ void cDBusMessageEPG::ClearEPG(void)
      }
 }
 
-void cDBusMessageEPG::PutEntry(void)
+void cDBusMessageEpg::PutEntry(void)
 {
   DBusMessageIter args;
   if (!dbus_message_iter_init(_msg, &args)) {
@@ -189,7 +189,7 @@ void cDBusMessageEPG::PutEntry(void)
   delete handler;
 }
 
-void cDBusMessageEPG::PutFile(void)
+void cDBusMessageEpg::PutFile(void)
 {
   const char *filename = NULL;
   DBusMessageIter args;
@@ -299,7 +299,7 @@ static bool sGetChannel(DBusMessageIter &args, const char **input, cChannel **ch
   return true;
 }
 
-void cDBusMessageEPG::GetEntries(eMode mode)
+void cDBusMessageEpg::GetEntries(eMode mode)
 {
   cChannel *channel = NULL;
   DBusMessageIter args;
@@ -381,16 +381,16 @@ void cDBusMessageEPG::GetEntries(eMode mode)
 }
 
 
-cDBusDispatcherEPG::cDBusDispatcherEPG(void)
+cDBusDispatcherEpg::cDBusDispatcherEpg(void)
 :cDBusMessageDispatcher(DBUS_VDR_EPG_INTERFACE)
 {
 }
 
-cDBusDispatcherEPG::~cDBusDispatcherEPG(void)
+cDBusDispatcherEpg::~cDBusDispatcherEpg(void)
 {
 }
 
-cDBusMessage *cDBusDispatcherEPG::CreateMessage(DBusConnection* conn, DBusMessage* msg)
+cDBusMessage *cDBusDispatcherEpg::CreateMessage(DBusConnection* conn, DBusMessage* msg)
 {
   if ((conn == NULL) || (msg == NULL))
      return NULL;
@@ -400,30 +400,30 @@ cDBusMessage *cDBusDispatcherEPG::CreateMessage(DBusConnection* conn, DBusMessag
      return NULL;
 
   if (dbus_message_is_method_call(msg, DBUS_VDR_EPG_INTERFACE, "DisableScanner"))
-     return new cDBusMessageEPG(cDBusMessageEPG::dmeDisableScanner, conn, msg);
+     return new cDBusMessageEpg(cDBusMessageEpg::dmeDisableScanner, conn, msg);
 
   if (dbus_message_is_method_call(msg, DBUS_VDR_EPG_INTERFACE, "EnableScanner"))
-     return new cDBusMessageEPG(cDBusMessageEPG::dmeEnableScanner, conn, msg);
+     return new cDBusMessageEpg(cDBusMessageEpg::dmeEnableScanner, conn, msg);
 
   if (dbus_message_is_method_call(msg, DBUS_VDR_EPG_INTERFACE, "ClearEPG"))
-     return new cDBusMessageEPG(cDBusMessageEPG::dmeClearEPG, conn, msg);
+     return new cDBusMessageEpg(cDBusMessageEpg::dmeClearEPG, conn, msg);
 
   if (dbus_message_is_method_call(msg, DBUS_VDR_EPG_INTERFACE, "PutEntry"))
-     return new cDBusMessageEPG(cDBusMessageEPG::dmePutEntry, conn, msg);
+     return new cDBusMessageEpg(cDBusMessageEpg::dmePutEntry, conn, msg);
 
   if (dbus_message_is_method_call(msg, DBUS_VDR_EPG_INTERFACE, "PutFile"))
-     return new cDBusMessageEPG(cDBusMessageEPG::dmePutFile, conn, msg);
+     return new cDBusMessageEpg(cDBusMessageEpg::dmePutFile, conn, msg);
 
   if (dbus_message_is_method_call(msg, DBUS_VDR_EPG_INTERFACE, "Now"))
-     return new cDBusMessageEPG(cDBusMessageEPG::dmeNow, conn, msg);
+     return new cDBusMessageEpg(cDBusMessageEpg::dmeNow, conn, msg);
 
   if (dbus_message_is_method_call(msg, DBUS_VDR_EPG_INTERFACE, "Next"))
-     return new cDBusMessageEPG(cDBusMessageEPG::dmeNext, conn, msg);
+     return new cDBusMessageEpg(cDBusMessageEpg::dmeNext, conn, msg);
 
   return NULL;
 }
 
-bool          cDBusDispatcherEPG::OnIntrospect(DBusMessage *msg, cString &Data)
+bool          cDBusDispatcherEpg::OnIntrospect(DBusMessage *msg, cString &Data)
 {
   if (strcmp(dbus_message_get_path(msg), "/EPG") != 0)
      return false;

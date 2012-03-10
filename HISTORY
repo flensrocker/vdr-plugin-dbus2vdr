@@ -120,3 +120,7 @@ VDR Plugin 'dbus2vdr' Revision History
 2012-03-08: Version 0.0.4
 
 - add OSD interface
+
+2012-03-10: Version 0.0.4a
+
+- add "CreateProvider" and "DeleteProvider" to OSD interface

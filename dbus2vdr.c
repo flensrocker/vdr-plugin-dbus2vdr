@@ -22,7 +22,7 @@
 #include <vdr/osdbase.h>
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "0.0.4";
+static const char *VERSION        = "0.0.4a";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -129,7 +129,8 @@ bool cPluginDbus2vdr::Initialize(void)
 bool cPluginDbus2vdr::Start(void)
 {
   // Start any background activities the plugin shall perform.
-  new cDBusDispatcherEPG;
+  new cDBusDispatcherEpg;
+  new cDBusDispatcherOsd;
   new cDBusDispatcherPlugin;
   new cDBusDispatcherRecording;
   new cDBusDispatcherRemote;
@@ -138,10 +139,8 @@ bool cPluginDbus2vdr::Start(void)
   new cDBusDispatcherSkin;
   new cDBusDispatcherTimer;
   cDBusMonitor::StartMonitor();
-  if (enable_osd) {
-     new cDBusDispatcherOSD;
+  if (enable_osd)
      new cDBusOsdProvider();
-     }
   return true;
 }
 

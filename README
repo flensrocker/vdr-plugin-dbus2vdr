@@ -48,7 +48,7 @@ Commandline Arguments
 -w, --shutdown-hooks-wrapper=/path/to/shutdown-hooks-wrapper
         path to a program that will call the shutdown-hooks with suid
 -o, --osd
-        creates an OSD provider which will save the OSD as PNG files
+        creates an OSD-provider which will save the OSD as PNG files
         (see comments below at section "OSD")
 
 Implemented features
@@ -167,13 +167,19 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
 
 OSD
 ---
-If started with the parameter "--osd" dbus2vdr will create an OSD provider.
+If started with the parameter "--osd" dbus2vdr will create an OSD-provider.
 If you have another output plugin running, this is not recommended since it may
-override its OSD provider. For now it's just for fun (or a headless vdr).
-If the vdr opens an OSD, dbus2vdr will dump the pixmap to an PNG file and signals this.
+override its OSD-provider. For now it's just for fun (or a headless vdr).
+If the vdr opens an OSD, dbus2vdr will dump the pixmap to a PNG file and signals this.
 Every change at the OSD will generate another PNG and signal. If the OSD closes all
 files will be deleted.
 Every image between "Open" and "Close" has to be displayed on top of its predecessors.
+
+- create the DBus-OSD-provider on the fly
+  vdr-dbus-send.sh /OSD osd.CreateProvider
+
+- delete the DBus-OSD-provider and reinstantiate the OSD-provider of the primary device
+  vdr-dbus-send.sh /OSD osd.DeleteProvider
 
 interface: de.tvdr.vdr.osd
 path: /OSD
