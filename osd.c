@@ -91,7 +91,7 @@ void cDBusOsd::Flush(void)
 }
 
 
-cDBusOsdProvider *_provider = NULL;
+cDBusOsdProvider *cDBusOsdProvider::_provider = NULL;
 
 cDBusOsdProvider::cDBusOsdProvider(void)
 {
