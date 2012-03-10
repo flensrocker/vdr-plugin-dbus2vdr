@@ -1,6 +1,7 @@
 #include "osd.h"
 
 #include "common.h"
+#include "helper.h"
 #include "monitor.h"
 
 #include <sys/time.h>
@@ -8,6 +9,7 @@
 #include <png++/image.hpp>
 #include <png++/rgba_pixel.hpp>
 
+#include <vdr/device.h>
 #include <vdr/videodir.h>
 
 #define DBUSOSDDIR "/tmp/dbus2vdr"
@@ -89,16 +91,20 @@ void cDBusOsd::Flush(void)
 }
 
 
+cDBusOsdProvider *_provider = NULL;
+
 cDBusOsdProvider::cDBusOsdProvider(void)
 {
-  isyslog("dbus2vdr: new osd provider");
-  SetDescription("dbus2vdr: osd provider signal");
+  _provider = this;
+  isyslog("dbus2vdr: new DBus-OSD-provider");
+  SetDescription("dbus2vdr: osd-provider signal");
   Start();
 }
 
 cDBusOsdProvider::~cDBusOsdProvider()
 {
-  isyslog("dbus2vdr: delete osd provider");
+  _provider = NULL;
+  isyslog("dbus2vdr: delete DBus-OSD-provider");
   msgCond.Broadcast();
   Cancel(10);
 }
@@ -173,16 +179,64 @@ cDbusOsdMsg::~cDbusOsdMsg(void)
 }
 
 
-cDBusDispatcherOSD::cDBusDispatcherOSD(void)
+cDBusMessageOsd::cDBusMessageOsd(cDBusMessageOsd::eAction action, DBusConnection* conn, DBusMessage* msg)
+:cDBusMessage(conn, msg)
+,_action(action)
+{
+}
+
+cDBusMessageOsd::~cDBusMessageOsd(void)
+{
+}
+
+void cDBusMessageOsd::Process(void)
+{
+  switch (_action) {
+    case dmoCreateProvider:
+      CreateProvider();
+      break;
+    case dmoDeleteProvider:
+      DeleteProvider();
+      break;
+    }
+}
+
+void cDBusMessageOsd::CreateProvider(void)
+{
+  if (cDBusOsdProvider::_provider == NULL) {
+     new cDBusOsdProvider;
+     cDBusHelper::SendReply(_conn, _msg, 250, "DBus-OSD-provider created");
+     return;
+     }
+  cDBusHelper::SendReply(_conn, _msg, 900, "DBus-OSD-provider already active");
+}
+
+void cDBusMessageOsd::DeleteProvider(void)
+{
+  if (cDBusOsdProvider::_provider != NULL) {
+     delete cDBusOsdProvider::_provider;
+     // try to re-create the OSD provider of the primary device
+     // I don't know if it's "good" or work with all output plugins
+     cDevice *pd = cDevice::PrimaryDevice();
+     if (pd)
+        cDevice::SetPrimaryDevice(pd->CardIndex() + 1);
+     cDBusHelper::SendReply(_conn, _msg, 250, "DBus-OSD-provider deleted");
+     return;
+     }
+  cDBusHelper::SendReply(_conn, _msg, 900, "DBus-OSD-provider not active");
+}
+
+
+cDBusDispatcherOsd::cDBusDispatcherOsd(void)
 :cDBusMessageDispatcher(DBUS_VDR_OSD_INTERFACE)
 {
 }
 
-cDBusDispatcherOSD::~cDBusDispatcherOSD(void)
+cDBusDispatcherOsd::~cDBusDispatcherOsd(void)
 {
 }
 
-cDBusMessage *cDBusDispatcherOSD::CreateMessage(DBusConnection* conn, DBusMessage* msg)
+cDBusMessage *cDBusDispatcherOsd::CreateMessage(DBusConnection* conn, DBusMessage* msg)
 {
   if ((conn == NULL) || (msg == NULL))
      return NULL;
@@ -191,10 +245,16 @@ cDBusMessage *cDBusDispatcherOSD::CreateMessage(DBusConnection* conn, DBusMessag
   if ((object == NULL) || (strcmp(object, "/OSD") != 0))
      return NULL;
 
+  if (dbus_message_is_method_call(msg, DBUS_VDR_OSD_INTERFACE, "CreateProvider"))
+     return new cDBusMessageOsd(cDBusMessageOsd::dmoCreateProvider, conn, msg);
+
+  if (dbus_message_is_method_call(msg, DBUS_VDR_OSD_INTERFACE, "DeleteProvider"))
+     return new cDBusMessageOsd(cDBusMessageOsd::dmoDeleteProvider, conn, msg);
+
   return NULL;
 }
 
-bool          cDBusDispatcherOSD::OnIntrospect(DBusMessage *msg, cString &Data)
+bool          cDBusDispatcherOsd::OnIntrospect(DBusMessage *msg, cString &Data)
 {
   if (strcmp(dbus_message_get_path(msg), "/OSD") != 0)
      return false;
@@ -203,6 +263,14 @@ bool          cDBusDispatcherOSD::OnIntrospect(DBusMessage *msg, cString &Data)
   "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
   "<node>\n"
   "  <interface name=\""DBUS_VDR_OSD_INTERFACE"\">\n"
+  "    <method name=\"CreateProvider\">\n"
+  "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"DeleteProvider\">\n"
+  "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
   "    <signal name=\"Open\">\n"
   "      <arg name=\"osdid\"  type=\"s\"/>\n"
   "      <arg name=\"left\"   type=\"i\"/>\n"
