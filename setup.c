@@ -45,7 +45,9 @@ cDBusMessageSetup::cDBusMessageSetup(cDBusMessageSetup::eAction action, DBusConn
      _bindings.Add(cSetupBinding::NewInt32(&Setup.SVDRPTimeout, "SVDRPTimeout"));
      _bindings.Add(cSetupBinding::NewInt32(&Setup.ZapTimeout, "ZapTimeout"));
      _bindings.Add(cSetupBinding::NewInt32(&Setup.ChannelEntryTimeout, "ChannelEntryTimeout", 0));
+#if VDRVERSNUM < 10726
      _bindings.Add(cSetupBinding::NewInt32(&Setup.PrimaryLimit, "PrimaryLimit", 0, MAXPRIORITY));
+#endif
      _bindings.Add(cSetupBinding::NewInt32(&Setup.DefaultPriority, "DefaultPriority", 0, MAXPRIORITY));
      _bindings.Add(cSetupBinding::NewInt32(&Setup.DefaultLifetime, "DefaultLifetime", 0, MAXLIFETIME));
      _bindings.Add(cSetupBinding::NewInt32(&Setup.PausePriority, "PausePriority", 0, MAXPRIORITY));
