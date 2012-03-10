@@ -4,21 +4,21 @@
 #include "message.h"
 
 
-class cDBusMessageEPG : public cDBusMessage
+class cDBusMessageEpg : public cDBusMessage
 {
-friend class cDBusDispatcherEPG;
+friend class cDBusDispatcherEpg;
 
 public:
   enum eAction { dmeDisableScanner, dmeEnableScanner, dmeClearEPG, dmePutEntry, dmePutFile, dmeNow, dmeNext };
   enum eMode   { dmmAll, dmmPresent, dmmFollowing, dmmAtTime };
 
-  virtual ~cDBusMessageEPG(void);
+  virtual ~cDBusMessageEpg(void);
 
 protected:
   virtual void Process(void);
 
 private:
-  cDBusMessageEPG(eAction action, DBusConnection* conn, DBusMessage* msg);
+  cDBusMessageEpg(eAction action, DBusConnection* conn, DBusMessage* msg);
   void DisableScanner(void);
   void EnableScanner(void);
   void ClearEPG(void);
@@ -29,11 +29,11 @@ private:
   eAction _action;
 };
 
-class cDBusDispatcherEPG : public cDBusMessageDispatcher
+class cDBusDispatcherEpg : public cDBusMessageDispatcher
 {
 public:
-  cDBusDispatcherEPG(void);
-  virtual ~cDBusDispatcherEPG(void);
+  cDBusDispatcherEpg(void);
+  virtual ~cDBusDispatcherEpg(void);
 
 protected:
   virtual cDBusMessage *CreateMessage(DBusConnection* conn, DBusMessage* msg);

@@ -129,7 +129,7 @@ bool cPluginDbus2vdr::Initialize(void)
 bool cPluginDbus2vdr::Start(void)
 {
   // Start any background activities the plugin shall perform.
-  new cDBusDispatcherEPG;
+  new cDBusDispatcherEpg;
   new cDBusDispatcherOsd;
   new cDBusDispatcherPlugin;
   new cDBusDispatcherRecording;
