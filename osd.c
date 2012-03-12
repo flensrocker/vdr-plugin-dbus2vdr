@@ -1,7 +1,5 @@
 #include "osd.h"
 
-#if VDRVERSNUM >= 10717
-
 #include "common.h"
 #include "helper.h"
 #include "monitor.h"
@@ -49,6 +47,7 @@ void cDBusOsd::Flush(void)
   bool write = false;
 */
 
+#if VDRVERSNUM >= 10717
   if (IsTrueColor()) {
     LOCK_PIXMAPS;
     int left = Left();
@@ -82,6 +81,7 @@ void cDBusOsd::Flush(void)
           delete pm;
           }
   }
+#endif
 /*
   if (write) {
      gettimeofday(&end, &timeZone);
@@ -292,5 +292,3 @@ bool          cDBusDispatcherOsd::OnIntrospect(DBusMessage *msg, cString &Data)
   "</node>\n";
   return true;
 }
-
-#endif
