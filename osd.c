@@ -1,5 +1,7 @@
 #include "osd.h"
 
+#if VDRVERSNUM >= 10717
+
 #include "common.h"
 #include "helper.h"
 #include "monitor.h"
@@ -290,3 +292,5 @@ bool          cDBusDispatcherOsd::OnIntrospect(DBusMessage *msg, cString &Data)
   "</node>\n";
   return true;
 }
+
+#endif

@@ -1,6 +1,8 @@
 #ifndef __DBUS2VDR_OSD_H
 #define __DBUS2VDR_OSD_H
 
+#if VDRVERSNUM >= 10717
+
 #include "message.h"
 
 #include <vdr/osd.h>
@@ -134,5 +136,7 @@ protected:
   virtual cDBusMessage *CreateMessage(DBusConnection* conn, DBusMessage* msg);
   virtual bool          OnIntrospect(DBusMessage *msg, cString &Data);
 };
+
+#endif
 
 #endif
