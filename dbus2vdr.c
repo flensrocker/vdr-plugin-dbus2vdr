@@ -130,9 +130,7 @@ bool cPluginDbus2vdr::Start(void)
 {
   // Start any background activities the plugin shall perform.
   new cDBusDispatcherEpg;
-#if VDRVERSNUM >= 10717
   new cDBusDispatcherOsd;
-#endif
   new cDBusDispatcherPlugin;
   new cDBusDispatcherRecording;
   new cDBusDispatcherRemote;
@@ -141,10 +139,8 @@ bool cPluginDbus2vdr::Start(void)
   new cDBusDispatcherSkin;
   new cDBusDispatcherTimer;
   cDBusMonitor::StartMonitor();
-#if VDRVERSNUM >= 10717
   if (enable_osd)
      new cDBusOsdProvider();
-#endif
   return true;
 }
 
