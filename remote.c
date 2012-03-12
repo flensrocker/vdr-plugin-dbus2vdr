@@ -1,6 +1,7 @@
 #include "remote.h"
 #include "common.h"
 #include "helper.h"
+#include "monitor.h"
 
 #include <vdr/plugin.h>
 #include <vdr/remote.h>
@@ -9,8 +10,8 @@
 class cDbusSelectMenu : public cOsdMenu
 {
 private:
-  DBusConnection *_conn;
-  bool _selected;
+  cString _title;
+  bool    _selected;
 
   void SendSelectedItem(int item)
   {
@@ -23,25 +24,26 @@ private:
        return;
        }
 
-    dbus_uint32_t serial = 0;
-    const char *title = Title();
+    const char *title = *_title;
     DBusMessageIter args;
     dbus_message_iter_init_append(msg, &args);
     if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &title))
        esyslog("dbus2vdr: can't add title to signal");
     else if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &item))
        esyslog("dbus2vdr: can't add selected item to signal");
-    else if (!dbus_connection_send(_conn, msg, &serial))
+    else if (!cDBusMonitor::SendSignal(msg))
        esyslog("dbus2vdr: can't send signal");
     else
-       dbus_connection_flush(_conn);
-    dbus_message_unref(msg);
+       msg = NULL;
+
+    if (msg != NULL)
+       dbus_message_unref(msg);
   }
 
 public:
- cDbusSelectMenu(DBusConnection* conn, const char *title)
+ cDbusSelectMenu(const char *title)
   :cOsdMenu(title)
-  ,_conn(conn)
+  ,_title(title)
   ,_selected(false) 
  {
  }
@@ -217,7 +219,7 @@ void cDBusMessageRemote::AskUser(void)
      int i = 0;
      while (cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &item) >= 0) {
            if (menu == NULL)
-              menu = new cDbusSelectMenu(_conn, item);
+              menu = new cDbusSelectMenu(item);
            else {
               menu->Add(new cOsdItem(item, (eOSState)(osUser1 + i)));
               i++;
