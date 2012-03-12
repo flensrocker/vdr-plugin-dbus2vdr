@@ -211,7 +211,7 @@ void cDBusMessageRemote::AskUser(void)
   cDbusSelectMenu *menu = NULL;
   DBusMessageIter args;
   if (!dbus_message_iter_init(_msg, &args))
-     esyslog("dbus2vdr: %s.HitKey: message misses an argument for the keyName", DBUS_VDR_REMOTE_INTERFACE);
+     esyslog("dbus2vdr: %s.AskUser: message misses an argument for the keyName", DBUS_VDR_REMOTE_INTERFACE);
   else {
      const char *item = NULL;
      int i = 0;
