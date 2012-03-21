@@ -6,8 +6,10 @@
 
 #include <sys/time.h>
 
+#ifndef NO_PNGPP
 #include <png++/image.hpp>
 #include <png++/rgba_pixel.hpp>
+#endif
 
 #include <vdr/device.h>
 #include <vdr/videodir.h>
@@ -39,6 +41,9 @@ void cDBusOsd::Flush(void)
 {
   if (!cOsd::Active())
       return;
+
+#ifndef NO_PNGPP
+
 /*
   struct timeval start;
   struct timeval end;
@@ -47,6 +52,7 @@ void cDBusOsd::Flush(void)
   bool write = false;
 */
 
+#if VDRVERSNUM >= 10717
   if (IsTrueColor()) {
     LOCK_PIXMAPS;
     int left = Left();
@@ -80,6 +86,7 @@ void cDBusOsd::Flush(void)
           delete pm;
           }
   }
+#endif
 /*
   if (write) {
      gettimeofday(&end, &timeZone);
@@ -88,6 +95,7 @@ void cDBusOsd::Flush(void)
      isyslog("dbus2vdr: flushing osd %d needed %d\n", osd_index, timeNeeded);
      }
 */
+#endif
 }
 
 

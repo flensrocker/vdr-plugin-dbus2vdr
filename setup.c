@@ -57,8 +57,12 @@ cDBusMessageSetup::cDBusMessageSetup(cDBusMessageSetup::eAction action, DBusConn
      _bindings.Add(cSetupBinding::NewInt32(&Setup.UseVps, "UseVps", 0, 1));
      _bindings.Add(cSetupBinding::NewInt32(&Setup.VpsMargin, "VpsMargin", 0));
      _bindings.Add(cSetupBinding::NewInt32(&Setup.RecordingDirs, "RecordingDirs", 0, 1));
+#if VDRVERSNUM >= 10712
      _bindings.Add(cSetupBinding::NewInt32(&Setup.FoldersInTimerMenu, "FoldersInTimerMenu", 0, 1));
+#endif
+#if VDRVERSNUM >= 10715
      _bindings.Add(cSetupBinding::NewInt32(&Setup.NumberKeysForChars, "NumberKeysForChars", 0, 1));
+#endif
      //_bindings.Add(cSetupBinding::NewInt32(&Setup.VideoDisplayFormat, "VideoDisplayFormat"));
      //_bindings.Add(cSetupBinding::NewInt32(&Setup.VideoFormat, "VideoFormat"));
      //_bindings.Add(cSetupBinding::NewInt32(&Setup.UpdateChannels, "UpdateChannels"));
@@ -78,7 +82,9 @@ cDBusMessageSetup::cDBusMessageSetup(cDBusMessageSetup::eAction action, DBusConn
      //_bindings.Add(cSetupBinding::NewInt32(&Setup.FontOsdSize, "FontOsdSize"));
      //_bindings.Add(cSetupBinding::NewInt32(&Setup.FontSmlSize, "FontSmlSize"));
      //_bindings.Add(cSetupBinding::NewInt32(&Setup.FontFixSize, "FontFixSize"));
+#if VDRVERSNUM >= 10704
      _bindings.Add(cSetupBinding::NewInt32(&Setup.MaxVideoFileSize, "MaxVideoFileSize", MINVIDEOFILESIZE, MAXVIDEOFILESIZETS));
+#endif
      _bindings.Add(cSetupBinding::NewInt32(&Setup.SplitEditedFiles, "SplitEditedFiles", 0, 1));
      //_bindings.Add(cSetupBinding::NewInt32(&Setup.DelTimeshiftRec, "DelTimeshiftRec"));
      _bindings.Add(cSetupBinding::NewInt32(&Setup.MinEventTimeout, "MinEventTimeout"));
@@ -87,7 +93,9 @@ cDBusMessageSetup::cDBusMessageSetup(cDBusMessageSetup::eAction action, DBusConn
      _bindings.Add(cSetupBinding::NewInt32(&Setup.ShowReplayMode, "ShowReplayMode", 0, 1));
      _bindings.Add(cSetupBinding::NewInt32(&Setup.ResumeID, "ResumeID", 0, 99));
      _bindings.Add(cSetupBinding::NewInt32(&Setup.InitialVolume, "InitialVolume", -1, 255));
+#if VDRVERSNUM >= 10712
      _bindings.Add(cSetupBinding::NewInt32(&Setup.ChannelsWrap, "ChannelsWrap", 0, 1));
+#endif
      _bindings.Add(cSetupBinding::NewInt32(&Setup.EmergencyExit, "EmergencyExit", 0, 1));
      }
 }

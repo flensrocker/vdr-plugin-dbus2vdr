@@ -265,6 +265,7 @@ static void sAddEvent(DBusMessageIter &array, const cEvent &event)
   ti = event.RunningStatus();
   cDBusHelper::AddKeyValue(arr, "RunningStatus", DBUS_TYPE_INT32, DBUS_TYPE_INT32_AS_STRING, &ti);
 
+#if VDRVERSNUM >= 10711
   ti = event.ParentalRating();
   cDBusHelper::AddKeyValue(arr, "ParentalRating", DBUS_TYPE_INT32, DBUS_TYPE_INT32_AS_STRING, &ti);
 
@@ -279,6 +280,7 @@ static void sAddEvent(DBusMessageIter &array, const cEvent &event)
          cDBusHelper::AddKeyValue(arr, *cString::sprintf("Content[%d]", i), DBUS_TYPE_STRING, DBUS_TYPE_STRING_AS_STRING, &c);
          }
       }
+#endif
 
   if (!dbus_message_iter_close_container(&array, &arr))
      esyslog("dbus2vdr: sAddEvent: can't close array container");
