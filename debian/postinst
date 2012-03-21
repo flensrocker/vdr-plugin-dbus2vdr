@@ -1,0 +1,4 @@
+#!/bin/sh
+
+chmod +s /usr/share/vdr-plugin-dbus2vdr/shutdown-wrapper
+
