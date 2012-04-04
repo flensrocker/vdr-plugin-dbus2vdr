@@ -174,31 +174,40 @@ void cDBusMessageRemote::Status(void)
 
 void cDBusMessageRemote::HitKey(void)
 {
-  const char *keyName = NULL;
+  cVector<eKeys> keys;
   DBusMessageIter args;
-  if (!dbus_message_iter_init(_msg, &args))
-     esyslog("dbus2vdr: %s.HitKey: message misses an argument for the keyName", DBUS_VDR_REMOTE_INTERFACE);
-  else {
-     int rc = cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &keyName);
-     if (rc < 0)
-        esyslog("dbus2vdr: %s.HitKey: 'keyName' argument is not a string", DBUS_VDR_REMOTE_INTERFACE);
-     }
-
   dbus_int32_t replyCode = 500;
   cString replyMessage;
-  if (keyName != NULL) {
-     eKeys k = cKey::FromString(keyName);
-     if (k != kNone) {
-        cRemote::Put(k);
-        replyCode = 250;
-        replyMessage = cString::sprintf("Key \"%s\" accepted", keyName);
-        }
-     else {
-        replyCode = 504;
-        replyMessage = cString::sprintf("Unknown key: \"%s\"", keyName);
-        }
+  if (!dbus_message_iter_init(_msg, &args)) {
+     esyslog("dbus2vdr: %s.HitKey: message misses an argument for the keyName", DBUS_VDR_REMOTE_INTERFACE);
+     cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
+     return;
      }
 
+  const char *keyName = NULL;
+  while (cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &keyName) >= 0) {
+        eKeys k = cKey::FromString(keyName);
+        if (k == kNone) {
+           replyCode = 504;
+           replyMessage = cString::sprintf("Unknown key: \"%s\"", keyName);
+           keys.Clear();
+           break; // just get the keys until first error
+           }
+        isyslog("dbus2vdr: %s.HitKey: get key '%s'", DBUS_VDR_REMOTE_INTERFACE, keyName);
+        keys.Append(k);
+        }
+
+  if (keys.Size() == 0) {
+     esyslog("dbus2vdr: %s.HitKey: no valid 'keyName' given", DBUS_VDR_REMOTE_INTERFACE);
+     cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
+     return;
+     }
+
+  for (int i = 0; i < keys.Size(); i++)
+      cRemote::Put(keys.At(i));
+
+  replyCode = 250;
+  replyMessage = cString::sprintf("Key%s accepted", keys.Size() > 1 ? "s" : "");
   cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
 }
 

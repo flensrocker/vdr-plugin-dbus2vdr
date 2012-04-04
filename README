@@ -115,8 +115,8 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
   vdr-dbus-send.sh /Remote remote.Disable
   vdr-dbus-send.sh /Remote remote.Status
 
-- hit a key
-  vdr-dbus-send.sh /Remote remote.HitKey string:'Menu'
+- hit a key, you may specify more than one key
+  vdr-dbus-send.sh /Remote remote.HitKey string:'Menu' string:'Down' string:'Down' ...
 
 - display list of strings on the osd and let the user select one
   vdr-dbus-send.sh /Remote remote.AskUser string:'title' string:'item 1' string:'item 2' ...

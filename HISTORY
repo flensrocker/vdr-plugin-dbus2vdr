@@ -128,3 +128,7 @@ VDR Plugin 'dbus2vdr' Revision History
 2012-03-11: Version 0.0.4b
 
 - adapt to vdr 1.7.26 and add missing symbol
+
+2012-04-04: Version 0.0.4c
+
+- accept multiple keys with "HitKey"
