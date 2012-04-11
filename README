@@ -32,6 +32,11 @@ Instead of calling:
 you can call:
   vdr-dbus-send.sh /Plugins/<pluginname> plugin.SVDRPCommand string:'command' string:'parameter'
 
+Dependencies
+------------
+Debian/Ubuntu packages:
+libdbus-1-dev, pkg-config, libjpeg62-dev, libpng++-dev
+
 Restrictions
 ------------
 Objectpaths and interface names are restricted to some naming conventions. Only letters, numbers
