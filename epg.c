@@ -43,6 +43,9 @@ void cDBusMessageEpg::Process(void)
     case dmeNext:
       GetEntries(dmmFollowing);
       break;
+    case dmeAt:
+      GetEntries(dmmAtTime);
+      break;
     }
 }
 
@@ -304,11 +307,18 @@ static bool sGetChannel(DBusMessageIter &args, const char **input, cChannel **ch
 void cDBusMessageEpg::GetEntries(eMode mode)
 {
   cChannel *channel = NULL;
+  uint64_t atTime = 0;
   DBusMessageIter args;
   if (dbus_message_iter_init(_msg, &args)) {
      const char *c = NULL;
      if (!sGetChannel(args, &c, &channel)) {
         cString reply = cString::sprintf("channel \"%s\" not defined", c);
+        esyslog("dbus2vdr: %s.GetEntries: %s", DBUS_VDR_EPG_INTERFACE, *reply);
+        cDBusHelper::SendReply(_conn, _msg, 501, *reply);
+        return;
+        }
+     if ((mode == dmmAtTime) && ((cDBusHelper::GetNextArg(args, DBUS_TYPE_UINT64, &atTime) < 0) || (atTime == 0))) {
+        cString reply = cString::sprintf("missing time");
         esyslog("dbus2vdr: %s.GetEntries: %s", DBUS_VDR_EPG_INTERFACE, *reply);
         cDBusHelper::SendReply(_conn, _msg, 501, *reply);
         return;
@@ -359,6 +369,9 @@ void cDBusMessageEpg::GetEntries(eMode mode)
                break;
              case dmmFollowing:
                e = s->GetFollowingEvent();
+               break;
+             case dmmAtTime:
+               e = s->GetEventAround(atTime);
                break;
              default:
                e = NULL;
@@ -422,6 +435,9 @@ cDBusMessage *cDBusDispatcherEpg::CreateMessage(DBusConnection* conn, DBusMessag
   if (dbus_message_is_method_call(msg, DBUS_VDR_EPG_INTERFACE, "Next"))
      return new cDBusMessageEpg(cDBusMessageEpg::dmeNext, conn, msg);
 
+  if (dbus_message_is_method_call(msg, DBUS_VDR_EPG_INTERFACE, "At"))
+     return new cDBusMessageEpg(cDBusMessageEpg::dmeAt, conn, msg);
+
   return NULL;
 }
 
@@ -467,6 +483,13 @@ bool          cDBusDispatcherEpg::OnIntrospect(DBusMessage *msg, cString &Data)
   "    </method>\n"
   "    <method name=\"Next\">\n"
   "      <arg name=\"channel\"        type=\"s\"  direction=\"in\"/>\n"
+  "      <arg name=\"replycode\"      type=\"i\"  direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\"   type=\"s\"  direction=\"out\"/>\n"
+  "      <arg name=\"event_list\"     type=\"aa(sv)\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"At\">\n"
+  "      <arg name=\"channel\"        type=\"s\"  direction=\"in\"/>\n"
+  "      <arg name=\"time\"           type=\"t\"  direction=\"in\"/>\n"
   "      <arg name=\"replycode\"      type=\"i\"  direction=\"out\"/>\n"
   "      <arg name=\"replymessage\"   type=\"s\"  direction=\"out\"/>\n"
   "      <arg name=\"event_list\"     type=\"aa(sv)\" direction=\"out\"/>\n"

@@ -9,7 +9,7 @@ class cDBusMessageEpg : public cDBusMessage
 friend class cDBusDispatcherEpg;
 
 public:
-  enum eAction { dmeDisableScanner, dmeEnableScanner, dmeClearEPG, dmePutEntry, dmePutFile, dmeNow, dmeNext };
+  enum eAction { dmeDisableScanner, dmeEnableScanner, dmeClearEPG, dmePutEntry, dmePutFile, dmeNow, dmeNext, dmeAt };
   enum eMode   { dmmAll, dmmPresent, dmmFollowing, dmmAtTime };
 
   virtual ~cDBusMessageEpg(void);
