@@ -132,3 +132,7 @@ VDR Plugin 'dbus2vdr' Revision History
 2012-04-04: Version 0.0.4c
 
 - accept multiple keys with "HitKey"
+
+2012-04-12: Version 0.0.4d
+
+- add "At" to EPG interface

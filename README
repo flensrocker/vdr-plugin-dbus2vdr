@@ -81,6 +81,7 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
 - get current or next event of given or all channels
   vdr-dbus-send.sh /EPG epg.Now [string:'channel']
   vdr-dbus-send.sh /EPG epg.Next [string:'channel']
+  vdr-dbus-send.sh /EPG epg.At [string:'channel'] uint64:time
 
   The events are returned as an array of structs.
   Each struct contains a string as a key and a variant as its value.
