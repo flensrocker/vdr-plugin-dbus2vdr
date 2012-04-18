@@ -32,6 +32,11 @@ Instead of calling:
 you can call:
   vdr-dbus-send.sh /Plugins/<pluginname> plugin.SVDRPCommand string:'command' string:'parameter'
 
+Dependencies
+------------
+Debian/Ubuntu packages:
+libdbus-1-dev, pkg-config, libjpeg62-dev, libpng++-dev
+
 Restrictions
 ------------
 Objectpaths and interface names are restricted to some naming conventions. Only letters, numbers
@@ -134,6 +139,14 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
 
 - display a message at the OSD
   vdr-dbus-send.sh /Skin skin.QueueMessage string:'message text'
+
+- get information about available skins
+  vdr-dbus-send.sh /Skin skin.ListSkins
+  You will get an array of index, name and description.
+
+- get information about current skin
+  vdr-dbus-send.sh /Skin skin.CurrentSkin
+  You will get the index, name and description.
 
 - ask vdr if it is ready for shutdown
   vdr-dbus-send.sh /Shutdown shutdown.ConfirmShutdown

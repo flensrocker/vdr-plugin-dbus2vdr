@@ -136,3 +136,6 @@ VDR Plugin 'dbus2vdr' Revision History
 2012-04-12: Version 0.0.4d
 
 - add "At" to EPG interface
+
+2012-04-19: Version 0.0.5
+- add "CurrentSkin" and "ListSkins" to Skin interface

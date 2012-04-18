@@ -9,7 +9,7 @@ class cDBusMessageSkin : public cDBusMessage
 friend class cDBusDispatcherSkin;
 
 public:
-  enum eAction { dmsQueueMessage };
+  enum eAction { dmsQueueMessage, dmsListSkins, dmsCurrentSkin };
 
   virtual ~cDBusMessageSkin(void);
 
@@ -18,6 +18,8 @@ protected:
 
 private:
   cDBusMessageSkin(eAction action, DBusConnection* conn, DBusMessage* msg);
+  void CurrentSkin(void);
+  void ListSkins(void);
   void QueueMessage(void);
 
   eAction _action;
