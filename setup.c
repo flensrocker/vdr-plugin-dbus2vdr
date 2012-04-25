@@ -126,7 +126,7 @@ void cDBusMessageSetup::List(void)
   DBusMessageIter array;
   DBusMessageIter element;
   DBusMessageIter variant;
-  DBusMessageIter intminmax;
+  DBusMessageIter vstruct;
   dbus_message_iter_init_append(reply, &args);
   if (!dbus_message_iter_open_container(&args, DBUS_TYPE_ARRAY, "(sv)", &array))
      esyslog("dbus2vdr: %s.List: can't open array container", DBUS_VDR_SETUP_INTERFACE);
@@ -138,27 +138,33 @@ void cDBusMessageSetup::List(void)
       switch (b->Type) {
        case cSetupBinding::dstString:
         {
-         if (!dbus_message_iter_open_container(&element, DBUS_TYPE_VARIANT, "s", &variant))
+         if (!dbus_message_iter_open_container(&element, DBUS_TYPE_VARIANT, "(si)", &variant))
             esyslog("dbus2vdr: %s.List: can't open variant container", DBUS_VDR_SETUP_INTERFACE);
+         if (!dbus_message_iter_open_container(&variant, DBUS_TYPE_STRUCT, NULL, &vstruct))
+            esyslog("dbus2vdr: %s.List: can't open struct container", DBUS_VDR_SETUP_INTERFACE);
          const char *str = (const char*)b->Value;
-         if (!dbus_message_iter_append_basic(&variant, DBUS_TYPE_STRING, &str))
+         if (!dbus_message_iter_append_basic(&vstruct, DBUS_TYPE_STRING, &str))
             esyslog("dbus2vdr: %s.List: out of memory while appending the string value", DBUS_VDR_SETUP_INTERFACE);
+         if (!dbus_message_iter_append_basic(&vstruct, DBUS_TYPE_INT32, &b->StrMaxLength))
+            esyslog("dbus2vdr: %s.List: out of memory while appending the max string length value", DBUS_VDR_SETUP_INTERFACE);
+         if (!dbus_message_iter_close_container(&variant, &vstruct))
+            esyslog("dbus2vdr: %s.List: can't close struct container", DBUS_VDR_SETUP_INTERFACE);
          break;
         }
        case cSetupBinding::dstInt32:
         {
          if (!dbus_message_iter_open_container(&element, DBUS_TYPE_VARIANT, "(iii)", &variant))
             esyslog("dbus2vdr: %s.List: can't open variant container", DBUS_VDR_SETUP_INTERFACE);
-         if (!dbus_message_iter_open_container(&variant, DBUS_TYPE_STRUCT, NULL, &intminmax))
+         if (!dbus_message_iter_open_container(&variant, DBUS_TYPE_STRUCT, NULL, &vstruct))
             esyslog("dbus2vdr: %s.List: can't open struct container", DBUS_VDR_SETUP_INTERFACE);
          int i32 = *(int*)(b->Value);
-         if (!dbus_message_iter_append_basic(&intminmax, DBUS_TYPE_INT32, &i32))
+         if (!dbus_message_iter_append_basic(&vstruct, DBUS_TYPE_INT32, &i32))
             esyslog("dbus2vdr: %s.List: out of memory while appending the integer value", DBUS_VDR_SETUP_INTERFACE);
-         if (!dbus_message_iter_append_basic(&intminmax, DBUS_TYPE_INT32, &b->Int32MinValue))
+         if (!dbus_message_iter_append_basic(&vstruct, DBUS_TYPE_INT32, &b->Int32MinValue))
             esyslog("dbus2vdr: %s.List: out of memory while appending the min integer value", DBUS_VDR_SETUP_INTERFACE);
-         if (!dbus_message_iter_append_basic(&intminmax, DBUS_TYPE_INT32, &b->Int32MaxValue))
+         if (!dbus_message_iter_append_basic(&vstruct, DBUS_TYPE_INT32, &b->Int32MaxValue))
             esyslog("dbus2vdr: %s.List: out of memory while appending the max integer value", DBUS_VDR_SETUP_INTERFACE);
-         if (!dbus_message_iter_close_container(&variant, &intminmax))
+         if (!dbus_message_iter_close_container(&variant, &vstruct))
             esyslog("dbus2vdr: %s.List: can't close struct container", DBUS_VDR_SETUP_INTERFACE);
          break;
         }
