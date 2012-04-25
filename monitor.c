@@ -3,6 +3,7 @@
 #include "helper.h"
 #include "plugin.h"
 
+#include <vdr/plugin.h>
 #include <vdr/tools.h>
 
 
@@ -102,6 +103,8 @@ void cDBusMonitor::Action(void)
 
   started = true;
   isyslog("dbus2vdr: monitor started on bus %s", DBUS_VDR_BUSNAME);
+  //cDBusDispatcherPlugin::SendUpstartSignals("started");
+
   while (true) {
         dbus_connection_read_write(_conn, 1000);
         if (!Running())
@@ -154,4 +157,5 @@ void cDBusMonitor::Action(void)
         }
   cDBusMessageDispatcher::Stop();
   isyslog("dbus2vdr: monitor stopped on bus %s", DBUS_VDR_BUSNAME);
+  //cDBusDispatcherPlugin::SendUpstartSignals("stopped");
 }
