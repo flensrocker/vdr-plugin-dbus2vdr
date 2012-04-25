@@ -6,6 +6,8 @@
 #include <vdr/tools.h>
 
 
+DBusConnection *cDBusMonitor::_signalConn = NULL;
+
 cMutex cDBusMonitor::_mutex;
 cDBusMonitor *cDBusMonitor::_monitor = NULL;
 
@@ -48,16 +50,26 @@ void cDBusMonitor::StopMonitor(void)
 
 bool cDBusMonitor::SendSignal(DBusMessage *msg)
 {
-  cMutexLock lock(&_mutex);
-  if ((_monitor == NULL) || (_monitor->_conn == NULL))
-     return false;
+  if (_signalConn == NULL) {
+     static DBusError err;
+     dbus_error_init(&err);
+     _signalConn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
+     if (dbus_error_is_set(&err)) {
+        esyslog("dbus2vdr: signal connection error: %s", err.message);
+        dbus_error_free(&err);
+        }
+     if (_signalConn == NULL)
+        return false;
+     dbus_connection_set_exit_on_disconnect(_signalConn, false);
+     isyslog("dbus2vdr: established connection for sending signals");
+     }
 
   dbus_uint32_t serial = 0;
-  if (!dbus_connection_send(_monitor->_conn, msg, &serial)) { 
-     esyslog("dbus2vdr: out of memory while sending signal"); 
+  if (!dbus_connection_send(_signalConn, msg, &serial)) {
+     esyslog("dbus2vdr: out of memory while sending signal");
      return false;
      }
-  dbus_connection_flush(_monitor->_conn);
+  dbus_connection_flush(_signalConn);
   dbus_message_unref(msg);
   return true;
 }
@@ -75,6 +87,7 @@ void cDBusMonitor::Action(void)
      started = true;
      return;
      }
+  dbus_connection_set_exit_on_disconnect(_conn, false);
 
   int ret = dbus_bus_request_name(_conn, DBUS_VDR_BUSNAME, DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
   if (dbus_error_is_set(&err)) {
@@ -103,7 +116,7 @@ void cDBusMonitor::Action(void)
            dbus_message_unref(msg);
            continue;
            }
-        
+
         isyslog("dbus2vdr: new message, object %s, interface %s, member %s", object, interface, member);
         if ((strcmp(interface, "org.freedesktop.DBus") == 0)
          && (strcmp(object, "/org/freedesktop/DBus") == 0)
