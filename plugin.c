@@ -1,7 +1,6 @@
 #include "plugin.h"
 #include "common.h"
 #include "helper.h"
-#include "monitor.h"
 
 #include <vdr/plugin.h>
 
@@ -132,53 +131,6 @@ cDBusDispatcherPlugin::cDBusDispatcherPlugin(void)
 
 cDBusDispatcherPlugin::~cDBusDispatcherPlugin(void)
 {
-}
-
-void cDBusDispatcherPlugin::SendUpstartSignals(const char *action)
-{
-  int i = 0;
-  const char *signal = "vdr-plugin";
-  DBusMessageIter args;
-  DBusMessageIter array;
-  cString tmpPlugin;
-  const char *p;
-  cString tmpAction = cString::sprintf("ACTION=%s", action);
-  const char *a = *tmpAction;
-  int nowait = 1;
-  do {
-     cPlugin *plugin = cPluginManager::GetPlugin(i);
-     if (plugin == NULL)
-        break;
-     bool msgError = true;
-     DBusMessage *msg = dbus_message_new_signal("/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", "EmitEvent");
-     if (msg != NULL) {
-        dbus_message_iter_init_append(msg, &args);
-        if (dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &signal)) {
-           if (dbus_message_iter_open_container(&args, DBUS_TYPE_ARRAY, "s", &array)) {
-              tmpPlugin = cString::sprintf("PLUGIN=%s", plugin->Name());
-              p = *tmpPlugin;
-              if (dbus_message_iter_append_basic(&array, DBUS_TYPE_STRING, &p)) {
-                 if (dbus_message_iter_append_basic(&array, DBUS_TYPE_STRING, &a)) {
-                    if (dbus_message_iter_close_container(&args, &array)) {
-                       if (dbus_message_iter_append_basic(&args, DBUS_TYPE_BOOLEAN, &nowait)) {
-                          if (cDBusMonitor::SendSignal(msg)) {
-                             msg = NULL;
-                             msgError = false;
-                             isyslog("dbus2vdr: send %s-signal for plugin %s", action, plugin->Name());
-                             }
-                          }
-                       }
-                    }
-                 }
-              }
-           }
-        if (msg != NULL)
-           dbus_message_unref(msg);
-        }
-     if (msgError)
-        esyslog("dbus2vdr: can't send %s-signal for plugin %s", action, plugin->Name());
-     i++;
-     } while (true);
 }
 
 cDBusMessage *cDBusDispatcherPlugin::CreateMessage(DBusConnection* conn, DBusMessage* msg)

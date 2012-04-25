@@ -103,7 +103,6 @@ void cDBusMonitor::Action(void)
 
   started = true;
   isyslog("dbus2vdr: monitor started on bus %s", DBUS_VDR_BUSNAME);
-  //cDBusDispatcherPlugin::SendUpstartSignals("started");
 
   while (true) {
         dbus_connection_read_write(_conn, 1000);
@@ -157,5 +156,132 @@ void cDBusMonitor::Action(void)
         }
   cDBusMessageDispatcher::Stop();
   isyslog("dbus2vdr: monitor stopped on bus %s", DBUS_VDR_BUSNAME);
-  //cDBusDispatcherPlugin::SendUpstartSignals("stopped");
+}
+
+class cUpstartSignal : public cListObject
+{
+public:
+  const char *_name;
+  const char *_signal;
+  cStringList _parameters;
+
+  cUpstartSignal(const char *name, const char *signal)
+   :_name(name),_signal(signal)
+  {
+  }
+
+  virtual ~cUpstartSignal(void)
+  {
+  }
+};
+
+class cUpstartSignalSender : public cThread
+{
+private:
+  cMutex                signalMutex;
+  cCondVar              signalCond;
+  cList<cUpstartSignal> signalQueue;
+
+protected:
+  virtual void Action(void)
+  {
+    DBusMessageIter args;
+    DBusMessageIter array;
+    while (Running() || (signalQueue.Count() > 0)) {
+          cUpstartSignal *signal = NULL;
+          { // for short lock
+            cMutexLock MutexLock(&signalMutex);
+            signal = signalQueue.First();
+            if (signal != NULL)
+               signalQueue.Del(signal, false);
+          }
+          if (signal != NULL) {
+             bool msgError = true;
+             DBusMessage *msg = dbus_message_new_signal("/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", "EmitEvent");
+             if (msg != NULL) {
+                dbus_message_iter_init_append(msg, &args);
+                if (dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &signal->_signal)) {
+                   if (dbus_message_iter_open_container(&args, DBUS_TYPE_ARRAY, "s", &array)) {
+                      bool parameterOk = true;
+                      for (int p = 0; p < signal->_parameters.Size(); p++) {
+                          const char *parameter = signal->_parameters[p];
+                          if (!dbus_message_iter_append_basic(&array, DBUS_TYPE_STRING, &parameter)) {
+                             parameter = false;
+                             break;
+                             }
+                          }
+                      if (parameterOk) {
+                         if (dbus_message_iter_close_container(&args, &array)) {
+                            int nowait = 1;
+                            if (dbus_message_iter_append_basic(&args, DBUS_TYPE_BOOLEAN, &nowait)) {
+                               if (cDBusMonitor::SendSignal(msg)) {
+                                  msg = NULL;
+                                  msgError = false;
+                                  isyslog("dbus2vdr: send upstart-signal %s for %s", signal->_signal, signal->_name);
+                                  }
+                               }
+                            }
+                         }
+                      }
+                   }
+                if (msg != NULL)
+                   dbus_message_unref(msg);
+                }
+             if (msgError)
+                esyslog("dbus2vdr: can't send upstart-signal %s for %s", signal->_signal, signal->_name);
+             delete signal;
+             }
+          cMutexLock MutexLock(&signalMutex);
+          if (signalQueue.Count() == 0)
+             signalCond.TimedWait(signalMutex, 1000);
+          }
+  }
+
+public:
+  static cUpstartSignalSender *sender;
+
+  cUpstartSignalSender(void)
+  {
+    isyslog("dbus2vdr: new DBus-Upstart-Signal-Sender");
+    SetDescription("dbus2vdr: DBus-Upstart-Signal-Sender");
+    Start();
+  }
+
+  virtual ~cUpstartSignalSender(void)
+  {
+    isyslog("dbus2vdr: delete DBus-OSD-provider");
+    signalCond.Broadcast();
+    Cancel(10);
+  }
+
+  void AddSignal(cUpstartSignal *signal)
+  {
+    cMutexLock MutexLock(&signalMutex);
+    signalQueue.Add(signal);
+    signalCond.Broadcast();
+  }
+};
+
+cUpstartSignalSender *cUpstartSignalSender::sender = NULL;
+
+void cDBusMonitor::SendUpstartPluginSignals(const char *action)
+{
+  if (cUpstartSignalSender::sender == NULL)
+     cUpstartSignalSender::sender = new cUpstartSignalSender();
+  isyslog("dbus2vdr: send upstart-signal %s for all plugins", action);
+  cPlugin *plugin;
+  for (int i = 0; (plugin = cPluginManager::GetPlugin(i)) != NULL; i++) {
+      cUpstartSignal *signal = new cUpstartSignal(plugin->Name(), "vdr-plugin");
+      signal->_parameters.Append(strdup(*cString::sprintf("PLUGIN=%s", plugin->Name())));
+      signal->_parameters.Append(strdup(*cString::sprintf("ACTION=%s", action)));
+      cUpstartSignalSender::sender->AddSignal(signal);
+      }
+  isyslog("dbus2vdr: upstart-signal %s queued", action);
+}
+
+void cDBusMonitor::StopUpstartSender(void)
+{
+  if (cUpstartSignalSender::sender != NULL)
+     delete cUpstartSignalSender::sender;
+  cUpstartSignalSender::sender = NULL;
 }

@@ -27,6 +27,9 @@ public:
 
   static bool SendSignal(DBusMessage *msg);
 
+  static void SendUpstartPluginSignals(const char *action);
+  static void StopUpstartSender(void);
+
 protected:
   virtual void Action(void);
 };

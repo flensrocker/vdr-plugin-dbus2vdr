@@ -30,8 +30,6 @@ public:
   cDBusDispatcherPlugin(void);
   virtual ~cDBusDispatcherPlugin(void);
 
-  static void SendUpstartSignals(const char *action);
-
 protected:
   virtual cDBusMessage *CreateMessage(DBusConnection* conn, DBusMessage* msg);
   virtual bool          OnIntrospect(DBusMessage *msg, cString &Data);

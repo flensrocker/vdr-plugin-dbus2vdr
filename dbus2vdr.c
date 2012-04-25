@@ -154,8 +154,9 @@ void cPluginDbus2vdr::Stop(void)
   cDBusMessageDispatcher::Shutdown();
   if (send_upstart_signals == 1) {
      send_upstart_signals++;
-     cDBusDispatcherPlugin::SendUpstartSignals("stopped");
+     cDBusMonitor::SendUpstartPluginSignals("stopped");
      }
+  cDBusMonitor::StopUpstartSender();
 }
 
 void cPluginDbus2vdr::Housekeeping(void)
@@ -169,7 +170,7 @@ void cPluginDbus2vdr::MainThreadHook(void)
   // WARNING: Use with great care - see PLUGINS.html!
   if (send_upstart_signals == 0) {
      send_upstart_signals++;
-     cDBusDispatcherPlugin::SendUpstartSignals("started");
+     cDBusMonitor::SendUpstartPluginSignals("started");
      }
 }
 
