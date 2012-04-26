@@ -219,6 +219,17 @@ You can watch the signals with (or write your own program):
 Since the DBus signals are not really "fast" the files may not exist anymore if you
 receive them.
 
+Upstart
+-------
+When all plugins are started and dbus2vdr enters the first time the "MainThreadHook"
+it sends a signal for every plugin to Upstart like:
+initctl emit --no-wait vdr-plugin PLUGIN=<name> ACTION=started
+
+And when the plugin reaches its "Stop" state another list of signals are sent:
+initctl emit --no-wait vdr-plugin PLUGIN=<name> ACTION=stopped
+
+You can configure various upstart jobs to respond to those signals.
+
 Using the Python binding
 ------------------------
 First, I don't know Python at all, I just copy code fragments from the Python Binding Tutorial [1]

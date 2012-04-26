@@ -12,6 +12,8 @@ private:
   static cMutex _mutex;
   static cDBusMonitor *_monitor;
 
+  static DBusConnection *_signalConn;
+
   bool started;
   DBusConnection *_conn;
 
@@ -24,6 +26,9 @@ public:
   static void StopMonitor(void);
 
   static bool SendSignal(DBusMessage *msg);
+
+  static void SendUpstartPluginSignals(const char *action);
+  static void StopUpstartSender(void);
 
 protected:
   virtual void Action(void);

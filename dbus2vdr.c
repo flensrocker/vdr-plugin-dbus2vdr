@@ -8,6 +8,7 @@
 
 #include <getopt.h>
 
+#include "common.h"
 #include "epg.h"
 #include "plugin.h"
 #include "monitor.h"
@@ -22,7 +23,7 @@
 #include <vdr/osdbase.h>
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "0.0.5";
+static const char *VERSION        = "0.0.6";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -30,6 +31,7 @@ class cPluginDbus2vdr : public cPlugin {
 private:
   // Add any member variables or functions you may need here.
   bool enable_osd;
+  int send_upstart_signals;
 
 public:
   cPluginDbus2vdr(void);
@@ -60,6 +62,7 @@ cPluginDbus2vdr::cPluginDbus2vdr(void)
   // DON'T DO ANYTHING ELSE THAT MAY HAVE SIDE EFFECTS, REQUIRE GLOBAL
   // VDR OBJECTS TO EXIST OR PRODUCE ANY OUTPUT!
   enable_osd = false;
+  send_upstart_signals = 0;
 }
 
 cPluginDbus2vdr::~cPluginDbus2vdr()
@@ -149,6 +152,11 @@ void cPluginDbus2vdr::Stop(void)
   // Stop any background activities the plugin is performing.
   cDBusMonitor::StopMonitor();
   cDBusMessageDispatcher::Shutdown();
+  if (send_upstart_signals == 1) {
+     send_upstart_signals++;
+     cDBusMonitor::SendUpstartPluginSignals("stopped");
+     }
+  cDBusMonitor::StopUpstartSender();
 }
 
 void cPluginDbus2vdr::Housekeeping(void)
@@ -160,6 +168,10 @@ void cPluginDbus2vdr::MainThreadHook(void)
 {
   // Perform actions in the context of the main program thread.
   // WARNING: Use with great care - see PLUGINS.html!
+  if (send_upstart_signals == 0) {
+     send_upstart_signals++;
+     cDBusMonitor::SendUpstartPluginSignals("started");
+     }
 }
 
 cString cPluginDbus2vdr::Active(void)

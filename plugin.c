@@ -168,6 +168,9 @@ bool          cDBusDispatcherPlugin::OnIntrospect(DBusMessage *msg, cString &Dat
   "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
   "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"
   "    </method>\n"
+  "    <signal name=\"Started\">\n"
+  "      <arg name=\"name\"  type=\"s\"/>\n"
+  "    </signal>\n"
   "  </interface>\n"
   "</node>\n";
   return true;

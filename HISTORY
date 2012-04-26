@@ -139,3 +139,6 @@ VDR Plugin 'dbus2vdr' Revision History
 
 2012-04-19: Version 0.0.5
 - add "CurrentSkin" and "ListSkins" to Skin interface
+
+2012-04-26: Version 0.0.6
+- send upstart signals for every plugin on startup and stopping 
