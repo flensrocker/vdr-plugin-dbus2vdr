@@ -141,4 +141,7 @@ VDR Plugin 'dbus2vdr' Revision History
 - add "CurrentSkin" and "ListSkins" to Skin interface
 
 2012-04-26: Version 0.0.6
-- send upstart signals for every plugin on startup and stopping 
+- send upstart signals for every plugin on startup and stopping
+
+2012-04-26: Version 0.0.6a
+- use a DBus method call for Upstart, not a DBus signal

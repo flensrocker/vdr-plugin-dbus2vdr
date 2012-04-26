@@ -197,7 +197,7 @@ protected:
           }
           if (signal != NULL) {
              bool msgError = true;
-             DBusMessage *msg = dbus_message_new_signal("/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", "EmitEvent");
+             DBusMessage *msg = dbus_message_new_method_call("com.ubuntu.Upstart", "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", "EmitEvent");
              if (msg != NULL) {
                 dbus_message_iter_init_append(msg, &args);
                 if (dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &signal->_signal)) {
@@ -217,7 +217,7 @@ protected:
                                if (cDBusMonitor::SendSignal(msg)) {
                                   msg = NULL;
                                   msgError = false;
-                                  isyslog("dbus2vdr: send upstart-signal %s for %s", signal->_signal, signal->_name);
+                                  isyslog("dbus2vdr: emit upstart-signal %s for %s", signal->_signal, signal->_name);
                                   }
                                }
                             }
@@ -228,7 +228,7 @@ protected:
                    dbus_message_unref(msg);
                 }
              if (msgError)
-                esyslog("dbus2vdr: can't send upstart-signal %s for %s", signal->_signal, signal->_name);
+                esyslog("dbus2vdr: can't emit upstart-signal %s for %s", signal->_signal, signal->_name);
              delete signal;
              }
           cMutexLock MutexLock(&signalMutex);
