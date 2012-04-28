@@ -145,3 +145,6 @@ VDR Plugin 'dbus2vdr' Revision History
 
 2012-04-26: Version 0.0.6a
 - use a DBus method call for Upstart, not a DBus signal
+
+2012-04-28: Version 0.0.6b
+- emit only one Upstart event for all plugins
