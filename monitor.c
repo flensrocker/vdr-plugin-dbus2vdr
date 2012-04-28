@@ -254,11 +254,13 @@ public:
     Cancel(10);
   }
 
-  void AddSignal(cUpstartSignal *signal)
+  void AddSignal(cUpstartSignal *signal, bool broadcast)
   {
     cMutexLock MutexLock(&signalMutex);
-    signalQueue.Add(signal);
-    signalCond.Broadcast();
+    if (signal != NULL)
+       signalQueue.Add(signal);
+    if (broadcast)
+       signalCond.Broadcast();
   }
 };
 
@@ -270,12 +272,19 @@ void cDBusMonitor::SendUpstartPluginSignals(const char *action)
      cUpstartSignalSender::sender = new cUpstartSignalSender();
   isyslog("dbus2vdr: send upstart-signal %s for all plugins", action);
   cPlugin *plugin;
+  cVector<cUpstartSignal*> signals;
+  cUpstartSignal *onesignal =  new cUpstartSignal(action, "vdr-plugin");;
   for (int i = 0; (plugin = cPluginManager::GetPlugin(i)) != NULL; i++) {
+      onesignal->_parameters.Append(strdup(*cString::sprintf("%s=%s", plugin->Name(), action)));
       cUpstartSignal *signal = new cUpstartSignal(plugin->Name(), "vdr-plugin");
       signal->_parameters.Append(strdup(*cString::sprintf("PLUGIN=%s", plugin->Name())));
       signal->_parameters.Append(strdup(*cString::sprintf("ACTION=%s", action)));
-      cUpstartSignalSender::sender->AddSignal(signal);
+      signals.Append(signal);
       }
+  cUpstartSignalSender::sender->AddSignal(onesignal, true);
+  for (int sNr = 0; sNr < signals.Size(); sNr++)
+      cUpstartSignalSender::sender->AddSignal(signals[sNr], false);
+  cUpstartSignalSender::sender->AddSignal(NULL, true);
   isyslog("dbus2vdr: upstart-signal %s queued", action);
 }
 
