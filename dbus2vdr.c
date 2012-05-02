@@ -7,6 +7,7 @@
  */
 
 #include <getopt.h>
+#include <signal.h>
 
 #include "common.h"
 #include "epg.h"
@@ -23,7 +24,7 @@
 #include <vdr/osdbase.h>
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "0.0.6b";
+static const char *VERSION        = "0.0.6c";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -62,7 +63,7 @@ cPluginDbus2vdr::cPluginDbus2vdr(void)
   // DON'T DO ANYTHING ELSE THAT MAY HAVE SIDE EFFECTS, REQUIRE GLOBAL
   // VDR OBJECTS TO EXIST OR PRODUCE ANY OUTPUT!
   enable_osd = false;
-  send_upstart_signals = 0;
+  send_upstart_signals = -1;
 }
 
 cPluginDbus2vdr::~cPluginDbus2vdr()
@@ -78,7 +79,9 @@ const char *cPluginDbus2vdr::CommandLineHelp(void)
          "  --shutdown-hooks-wrapper=/path/to/shutdown-hooks-wrapper\n"
          "    path to a program that will call the shutdown-hooks with suid\n"
          "  --osd\n"
-         "    creates an OSD provider which will save the OSD as PNG files";
+         "    creates an OSD provider which will save the OSD as PNG files\n"
+         "  --upstart\n"
+         "    enable Upstart started/stopped events\n";
 }
 
 bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
@@ -88,12 +91,13 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
     {"shutdown-hooks", required_argument, 0, 's'},
     {"shutdown-hooks-wrapper", required_argument, 0, 'w'},
     {"osd", no_argument, 0, 'o'},
+    {"upstart", no_argument, 0, 'u'},
     {0, 0, 0, 0}
   };
 
   while (true) {
         int option_index = 0;
-        int c = getopt_long(argc, argv, "os:w:", options, &option_index);
+        int c = getopt_long(argc, argv, "os:uw:", options, &option_index);
         if (c == -1)
            break;
         switch (c) {
@@ -108,6 +112,11 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
                 isyslog("dbus2vdr: use shutdown-hooks in %s", optarg);
                 cDBusMessageShutdown::SetShutdownHooksDir(optarg);
                 }
+             break;
+           }
+          case 'u':
+           {
+             send_upstart_signals = 0;
              break;
            }
           case 'w':
@@ -170,6 +179,7 @@ void cPluginDbus2vdr::MainThreadHook(void)
   // WARNING: Use with great care - see PLUGINS.html!
   if (send_upstart_signals == 0) {
      send_upstart_signals++;
+     raise(SIGSTOP);
      cDBusMonitor::SendUpstartPluginSignals("started");
      }
 }

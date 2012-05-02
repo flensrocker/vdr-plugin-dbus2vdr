@@ -148,3 +148,6 @@ VDR Plugin 'dbus2vdr' Revision History
 
 2012-04-28: Version 0.0.6b
 - emit only one Upstart event for all plugins
+
+2012-05-02: Version 0.0.6c
+- emit Upstart signal only if activated and send a SIGSTOP
