@@ -55,6 +55,8 @@ Commandline Arguments
 -o, --osd
         creates an OSD-provider which will save the OSD as PNG files
         (see comments below at section "OSD")
+-u, --upstart
+        enable Upstart started/stopped events
 
 Implemented features
 --------------------
@@ -222,10 +224,10 @@ receive them.
 Upstart
 -------
 When all plugins are started and dbus2vdr enters the first time the "MainThreadHook"
-it emits an Upstart signal like:
+it raises SIGSTOP and after SIGCONT raised by Upstart it emits an signal like:
 initctl emit --no-wait vdr-plugin softhddevice=started dbus2vdr=started ...
 
-And when the plugin reaches its "Stop" state another list of signals are sent:
+When the plugin reaches its "Stop" function another signal is sent:
 initctl emit --no-wait vdr-plugin softhddevice=stopped dbus2vdr=stopped ...
 
 You can configure various upstart jobs to respond to this signal like starting
