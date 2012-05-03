@@ -116,6 +116,7 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
            }
           case 'u':
            {
+             isyslog("dbus2vdr: enable Upstart support");
              send_upstart_signals = 0;
              break;
            }
@@ -179,6 +180,7 @@ void cPluginDbus2vdr::MainThreadHook(void)
   // WARNING: Use with great care - see PLUGINS.html!
   if (send_upstart_signals == 0) {
      send_upstart_signals++;
+     isyslog("dbus2vdr: raise SIGSTOP for Upstart");
      raise(SIGSTOP);
      cDBusMonitor::SendUpstartPluginSignals("started");
      }

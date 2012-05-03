@@ -224,7 +224,7 @@ receive them.
 Upstart
 -------
 When all plugins are started and dbus2vdr enters the first time the "MainThreadHook"
-it raises SIGSTOP and after SIGCONT raised by Upstart it emits an signal like:
+it raises SIGSTOP and after SIGCONT raised by Upstart it emits a signal like:
 initctl emit --no-wait vdr-plugin softhddevice=started dbus2vdr=started ...
 
 When the plugin reaches its "Stop" function another signal is sent:
@@ -232,6 +232,19 @@ initctl emit --no-wait vdr-plugin softhddevice=stopped dbus2vdr=stopped ...
 
 You can configure various upstart jobs to respond to this signal like starting
 the vdr frontend etc.
+
+If you want to start vdr whenever a client tries to access de.tvdr.vdr on DBus
+you can create a DBus service file like
+/usr/share/dbus-1/system-services/de.tvdr.vdr-upstart.service
+with the following content:
+[D-BUS Service]
+Name=de.tvdr.vdr
+Exec=/bin/true
+UpstartJob=true
+
+Your vdr-upstart-job has to "start on dbus-activation de.tvdr.vdr".
+If you don't use Upstart "Exec" has to point to your "runvdr" or whatever you use and
+you can omit the "UpstartJob=true" line.
 
 Using the Python binding
 ------------------------
