@@ -249,7 +249,7 @@ public:
 
   virtual ~cUpstartSignalSender(void)
   {
-    isyslog("dbus2vdr: delete DBus-OSD-provider");
+    isyslog("dbus2vdr: delete DBus-Upstart-Signal-Sender");
     signalCond.Broadcast();
     Cancel(10);
   }
@@ -270,7 +270,7 @@ void cDBusMonitor::SendUpstartPluginSignals(const char *action)
 {
   if (cUpstartSignalSender::sender == NULL)
      cUpstartSignalSender::sender = new cUpstartSignalSender();
-  isyslog("dbus2vdr: send upstart-signal %s for all plugins", action);
+  isyslog("dbus2vdr: emit upstart-signal %s for all plugins", action);
   cPlugin *plugin;
   cUpstartSignal *onesignal =  new cUpstartSignal(action, "vdr-plugin");;
   for (int i = 0; (plugin = cPluginManager::GetPlugin(i)) != NULL; i++)
