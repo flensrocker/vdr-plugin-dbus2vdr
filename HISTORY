@@ -151,3 +151,6 @@ VDR Plugin 'dbus2vdr' Revision History
 
 2012-05-02: Version 0.0.6c
 - emit Upstart signal only if activated and send a SIGSTOP
+
+2012-05-13: Version 0.0.6d
+- if dbus disconnects try to reconnect to system bus

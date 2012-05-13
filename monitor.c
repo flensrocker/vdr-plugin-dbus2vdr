@@ -7,8 +7,6 @@
 #include <vdr/tools.h>
 
 
-DBusConnection *cDBusMonitor::_signalConn = NULL;
-
 cMutex cDBusMonitor::_mutex;
 cDBusMonitor *cDBusMonitor::_monitor = NULL;
 
@@ -51,26 +49,33 @@ void cDBusMonitor::StopMonitor(void)
 
 bool cDBusMonitor::SendSignal(DBusMessage *msg)
 {
-  if (_signalConn == NULL) {
+  DBusConnection *conn = NULL;
+  { // for short lock
+    cMutexLock lock(&_mutex);
+    if (_monitor != NULL)
+       conn = _monitor->_conn;
+  }
+  if (conn == NULL) {
+     isyslog("dbus2vdr: SendSignal: monitor has no connection, try to connect");
      static DBusError err;
      dbus_error_init(&err);
-     _signalConn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
+     conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
      if (dbus_error_is_set(&err)) {
         esyslog("dbus2vdr: signal connection error: %s", err.message);
         dbus_error_free(&err);
         }
-     if (_signalConn == NULL)
+     if (conn == NULL)
         return false;
-     dbus_connection_set_exit_on_disconnect(_signalConn, false);
+     dbus_connection_set_exit_on_disconnect(conn, false);
      isyslog("dbus2vdr: established connection for sending signals");
      }
 
   dbus_uint32_t serial = 0;
-  if (!dbus_connection_send(_signalConn, msg, &serial)) {
+  if (!dbus_connection_send(conn, msg, &serial)) {
      esyslog("dbus2vdr: out of memory while sending signal");
      return false;
      }
-  dbus_connection_flush(_signalConn);
+  dbus_connection_flush(conn);
   dbus_message_unref(msg);
   return true;
 }
@@ -104,7 +109,42 @@ void cDBusMonitor::Action(void)
   started = true;
   isyslog("dbus2vdr: monitor started on bus %s", DBUS_VDR_BUSNAME);
 
+  int reconnectLogCount = 0;
   while (true) {
+        if (!Running())
+           break;
+        if (_conn == NULL) {
+           // don't get too verbose...
+           if (reconnectLogCount < 5)
+              isyslog("dbus2vdr: try to reconnect to system bus");
+           else if (reconnectLogCount > 15) // ...and too quiet
+              reconnectLogCount = 0;
+           DBusConnection *conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
+           if (dbus_error_is_set(&err)) {
+              esyslog("dbus2vdr: connection error: %s", err.message);
+              dbus_error_free(&err);
+              }
+           if (conn == NULL) {
+              cCondWait::SleepMs(1000);
+              reconnectLogCount++;
+              continue;
+              }
+           dbus_connection_set_exit_on_disconnect(conn, false);
+
+           ret = dbus_bus_request_name(conn, DBUS_VDR_BUSNAME, DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
+           if (dbus_error_is_set(&err)) {
+              esyslog("dbus2vdr: name error: %s", err.message);
+              dbus_error_free(&err);
+              }
+           if (ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
+              esyslog("dbus2vdr: not primary owner for bus %s", DBUS_VDR_BUSNAME);
+              cCondWait::SleepMs(1000);
+              continue;
+              }
+           _conn = conn;
+           isyslog("dbus2vdr: reconnect to system bus successful");
+           reconnectLogCount = 0;
+           }
         dbus_connection_read_write(_conn, 1000);
         if (!Running())
            break;
@@ -135,6 +175,14 @@ void cDBusMonitor::Action(void)
               isyslog("dbus2vdr: NameAcquired: get ownership of name %s", name);
            cDBusHelper::SendReply(_conn, msg, "");
            dbus_message_unref(msg);
+           continue;
+           }
+
+        if ((strcmp(interface, "org.freedesktop.DBus.Local") == 0)
+         && (strcmp(object, "/org/freedesktop/DBus/Local") == 0)
+         && (strcmp(member, "Disconnected") == 0)) {
+           isyslog("dbus2vdr: disconnected from system bus, will try to reconnect");
+           _conn = NULL;
            continue;
            }
 
