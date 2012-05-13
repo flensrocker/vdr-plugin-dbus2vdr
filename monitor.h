@@ -12,8 +12,6 @@ private:
   static cMutex _mutex;
   static cDBusMonitor *_monitor;
 
-  static DBusConnection *_signalConn;
-
   bool started;
   DBusConnection *_conn;
 
