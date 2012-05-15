@@ -154,3 +154,6 @@ VDR Plugin 'dbus2vdr' Revision History
 
 2012-05-13: Version 0.0.6d
 - if dbus disconnects try to reconnect to system bus
+
+2012-05-15: Version 0.0.6e
+- add support for getting/setting plugin parameters in the setup.conf
