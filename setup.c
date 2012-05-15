@@ -5,6 +5,7 @@
 #include <vdr/config.h>
 #include <vdr/device.h>
 #include <vdr/epg.h>
+#include <vdr/plugin.h>
 #include <vdr/recording.h>
 
 cList<cDBusMessageSetup::cSetupBinding> cDBusMessageSetup::_bindings;
@@ -200,6 +201,51 @@ void cDBusMessageSetup::Get(void)
   dbus_int32_t replyCode = 501;
   cString replyMessage = "missing arguments";
   if (name != NULL) {
+     char *point = (char*)strchr(name, '.');
+     if (point) { // this is a plugin setting
+        char *dummy = strdup(name);
+        char *plugin = compactspace(dummy);
+        point = strchr(plugin, '.');
+        *point = 0;
+        char *key = point + 1;
+        isyslog("dbus2vdr: %s.Get: looking for %s.%s", DBUS_VDR_SETUP_INTERFACE, plugin, key);
+        const char *value = NULL;
+        for (cSetupLine *line = Setup.First(); line; line = Setup.Next(line)) {
+            if (line->Plugin() == NULL)
+               continue;
+            if (strcasecmp(plugin, line->Plugin()) != 0)
+               continue;
+            if (strcasecmp(key, line->Name()) != 0)
+               continue;
+            value = line->Value();
+            break;
+            }
+        free(dummy);
+        if (value == NULL) {
+           replyMessage = cString::sprintf("%s not found in setup.conf", name);
+           esyslog("dbus2vdr: %s.Get: %s not found in setup.conf", DBUS_VDR_SETUP_INTERFACE, name);
+           cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
+           return;
+           }
+        replyCode = 900;
+        replyMessage = cString::sprintf("getting %s", name);
+
+        DBusMessage *reply = dbus_message_new_method_return(_msg);
+        DBusMessageIter args;
+        dbus_message_iter_init_append(reply, &args);
+        if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &value))
+           esyslog("dbus2vdr: %s.Get: out of memory while appending the string value", DBUS_VDR_SETUP_INTERFACE);
+        const char *message = replyMessage;
+        if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &message))
+           esyslog("dbus2vdr: %s.Get: out of memory while appending the reply-message", DBUS_VDR_SETUP_INTERFACE);
+
+        dbus_uint32_t serial = 0;
+        if (!dbus_connection_send(_conn, reply, &serial))
+           esyslog("dbus2vdr: %s.Get: out of memory while sending the reply", DBUS_VDR_SETUP_INTERFACE);
+        dbus_message_unref(reply);
+        return;
+        }
+
      replyMessage = cString::sprintf("%s is not yet implemented", name);
      for (cSetupBinding *b = _bindings.First(); b; b = _bindings.Next(b)) {
          if (strcasecmp(name, b->Name) == 0) {
@@ -262,6 +308,42 @@ void cDBusMessageSetup::Set(void)
   dbus_int32_t replyCode = 501;
   cString replyMessage = "missing arguments";
   if (name != NULL) {
+     char *point = (char*)strchr(name, '.');
+     if (point) { // this is a plugin setting
+        const char *str = NULL;
+        rc = cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &str);
+        if (rc < 0)
+           replyMessage = cString::sprintf("argument for %s is not a string", name);
+        else {
+           char *dummy = strdup(name);
+           char *pluginName = compactspace(dummy);
+           point = strchr(pluginName, '.');
+           *point = 0;
+           char *key = point + 1;
+           isyslog("dbus2vdr: %s.Set: looking for %s.%s", DBUS_VDR_SETUP_INTERFACE, pluginName, key);
+           cPlugin *plugin = cPluginManager::GetPlugin(pluginName);
+           if (plugin == NULL) {
+              replyMessage = cString::sprintf("plugin %s not loaded", pluginName);
+              esyslog("dbus2vdr: %s.Set: plugin %s not loaded", DBUS_VDR_SETUP_INTERFACE, pluginName);
+              }
+           else {
+              if (!plugin->SetupParse(key, str)) {
+                 replyMessage = cString::sprintf("plugin %s can't parse %s = %s", pluginName, key, str);
+                 esyslog("dbus2vdr: %s.Set: plugin %s can't parse %s = %s", DBUS_VDR_SETUP_INTERFACE, pluginName, key, str);
+                 }
+              else {
+                 replyCode = 900;
+                 replyMessage = cString::sprintf("storing %s = %s", name, str);
+                 plugin->SetupStore(key, str);
+                 Setup.Save();
+                 }
+              }
+           free(dummy);
+           }
+        cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
+        return;
+        }
+
      replyMessage = cString::sprintf("%s is not yet implemented", name);
      bool save = false;
      for (cSetupBinding *b = _bindings.First(); b; b = _bindings.Next(b)) {

@@ -181,6 +181,14 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
   vdr-dbus-send.sh /Setup setup.Set string:'MinUserInactivity' int32:0
   (look at setup.c for the supported parameters)
 
+You may also get/set parameters for plugins with
+  vdr-dbus-send.sh /Setup setup.Get string:'pluginname.parameter'
+  vdr-dbus-send.sh /Setup setup.Set string:'pluginname.parameter' string:'value'
+but it is not guaranteed that it will work and that changes will affect the plugin's
+behaviour immediately.
+dbus2vdr will call the plugin's "SetupParse" function. If it returns true the value
+is stored in the setup.conf. You may need to restart vdr.
+
 OSD
 ---
 If started with the parameter "--osd" dbus2vdr will create an OSD-provider.
