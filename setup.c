@@ -7,6 +7,7 @@
 #include <vdr/epg.h>
 #include <vdr/plugin.h>
 #include <vdr/recording.h>
+#include <vdr/themes.h>
 
 cList<cDBusMessageSetup::cSetupBinding> cDBusMessageSetup::_bindings;
 
@@ -346,6 +347,7 @@ void cDBusMessageSetup::Set(void)
 
      replyMessage = cString::sprintf("%s is not yet implemented", name);
      bool save = false;
+     bool ModifiedAppearance = false;
      for (cSetupBinding *b = _bindings.First(); b; b = _bindings.Next(b)) {
          if (strcasecmp(name, b->Name) == 0) {
             switch (b->Type) {
@@ -359,7 +361,29 @@ void cDBusMessageSetup::Set(void)
                    replyMessage = cString::sprintf("setting %s = %s", name, str);
                    Utf8Strn0Cpy((char*)b->Value, str, b->StrMaxLength);
                    save = true;
-                   }
+                   // special handling of some setup values
+                   if ((strcasecmp(name, "OSDLanguage") == 0)
+                    || (strcasecmp(name, "FontOsd") == 0)
+                    || (strcasecmp(name, "FontSml") == 0)
+                    || (strcasecmp(name, "FontFix") == 0)) {
+                      ModifiedAppearance = true;
+                      }
+                   else if (strcasecmp(name, "OSDSkin") == 0) {
+                      Skins.SetCurrent(str);
+                      ModifiedAppearance = true;
+                      }
+                   else if (strcasecmp(name, "OSDTheme") == 0) {
+                      cThemes themes;
+                      themes.Load(Skins.Current()->Name());
+                      if ((themes.NumThemes() > 0) && Skins.Current()->Theme()) {
+                         int themeIndex = themes.GetThemeIndex(str);
+                         if (themeIndex >= 0) {
+                            Skins.Current()->Theme()->Load(themes.FileName(themeIndex));
+                            ModifiedAppearance = true;
+                            }
+                         }
+                      }
+                  }
                 break;
                }
               case cSetupBinding::dstInt32:
@@ -374,6 +398,9 @@ void cDBusMessageSetup::Set(void)
                    replyMessage = cString::sprintf("setting %s = %d", name, i32);
                    (*((int*)b->Value)) = i32;
                    save = true;
+                   if (strcasecmp(name, "AntiAlias") == 0) {
+                      ModifiedAppearance = true;
+                      }
                    }
                 break;
                }
@@ -385,6 +412,8 @@ void cDBusMessageSetup::Set(void)
      if (save) {
         Setup.Save();
         replyCode = 900;
+        if (ModifiedAppearance)
+           cOsdProvider::UpdateOsdSize(true);
         }
      }
 
