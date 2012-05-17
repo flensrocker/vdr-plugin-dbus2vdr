@@ -311,8 +311,8 @@ void cDBusMessageSetup::Set(void)
   if (name != NULL) {
      char *point = (char*)strchr(name, '.');
      if (point) { // this is a plugin setting
-        const char *str = NULL;
-        rc = cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &str);
+        const char *value = NULL;
+        rc = cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &value);
         if (rc < 0)
            replyMessage = cString::sprintf("argument for %s is not a string", name);
         else {
@@ -324,18 +324,36 @@ void cDBusMessageSetup::Set(void)
            isyslog("dbus2vdr: %s.Set: looking for %s.%s", DBUS_VDR_SETUP_INTERFACE, pluginName, key);
            cPlugin *plugin = cPluginManager::GetPlugin(pluginName);
            if (plugin == NULL) {
-              replyMessage = cString::sprintf("plugin %s not loaded", pluginName);
-              esyslog("dbus2vdr: %s.Set: plugin %s not loaded", DBUS_VDR_SETUP_INTERFACE, pluginName);
+              isyslog("dbus2vdr: %s.Set: plugin %s not loaded, try to set it directly", DBUS_VDR_SETUP_INTERFACE, pluginName);
+              bool foundLine = false;
+              for (cSetupLine *line = Setup.First(); line; line = Setup.Next(line)) {
+                  if (line->Plugin() == NULL)
+                     continue;
+                  if (strcasecmp(pluginName, line->Plugin()) != 0)
+                     continue;
+                  if (strcasecmp(key, line->Name()) != 0)
+                     continue;
+                  char *dummy = strdup(*cString::sprintf("%s.%s = %s", pluginName, key, value));
+                  line->Parse(dummy);
+                  foundLine = true;
+                  free(dummy);
+                  break;
+                  }
+              if (!foundLine)
+                 Setup.Add(new cSetupLine(key, value, pluginName));
+              replyCode = 900;
+              replyMessage = cString::sprintf("storing %s.%s = %s", pluginName, key, value);
+              Setup.Save();
               }
            else {
-              if (!plugin->SetupParse(key, str)) {
-                 replyMessage = cString::sprintf("plugin %s can't parse %s = %s", pluginName, key, str);
-                 esyslog("dbus2vdr: %s.Set: plugin %s can't parse %s = %s", DBUS_VDR_SETUP_INTERFACE, pluginName, key, str);
+              if (!plugin->SetupParse(key, value)) {
+                 replyMessage = cString::sprintf("plugin %s can't parse %s = %s", pluginName, key, value);
+                 esyslog("dbus2vdr: %s.Set: plugin %s can't parse %s = %s", DBUS_VDR_SETUP_INTERFACE, pluginName, key, value);
                  }
               else {
                  replyCode = 900;
-                 replyMessage = cString::sprintf("storing %s = %s", name, str);
-                 plugin->SetupStore(key, str);
+                 replyMessage = cString::sprintf("storing %s = %s", name, value);
+                 plugin->SetupStore(key, value);
                  Setup.Save();
                  }
               }
