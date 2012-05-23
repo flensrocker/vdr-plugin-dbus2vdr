@@ -179,6 +179,32 @@ void cDBusMessageSetup::List(void)
        if (!dbus_message_iter_close_container(&array, &element))
           esyslog("dbus2vdr: %s.List: can't close struct container", DBUS_VDR_SETUP_INTERFACE);
       }
+  int nolimit = -1;
+  for (cSetupLine *line = Setup.First(); line; line = Setup.Next(line)) {
+      if (line->Plugin() == NULL)
+         continue;
+      if (!dbus_message_iter_open_container(&array, DBUS_TYPE_STRUCT, NULL, &element))
+         esyslog("dbus2vdr: %s.List: can't open struct container", DBUS_VDR_SETUP_INTERFACE);
+      cString name = cString::sprintf("%s.%s", line->Plugin(), line->Name());
+      const char *str = *name;
+      if (!dbus_message_iter_append_basic(&element, DBUS_TYPE_STRING, &str))
+         esyslog("dbus2vdr: %s.List: out of memory while appending the key name", DBUS_VDR_SETUP_INTERFACE);
+      if (!dbus_message_iter_open_container(&element, DBUS_TYPE_VARIANT, "(si)", &variant))
+         esyslog("dbus2vdr: %s.List: can't open variant container", DBUS_VDR_SETUP_INTERFACE);
+      if (!dbus_message_iter_open_container(&variant, DBUS_TYPE_STRUCT, NULL, &vstruct))
+         esyslog("dbus2vdr: %s.List: can't open struct container", DBUS_VDR_SETUP_INTERFACE);
+      str = line->Value();
+      if (!dbus_message_iter_append_basic(&vstruct, DBUS_TYPE_STRING, &str))
+         esyslog("dbus2vdr: %s.List: out of memory while appending the string value", DBUS_VDR_SETUP_INTERFACE);
+      if (!dbus_message_iter_append_basic(&vstruct, DBUS_TYPE_INT32, &nolimit))
+         esyslog("dbus2vdr: %s.List: out of memory while appending the max string length value", DBUS_VDR_SETUP_INTERFACE);
+      if (!dbus_message_iter_close_container(&variant, &vstruct))
+         esyslog("dbus2vdr: %s.List: can't close struct container", DBUS_VDR_SETUP_INTERFACE);
+       if (!dbus_message_iter_close_container(&element, &variant))
+          esyslog("dbus2vdr: %s.List: can't close variant container", DBUS_VDR_SETUP_INTERFACE);
+       if (!dbus_message_iter_close_container(&array, &element))
+          esyslog("dbus2vdr: %s.List: can't close struct container", DBUS_VDR_SETUP_INTERFACE);
+      }
   if (!dbus_message_iter_close_container(&args, &array))
      esyslog("dbus2vdr: %s.List: can't close array container", DBUS_VDR_SETUP_INTERFACE);
 
@@ -433,8 +459,10 @@ void cDBusMessageSetup::Set(void)
      if (save) {
         Setup.Save();
         replyCode = 900;
+#if VDRVERSNUM > 10706
         if (ModifiedAppearance)
            cOsdProvider::UpdateOsdSize(true);
+#endif
         }
      }
 
@@ -443,10 +471,32 @@ void cDBusMessageSetup::Set(void)
 
 void cDBusMessageSetup::Del(void)
 {
-  char *name = NULL;
+  const char *name = NULL;
   if (!dbus_message_get_args(_msg, NULL, DBUS_TYPE_STRING, &name, DBUS_TYPE_INVALID)) {
      esyslog("dbus2vdr: %s.Del: message misses an argument for the name", DBUS_VDR_SETUP_INTERFACE);
      cDBusHelper::SendReply(_conn, _msg, 501, "message misses an argument for the name");
+     return;
+     }
+
+  isyslog("dbus2vdr: %s.Del: %s", DBUS_VDR_SETUP_INTERFACE, name);
+
+  if (endswith(name, ".*")) {
+     // delete all plugin settings
+     char *plugin = strdup(name);
+     plugin[strlen(name) - 2] = 0;
+     cSetupLine *line = Setup.First();
+     cSetupLine *next;
+     while (line) {
+           next = Setup.Next(line);
+           if ((line->Plugin() != NULL) && (strcasecmp(line->Plugin(), plugin) == 0)) {
+              isyslog("dbus2vdr: %s.Del: deleting %s.%s = %s", DBUS_VDR_SETUP_INTERFACE, line->Plugin(), line->Name(), line->Value());
+              Setup.Del(line);
+              }
+           line = next;
+           }
+     Setup.Save();
+     cDBusHelper::SendReply(_conn, _msg, 900, *cString::sprintf("deleted all settings for plugin %s", plugin));
+     free(plugin);
      return;
      }
 

@@ -193,6 +193,9 @@ behaviour immediately.
 dbus2vdr will call the plugin's "SetupParse" function. If it returns true the value
 is stored in the setup.conf. You may need to restart vdr.
 
+- delete all settings of one plugin
+  vdr-dbus-send.sh /Setup setup.Del string:'pluginname.*'
+
 OSD
 ---
 If started with the parameter "--osd" dbus2vdr will create an OSD-provider.
