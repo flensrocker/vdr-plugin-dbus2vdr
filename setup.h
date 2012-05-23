@@ -52,7 +52,7 @@ private:
   static cList<cSetupBinding> _bindings;
 
 public:
-  enum eAction { dmsList, dmsGet, dmsSet };
+  enum eAction { dmsList, dmsGet, dmsSet, dmsDel };
 
   virtual ~cDBusMessageSetup(void);
 
@@ -64,6 +64,7 @@ private:
   void List(void);
   void Get(void);
   void Set(void);
+  void Del(void);
 
   eAction _action;
 };
