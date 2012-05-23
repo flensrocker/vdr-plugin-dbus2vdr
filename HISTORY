@@ -166,3 +166,4 @@ VDR Plugin 'dbus2vdr' Revision History
 
 2012-05-23: Version 0.0.7
 - output all plugin settings with setup.List
+- delete all plugin settings with "Del plugin.*"
