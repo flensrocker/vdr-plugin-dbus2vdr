@@ -169,27 +169,37 @@ void cDBusMessageEpg::ClearEPG(void)
 
 void cDBusMessageEpg::PutEntry(void)
 {
-  DBusMessageIter args;
-  if (!dbus_message_iter_init(_msg, &args)) {
-     cDBusHelper::SendReply(_conn, _msg, 501, "no lines for the epg entry given");
+  char **line = NULL;
+  int num = 0;
+  if (!dbus_message_get_args(_msg, NULL, DBUS_TYPE_ARRAY, DBUS_TYPE_STRING, &line, &num, DBUS_TYPE_INVALID)) {
+     if (line != NULL)
+        dbus_free_string_array(line);
+     cDBusHelper::SendReply(_conn, _msg, 501, "arguments are not as expected");
+     return;
+     }
+  if (num < 1) {
+     if (line != NULL)
+        dbus_free_string_array(line);
+     cDBusHelper::SendReply(_conn, _msg, 501, "at least one element must be given");
      return;
      }
 
   cPUTEhandler *handler = new cPUTEhandler();
   if (handler->Status() == 354) {
-     const char *item = NULL;
-     while (cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &item) >= 0) {
-           dsyslog("dbus2vdr: %s.PutEntry: item = %s", DBUS_VDR_EPG_INTERFACE, item);
-           dsyslog("dbus2vdr: %s.PutEntry: status = %d, message = %s", DBUS_VDR_EPG_INTERFACE, handler->Status(), handler->Message());
-           if (!handler->Process(item))
-              break;
-           }
+     for (int i = 0; i < num; i++) {
+         dsyslog("dbus2vdr: %s.PutEntry: item = %s", DBUS_VDR_EPG_INTERFACE, line[i]);
+         dsyslog("dbus2vdr: %s.PutEntry: status = %d, message = %s", DBUS_VDR_EPG_INTERFACE, handler->Status(), handler->Message());
+         if (!handler->Process(line[i]))
+            break;
+         }
      dsyslog("dbus2vdr: %s.PutEntry: status = %d, message = %s", DBUS_VDR_EPG_INTERFACE, handler->Status(), handler->Message());
      if (handler->Status() == 354)
         handler->Process(".");
      }
   cDBusHelper::SendReply(_conn, _msg, handler->Status(), handler->Message());
   delete handler;
+  if (line != NULL)
+     dbus_free_string_array(line);
 }
 
 void cDBusMessageEpg::PutFile(void)

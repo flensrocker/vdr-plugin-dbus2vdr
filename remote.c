@@ -219,33 +219,27 @@ void cDBusMessageRemote::AskUser(void)
      return;
      }
 
-  cDbusSelectMenu *menu = NULL;
-  DBusMessageIter args;
-  if (!dbus_message_iter_init(_msg, &args))
-     esyslog("dbus2vdr: %s.AskUser: message misses an argument for the keyName", DBUS_VDR_REMOTE_INTERFACE);
-  else {
-     const char *item = NULL;
-     int i = 0;
-     while (cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &item) >= 0) {
-           if (menu == NULL)
-              menu = new cDbusSelectMenu(item);
-           else {
-              menu->Add(new cOsdItem(item, (eOSState)(osUser1 + i)));
-              i++;
-              }
-           }
-     }
-
-  if (menu == NULL) {
-     cDBusHelper::SendReply(_conn, _msg, 501, "no title for selection menu given");
+  char *title = NULL;
+  char **item = NULL;
+  int num = 0;
+  if (!dbus_message_get_args(_msg, NULL, DBUS_TYPE_STRING, &title, DBUS_TYPE_ARRAY, DBUS_TYPE_STRING, &item, &num, DBUS_TYPE_INVALID)) {
+     if (item != NULL)
+        dbus_free_string_array(item);
+     cDBusHelper::SendReply(_conn, _msg, 501, "arguments are not as expected");
      return;
      }
-
-  if (menu->Count() == 0) {
-     delete menu;
+  if (num < 1) {
+     if (item != NULL)
+        dbus_free_string_array(item);
      cDBusHelper::SendReply(_conn, _msg, 501, "no items for selection menu given");
      return;
      }
+
+  cDbusSelectMenu *menu = new cDbusSelectMenu(title);
+  for (int i = 0; i < num; i++)
+      menu->Add(new cOsdItem(item[i], (eOSState)(osUser1 + i)));
+  if (item != NULL)
+     dbus_free_string_array(item);
 
   cDBusDispatcherRemote::MainMenuAction = menu;
   if (!cRemote::CallPlugin("dbus2vdr")) {
