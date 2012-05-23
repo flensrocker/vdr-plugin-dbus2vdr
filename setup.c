@@ -433,8 +433,10 @@ void cDBusMessageSetup::Set(void)
      if (save) {
         Setup.Save();
         replyCode = 900;
+#if VDRVERSNUM > 10706
         if (ModifiedAppearance)
            cOsdProvider::UpdateOsdSize(true);
+#endif
         }
      }
 
