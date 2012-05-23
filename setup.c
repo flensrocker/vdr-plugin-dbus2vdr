@@ -118,6 +118,9 @@ void cDBusMessageSetup::Process(void)
     case dmsSet:
       Set();
       break;
+    case dmsDel:
+      Del();
+      break;
     }
 }
 
@@ -438,6 +441,34 @@ void cDBusMessageSetup::Set(void)
   cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
 }
 
+void cDBusMessageSetup::Del(void)
+{
+  char *name = NULL;
+  if (!dbus_message_get_args(_msg, NULL, DBUS_TYPE_STRING, &name, DBUS_TYPE_INVALID)) {
+     esyslog("dbus2vdr: %s.Del: message misses an argument for the name", DBUS_VDR_SETUP_INTERFACE);
+     cDBusHelper::SendReply(_conn, _msg, 501, "message misses an argument for the name");
+     return;
+     }
+
+  cSetupLine delLine;
+  if (!delLine.Parse((char*)*cString::sprintf("%s=", name))) {
+     esyslog("dbus2vdr: %s.Del: can't parse %s", DBUS_VDR_SETUP_INTERFACE, name);
+     cDBusHelper::SendReply(_conn, _msg, 501, *cString::sprintf("can't parse %s", name));
+     return;
+     }
+
+  for (cSetupLine *line = Setup.First(); line; line = Setup.Next(line)) {
+      if (line->Compare(delLine) == 0) {
+         Setup.Del(line);
+         Setup.Save();
+         cDBusHelper::SendReply(_conn, _msg, 900, *cString::sprintf("%s deleted from setup.conf", name));
+         return;
+         }
+      }
+
+  cDBusHelper::SendReply(_conn, _msg, 550, *cString::sprintf("%s not found in setup.conf", name));
+}
+
 
 cDBusDispatcherSetup::cDBusDispatcherSetup(void)
 :cDBusMessageDispatcher(DBUS_VDR_SETUP_INTERFACE)
@@ -466,6 +497,9 @@ cDBusMessage *cDBusDispatcherSetup::CreateMessage(DBusConnection* conn, DBusMess
   if (dbus_message_is_method_call(msg, DBUS_VDR_SETUP_INTERFACE, "Set"))
      return new cDBusMessageSetup(cDBusMessageSetup::dmsSet, conn, msg);
 
+  if (dbus_message_is_method_call(msg, DBUS_VDR_SETUP_INTERFACE, "Del"))
+     return new cDBusMessageSetup(cDBusMessageSetup::dmsDel, conn, msg);
+
   return NULL;
 }
 
@@ -490,6 +524,11 @@ bool          cDBusDispatcherSetup::OnIntrospect(DBusMessage *msg, cString &Data
   "    <method name=\"Set\">\n"
   "      <arg name=\"name\"         type=\"s\" direction=\"in\"/>\n"
   "      <arg name=\"value\"        type=\"v\" direction=\"in\"/>\n"
+  "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"Del\">\n"
+  "      <arg name=\"name\"         type=\"s\" direction=\"in\"/>\n"
   "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
   "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"
   "    </method>\n"
