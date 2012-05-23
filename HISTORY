@@ -163,3 +163,6 @@ VDR Plugin 'dbus2vdr' Revision History
 
 2012-05-23: Version 0.0.6g
 - add "Del" to setup interface
+
+2012-05-23: Version 0.0.7
+- output all plugin settings with setup.List
