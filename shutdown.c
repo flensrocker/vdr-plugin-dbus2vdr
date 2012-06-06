@@ -72,10 +72,14 @@ static void SendReply(DBusConnection *conn, DBusMessage *msg, int  returncode, c
 
 void cDBusMessageShutdown::ConfirmShutdown(void)
 {
+  int ignoreuser = 0;
+  if (!dbus_message_get_args(_msg, NULL, DBUS_TYPE_BOOLEAN, &ignoreuser, DBUS_TYPE_INVALID))
+     ignoreuser = 0;
+
   // this is nearly a copy of vdr's cShutdownHandler::ConfirmShutdown
   // if the original changes take this into account
 
-  if (!ShutdownHandler.IsUserInactive()) {
+  if ((ignoreuser == 0) && !ShutdownHandler.IsUserInactive()) {
      SendReply(_conn, _msg, 901, "user is active");
      return;
      }
@@ -249,6 +253,7 @@ bool          cDBusDispatcherShutdown::OnIntrospect(DBusMessage *msg, cString &D
   "<node>\n"
   "  <interface name=\""DBUS_VDR_SHUTDOWN_INTERFACE"\">\n"
   "    <method name=\"ConfirmShutdown\">\n"
+  "      <arg name=\"ignoreuser\"   type=\"b\" direction=\"in\"/>\n"
   "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
   "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"
   "      <arg name=\"shexitcode\"   type=\"i\" direction=\"out\"/>\n"
