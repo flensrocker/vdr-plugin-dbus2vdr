@@ -151,7 +151,7 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
   You will get the index, name and description.
 
 - ask vdr if it is ready for shutdown
-  vdr-dbus-send.sh /Shutdown shutdown.ConfirmShutdown
+  vdr-dbus-send.sh /Shutdown shutdown.ConfirmShutdown [boolean:true]
   possible reply codes:
     250: vdr is ready for shutdown
     550: vdr is not ready for shutdown (unknown reason)
@@ -170,6 +170,8 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
   If SHUTDOWNCMD is given use this command for shutdown.
   'shutdown-wrapper' is a tool which calls the shutdown-hooks.
   If the hooks need elevated privileges set the SUID bit of the wrapper accordingly.
+  The optional boolean argument "ignoreuser" will ignore user activity. This may be
+  useful for external frontends like XBMC etc..
 
 - list all supported parameters from setup.conf
   vdr-dbus-send.sh /Setup setup.List
