@@ -170,3 +170,7 @@ VDR Plugin 'dbus2vdr' Revision History
 
 2012-06-06: Version 0.0.7a
 - extend "ConfirmShutdown" with an "ignore user" parameter
+
+2012-06-14: Version 0.0.7b
+- refactor connection handling
+- waiting for "NameAcquired" before sending signals

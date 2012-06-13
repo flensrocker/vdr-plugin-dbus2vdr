@@ -13,6 +13,7 @@ private:
   static cDBusMonitor *_monitor;
 
   bool started;
+  bool nameAcquired;
   DBusConnection *_conn;
 
   cDBusMonitor(void);
@@ -25,7 +26,7 @@ public:
 
   static bool SendSignal(DBusMessage *msg);
 
-  static void SendUpstartPluginSignals(const char *action);
+  static void SendUpstartSignal(const char *action);
   static void StopUpstartSender(void);
 
 protected:

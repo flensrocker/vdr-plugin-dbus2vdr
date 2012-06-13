@@ -24,7 +24,7 @@
 #include <vdr/osdbase.h>
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "0.0.7a";
+static const char *VERSION        = "0.0.7b";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -160,13 +160,13 @@ bool cPluginDbus2vdr::Start(void)
 void cPluginDbus2vdr::Stop(void)
 {
   // Stop any background activities the plugin is performing.
-  cDBusMonitor::StopMonitor();
-  cDBusMessageDispatcher::Shutdown();
   if (send_upstart_signals == 1) {
      send_upstart_signals++;
-     cDBusMonitor::SendUpstartPluginSignals("stopped");
+     cDBusMonitor::SendUpstartSignal("stopped");
      }
   cDBusMonitor::StopUpstartSender();
+  cDBusMonitor::StopMonitor();
+  cDBusMessageDispatcher::Shutdown();
 }
 
 void cPluginDbus2vdr::Housekeeping(void)
@@ -182,7 +182,7 @@ void cPluginDbus2vdr::MainThreadHook(void)
      send_upstart_signals++;
      isyslog("dbus2vdr: raise SIGSTOP for Upstart");
      raise(SIGSTOP);
-     cDBusMonitor::SendUpstartPluginSignals("started");
+     cDBusMonitor::SendUpstartSignal("started");
      }
 }
 
