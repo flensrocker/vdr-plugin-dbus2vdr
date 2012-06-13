@@ -15,6 +15,7 @@ cDBusMonitor::cDBusMonitor(void)
 {
   _conn = NULL;
   started = false;
+  nameAcquired = false;
 }
 
 cDBusMonitor::~cDBusMonitor(void)
@@ -42,6 +43,7 @@ void cDBusMonitor::StopMonitor(void)
   cMutexLock lock(&_mutex);
   if (_monitor == NULL)
      return;
+  _monitor->Cancel(-1);
   _monitor->Cancel(5);
   delete _monitor;
   _monitor = NULL;
@@ -50,25 +52,26 @@ void cDBusMonitor::StopMonitor(void)
 bool cDBusMonitor::SendSignal(DBusMessage *msg)
 {
   DBusConnection *conn = NULL;
-  { // for short lock
-    cMutexLock lock(&_mutex);
-    if (_monitor != NULL)
-       conn = _monitor->_conn;
-  }
-  if (conn == NULL) {
-     isyslog("dbus2vdr: SendSignal: monitor has no connection, try to connect");
-     static DBusError err;
-     dbus_error_init(&err);
-     conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
-     if (dbus_error_is_set(&err)) {
-        esyslog("dbus2vdr: signal connection error: %s", err.message);
-        dbus_error_free(&err);
+  int retry = 0;
+  while (conn == NULL) {
+        isyslog("dbus2vdr: retrieving connection for sending signal");
+        _mutex.Lock();
+        if (_monitor != NULL) {
+           conn = _monitor->_conn;
+           if ((conn != NULL) && _monitor->nameAcquired) {
+              _mutex.Unlock();
+              break;
+              }
+           }
+        _mutex.Unlock();
+        retry++;
+        if (retry > 5) {
+           esyslog("dbus2vdr: retrieving connection for sending signal timeout/%d", retry);
+           return false;
+           }
+        dsyslog("dbus2vdr: retrieving connection for sending signal (waiting/%d)", retry);
+        cCondWait::SleepMs(1000);
         }
-     if (conn == NULL)
-        return false;
-     dbus_connection_set_exit_on_disconnect(conn, false);
-     isyslog("dbus2vdr: established connection for sending signals");
-     }
 
   dbus_uint32_t serial = 0;
   if (!dbus_connection_send(conn, msg, &serial)) {
@@ -77,6 +80,7 @@ bool cDBusMonitor::SendSignal(DBusMessage *msg)
      }
   dbus_connection_flush(conn);
   dbus_message_unref(msg);
+  dsyslog("dbus2vdr: signal sent");
   return true;
 }
 
@@ -84,39 +88,22 @@ void cDBusMonitor::Action(void)
 {
   DBusError err;
   dbus_error_init(&err);
-  _conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
-  if (dbus_error_is_set(&err)) {
-     esyslog("dbus2vdr: connection error: %s", err.message);
-     dbus_error_free(&err);
-     }
-  if (_conn == NULL) {
-     started = true;
-     return;
-     }
-  dbus_connection_set_exit_on_disconnect(_conn, false);
-
-  int ret = dbus_bus_request_name(_conn, DBUS_VDR_BUSNAME, DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
-  if (dbus_error_is_set(&err)) {
-     esyslog("dbus2vdr: name error: %s", err.message);
-     dbus_error_free(&err);
-     }
-  if (ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
-     esyslog("dbus2vdr: not primary owner for bus %s", DBUS_VDR_BUSNAME);
-     started = true;
-     return;
-     }
-
   started = true;
   isyslog("dbus2vdr: monitor started on bus %s", DBUS_VDR_BUSNAME);
 
   int reconnectLogCount = 0;
+  bool isLocked = false;
   while (true) {
         if (!Running())
            break;
         if (_conn == NULL) {
+           if (!isLocked) {
+              _mutex.Lock();
+              isLocked = true;
+              }
            // don't get too verbose...
            if (reconnectLogCount < 5)
-              isyslog("dbus2vdr: try to reconnect to system bus");
+              isyslog("dbus2vdr: try to connect to system bus");
            else if (reconnectLogCount > 15) // ...and too quiet
               reconnectLogCount = 0;
            DBusConnection *conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
@@ -131,7 +118,7 @@ void cDBusMonitor::Action(void)
               }
            dbus_connection_set_exit_on_disconnect(conn, false);
 
-           ret = dbus_bus_request_name(conn, DBUS_VDR_BUSNAME, DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
+           int ret = dbus_bus_request_name(conn, DBUS_VDR_BUSNAME, DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
            if (dbus_error_is_set(&err)) {
               esyslog("dbus2vdr: name error: %s", err.message);
               dbus_error_free(&err);
@@ -142,8 +129,12 @@ void cDBusMonitor::Action(void)
               continue;
               }
            _conn = conn;
-           isyslog("dbus2vdr: reconnect to system bus successful");
+           isyslog("dbus2vdr: connect to system bus successful");
            reconnectLogCount = 0;
+           }
+        if (isLocked) {
+           isLocked = false;
+           _mutex.Unlock();
            }
         dbus_connection_read_write(_conn, 1000);
         if (!Running())
@@ -175,6 +166,7 @@ void cDBusMonitor::Action(void)
               isyslog("dbus2vdr: NameAcquired: get ownership of name %s", name);
            cDBusHelper::SendReply(_conn, msg, "");
            dbus_message_unref(msg);
+           nameAcquired = true;
            continue;
            }
 
@@ -183,6 +175,7 @@ void cDBusMonitor::Action(void)
          && (strcmp(member, "Disconnected") == 0)) {
            isyslog("dbus2vdr: disconnected from system bus, will try to reconnect");
            _conn = NULL;
+           nameAcquired = false;
            continue;
            }
 
@@ -227,7 +220,7 @@ class cUpstartSignalSender : public cThread
 {
 private:
   cMutex                signalMutex;
-  cCondVar              signalCond;
+  cCondWait             signalWait;
   cList<cUpstartSignal> signalQueue;
 
 protected:
@@ -237,12 +230,13 @@ protected:
     DBusMessageIter array;
     while (Running() || (signalQueue.Count() > 0)) {
           cUpstartSignal *signal = NULL;
-          { // for short lock
-            cMutexLock MutexLock(&signalMutex);
-            signal = signalQueue.First();
-            if (signal != NULL)
-               signalQueue.Del(signal, false);
-          }
+          signalMutex.Lock();
+          signal = signalQueue.First();
+          if (signal != NULL) {
+             signalQueue.Del(signal, false);
+             dsyslog("dbus2vdr: dequeue signal %s/%s", signal->_signal, signal->_name);
+             }
+          signalMutex.Unlock();
           if (signal != NULL) {
              bool msgError = true;
              DBusMessage *msg = dbus_message_new_method_call("com.ubuntu.Upstart", "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", "EmitEvent");
@@ -279,9 +273,13 @@ protected:
                 esyslog("dbus2vdr: can't emit upstart-signal %s for %s", signal->_signal, signal->_name);
              delete signal;
              }
-          cMutexLock MutexLock(&signalMutex);
-          if (signalQueue.Count() == 0)
-             signalCond.TimedWait(signalMutex, 1000);
+          if (Running()) {
+             signalMutex.Lock();
+             int sigCount = signalQueue.Count();
+             signalMutex.Unlock();
+             if (sigCount == 0)
+                signalWait.Wait(1000);
+             }
           }
   }
 
@@ -298,8 +296,14 @@ public:
   virtual ~cUpstartSignalSender(void)
   {
     isyslog("dbus2vdr: delete DBus-Upstart-Signal-Sender");
-    signalCond.Broadcast();
     Cancel(10);
+  }
+
+  void SendCancel(void)
+  {
+    isyslog("dbus2vdr: stop DBus-Upstart-Signal-Sender");
+    Cancel(-1);
+    signalWait.Signal();
   }
 
   void AddSignal(cUpstartSignal *signal, bool broadcast)
@@ -308,13 +312,13 @@ public:
     if (signal != NULL)
        signalQueue.Add(signal);
     if (broadcast)
-       signalCond.Broadcast();
+       signalWait.Signal();
   }
 };
 
 cUpstartSignalSender *cUpstartSignalSender::sender = NULL;
 
-void cDBusMonitor::SendUpstartPluginSignals(const char *action)
+void cDBusMonitor::SendUpstartSignal(const char *action)
 {
   if (cUpstartSignalSender::sender == NULL)
      cUpstartSignalSender::sender = new cUpstartSignalSender();
@@ -329,7 +333,11 @@ void cDBusMonitor::SendUpstartPluginSignals(const char *action)
 
 void cDBusMonitor::StopUpstartSender(void)
 {
-  if (cUpstartSignalSender::sender != NULL)
+  if (cUpstartSignalSender::sender != NULL) {
+     cUpstartSignalSender::sender->SendCancel();
+     while (cUpstartSignalSender::sender->Active())
+           cCondWait::SleepMs( 100);
      delete cUpstartSignalSender::sender;
-  cUpstartSignalSender::sender = NULL;
+     cUpstartSignalSender::sender = NULL;
+     }
 }
