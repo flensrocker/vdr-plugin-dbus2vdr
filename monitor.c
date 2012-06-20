@@ -28,25 +28,33 @@ cDBusMonitor::~cDBusMonitor(void)
 void cDBusMonitor::StartMonitor(void)
 {
   cMutexLock lock(&_mutex);
-  if (_monitor != NULL)
+  dsyslog("dbus2vdr: StartMonitor Lock");
+  if (_monitor != NULL) {
+     dsyslog("dbus2vdr: StartMonitor Unlock 1");
      return;
+     }
   _monitor = new cDBusMonitor;
   if (_monitor) {
      _monitor->Start();
      while (!_monitor->started)
            cCondWait::SleepMs(10);
      }
+  dsyslog("dbus2vdr: StartMonitor Unlock 2");
 }
 
 void cDBusMonitor::StopMonitor(void)
 {
   cMutexLock lock(&_mutex);
-  if (_monitor == NULL)
+  dsyslog("dbus2vdr: StopMonitor Lock");
+  if (_monitor == NULL) {
+     dsyslog("dbus2vdr: StopMonitor Unlock 1");
      return;
+     }
   _monitor->Cancel(-1);
   _monitor->Cancel(5);
   delete _monitor;
   _monitor = NULL;
+  dsyslog("dbus2vdr: StopMonitor Unlock 2");
 }
 
 bool cDBusMonitor::SendSignal(DBusMessage *msg)
@@ -56,13 +64,16 @@ bool cDBusMonitor::SendSignal(DBusMessage *msg)
   while (conn == NULL) {
         isyslog("dbus2vdr: retrieving connection for sending signal");
         _mutex.Lock();
+        dsyslog("dbus2vdr: SendSignal Lock");
         if (_monitor != NULL) {
            conn = _monitor->_conn;
            if ((conn != NULL) && _monitor->nameAcquired) {
+              dsyslog("dbus2vdr: SendSignal Unlock");
               _mutex.Unlock();
               break;
               }
            }
+        dsyslog("dbus2vdr: SendSignal Unlock");
         _mutex.Unlock();
         retry++;
         if (retry > 5) {
@@ -73,12 +84,15 @@ bool cDBusMonitor::SendSignal(DBusMessage *msg)
         cCondWait::SleepMs(1000);
         }
 
+  dsyslog("dbus2vdr: SendSignal: dbus_connection_send");
   dbus_uint32_t serial = 0;
   if (!dbus_connection_send(conn, msg, &serial)) {
      esyslog("dbus2vdr: out of memory while sending signal");
      return false;
      }
-  dbus_connection_flush(conn);
+  //dsyslog("dbus2vdr: SendSignal: dbus_connection_flush");
+  //dbus_connection_flush(conn);
+  dsyslog("dbus2vdr: SendSignal: dbus_message_unref");
   dbus_message_unref(msg);
   dsyslog("dbus2vdr: signal sent");
   return true;
@@ -88,17 +102,20 @@ void cDBusMonitor::Action(void)
 {
   DBusError err;
   dbus_error_init(&err);
+  if (!dbus_threads_init_default())
+     esyslog("dbus2vdr: dbus_threads_init_default returns an error - not good!");
   started = true;
   isyslog("dbus2vdr: monitor started on bus %s", DBUS_VDR_BUSNAME);
 
   int reconnectLogCount = 0;
   bool isLocked = false;
   while (true) {
-        if (!Running())
-           break;
+        //if (!Running())
+        //   break;
         if (_conn == NULL) {
            if (!isLocked) {
               _mutex.Lock();
+              dsyslog("dbus2vdr: Action Lock");
               isLocked = true;
               }
            // don't get too verbose...
@@ -134,14 +151,18 @@ void cDBusMonitor::Action(void)
            }
         if (isLocked) {
            isLocked = false;
+           dsyslog("dbus2vdr: Action Unlock");
            _mutex.Unlock();
            }
         dbus_connection_read_write(_conn, 1000);
-        if (!Running())
-           break;
+        //if (!Running())
+        //   break;
         DBusMessage *msg = dbus_connection_pop_message(_conn);
-        if (msg == NULL)
+        if (msg == NULL) {
+           if (!Running())
+              break;
            continue;
+           }
         const char *object = dbus_message_get_path(msg);
         const char *interface = dbus_message_get_interface(msg);
         const char *member = dbus_message_get_member(msg);

@@ -174,3 +174,6 @@ VDR Plugin 'dbus2vdr' Revision History
 2012-06-14: Version 0.0.7b
 - refactor connection handling
 - waiting for "NameAcquired" before sending signals
+
+2012-06-20: Version 0.0.7c
+- call dbus_threads_init_default, since connection shall be used by multiple threads
