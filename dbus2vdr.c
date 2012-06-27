@@ -136,6 +136,7 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
 bool cPluginDbus2vdr::Initialize(void)
 {
   // Initialize any background activities the plugin shall perform.
+  cDBusDispatcherShutdown::StartupTime = time(NULL);
   return true;
 }
 

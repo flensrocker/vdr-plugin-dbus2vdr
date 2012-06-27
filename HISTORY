@@ -180,3 +180,4 @@ VDR Plugin 'dbus2vdr' Revision History
 
 2012-06-27: Version 0.0.7d
 - add NextWakeupTime to Setup interface
+- add ManualStart to Shutdown interface

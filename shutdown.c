@@ -39,6 +39,9 @@ void cDBusMessageShutdown::Process(void)
     case dmsConfirmShutdown:
       ConfirmShutdown();
       break;
+    case dmsManualStart:
+      ManualStart();
+      break;
     }
 }
 
@@ -218,6 +221,26 @@ void cDBusMessageShutdown::ConfirmShutdown(void)
   SendReply(_conn, _msg, 250, "vdr is ready for shutdown");
 }
 
+void cDBusMessageShutdown::ManualStart(void)
+{
+  int manual = 0;
+  time_t Delta = Setup.NextWakeupTime ? Setup.NextWakeupTime - cDBusDispatcherShutdown::StartupTime : 0;
+  if (!Setup.NextWakeupTime || (abs(Delta) > 600)) // 600 comes from vdr's MANUALSTART constant in vdr.c
+     manual = 1;
+
+  DBusMessage *reply = dbus_message_new_method_return(_msg);
+  DBusMessageIter args;
+  dbus_message_iter_init_append(reply, &args);
+  if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_BOOLEAN, &manual))
+     esyslog("dbus2vdr: %s.ManualStart: out of memory while appending the return value", DBUS_VDR_SHUTDOWN_INTERFACE);
+  dbus_uint32_t serial = 0;
+  if (!dbus_connection_send(_conn, reply, &serial))
+     esyslog("dbus2vdr: %s.ManualStart: out of memory while sending the reply", DBUS_VDR_SHUTDOWN_INTERFACE);
+  dbus_message_unref(reply);
+}
+
+
+time_t cDBusDispatcherShutdown::StartupTime;
 
 cDBusDispatcherShutdown::cDBusDispatcherShutdown(void)
 :cDBusMessageDispatcher(DBUS_VDR_SHUTDOWN_INTERFACE)
@@ -240,6 +263,9 @@ cDBusMessage *cDBusDispatcherShutdown::CreateMessage(DBusConnection* conn, DBusM
   if (dbus_message_is_method_call(msg, DBUS_VDR_SHUTDOWN_INTERFACE, "ConfirmShutdown"))
      return new cDBusMessageShutdown(cDBusMessageShutdown::dmsConfirmShutdown, conn, msg);
 
+  if (dbus_message_is_method_call(msg, DBUS_VDR_SHUTDOWN_INTERFACE, "ManualStart"))
+     return new cDBusMessageShutdown(cDBusMessageShutdown::dmsManualStart, conn, msg);
+
   return NULL;
 }
 
@@ -258,6 +284,9 @@ bool          cDBusDispatcherShutdown::OnIntrospect(DBusMessage *msg, cString &D
   "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"
   "      <arg name=\"shexitcode\"   type=\"i\" direction=\"out\"/>\n"
   "      <arg name=\"shparameter\"  type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"ManualStart\">\n"
+  "      <arg name=\"manual\"       type=\"b\" direction=\"out\"/>\n"
   "    </method>\n"
   "  </interface>\n"
   "</node>\n";
