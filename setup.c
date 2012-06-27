@@ -91,6 +91,7 @@ cDBusMessageSetup::cDBusMessageSetup(cDBusMessageSetup::eAction action, DBusConn
      //_bindings.Add(cSetupBinding::NewInt32(&Setup.DelTimeshiftRec, "DelTimeshiftRec"));
      _bindings.Add(cSetupBinding::NewInt32(&Setup.MinEventTimeout, "MinEventTimeout"));
      _bindings.Add(cSetupBinding::NewInt32(&Setup.MinUserInactivity, "MinUserInactivity"));
+     _bindings.Add(cSetupBinding::NewTimeT(&Setup.NextWakeupTime, "NextWakeupTime"));
      _bindings.Add(cSetupBinding::NewInt32(&Setup.MultiSpeedMode, "MultiSpeedMode", 0, 1));
      _bindings.Add(cSetupBinding::NewInt32(&Setup.ShowReplayMode, "ShowReplayMode", 0, 1));
      _bindings.Add(cSetupBinding::NewInt32(&Setup.ResumeID, "ResumeID", 0, 99));
@@ -169,6 +170,19 @@ void cDBusMessageSetup::List(void)
             esyslog("dbus2vdr: %s.List: out of memory while appending the min integer value", DBUS_VDR_SETUP_INTERFACE);
          if (!dbus_message_iter_append_basic(&vstruct, DBUS_TYPE_INT32, &b->Int32MaxValue))
             esyslog("dbus2vdr: %s.List: out of memory while appending the max integer value", DBUS_VDR_SETUP_INTERFACE);
+         if (!dbus_message_iter_close_container(&variant, &vstruct))
+            esyslog("dbus2vdr: %s.List: can't close struct container", DBUS_VDR_SETUP_INTERFACE);
+         break;
+        }
+       case cSetupBinding::dstTimeT:
+        {
+         if (!dbus_message_iter_open_container(&element, DBUS_TYPE_VARIANT, "(x)", &variant))
+            esyslog("dbus2vdr: %s.List: can't open variant container", DBUS_VDR_SETUP_INTERFACE);
+         if (!dbus_message_iter_open_container(&variant, DBUS_TYPE_STRUCT, NULL, &vstruct))
+            esyslog("dbus2vdr: %s.List: can't open struct container", DBUS_VDR_SETUP_INTERFACE);
+         time_t i64 = *(time_t*)(b->Value);
+         if (!dbus_message_iter_append_basic(&vstruct, DBUS_TYPE_INT64, &i64))
+            esyslog("dbus2vdr: %s.List: out of memory while appending the integer value", DBUS_VDR_SETUP_INTERFACE);
          if (!dbus_message_iter_close_container(&variant, &vstruct))
             esyslog("dbus2vdr: %s.List: can't close struct container", DBUS_VDR_SETUP_INTERFACE);
          break;
@@ -298,6 +312,13 @@ void cDBusMessageSetup::Get(void)
                {
                 int i32 = *(int*)(b->Value);
                 if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &i32))
+                   esyslog("dbus2vdr: %s.Get: out of memory while appending the integer value", DBUS_VDR_SETUP_INTERFACE);
+                break;
+               }
+              case cSetupBinding::dstTimeT:
+               {
+                time_t i64 = *(time_t*)(b->Value);
+                if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT64, &i64))
                    esyslog("dbus2vdr: %s.Get: out of memory while appending the integer value", DBUS_VDR_SETUP_INTERFACE);
                 break;
                }
@@ -448,6 +469,19 @@ void cDBusMessageSetup::Set(void)
                    if (strcasecmp(name, "AntiAlias") == 0) {
                       ModifiedAppearance = true;
                       }
+                   }
+                break;
+               }
+              case cSetupBinding::dstTimeT:
+               {
+                time_t i64;
+                rc = cDBusHelper::GetNextArg(args, DBUS_TYPE_INT64, &i64);
+                if (rc < 0)
+                   replyMessage = cString::sprintf("argument for %s is not a 64bit-integer", name);
+                else {
+                   replyMessage = cString::sprintf("setting %s = %ld", name, i64);
+                   (*((time_t*)b->Value)) = i64;
+                   save = true;
                    }
                 break;
                }

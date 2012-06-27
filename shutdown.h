@@ -9,7 +9,7 @@ class cDBusMessageShutdown : public cDBusMessage
 friend class cDBusDispatcherShutdown;
 
 public:
-  enum eAction { dmsConfirmShutdown };
+  enum eAction { dmsConfirmShutdown, dmsManualStart };
 
   static void SetShutdownHooksDir(const char *Dir);
   static void SetShutdownHooksWrapper(const char *Wrapper);
@@ -25,6 +25,7 @@ private:
 
   cDBusMessageShutdown(eAction action, DBusConnection* conn, DBusMessage* msg);
   void ConfirmShutdown(void);
+  void ManualStart(void);
 
   eAction _action;
 };
@@ -32,6 +33,8 @@ private:
 class cDBusDispatcherShutdown : public cDBusMessageDispatcher
 {
 public:
+  static time_t StartupTime;
+
   cDBusDispatcherShutdown(void);
   virtual ~cDBusDispatcherShutdown(void);
 

@@ -17,7 +17,7 @@ private:
     cSetupBinding() {}
 
   public:
-    enum eType { dstString, dstInt32 };
+    enum eType { dstString, dstInt32, dstTimeT };
 
     const char *Name;
     eType Type;
@@ -46,6 +46,15 @@ private:
       b->Value = value;
       b->Int32MinValue = minValue;
       b->Int32MaxValue = maxValue;
+      return b;
+    }
+
+    static cSetupBinding *NewTimeT(void* value, const char *name)
+    {
+      cSetupBinding *b = new cSetupBinding();
+      b->Name = name;
+      b->Type = dstTimeT;
+      b->Value = value;
       return b;
     }
   };

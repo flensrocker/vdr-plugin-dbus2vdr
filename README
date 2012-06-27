@@ -173,6 +173,12 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
   The optional boolean argument "ignoreuser" will ignore user activity. This may be
   useful for external frontends like XBMC etc..
 
+- ask if vdr was started manually
+  vdr-dbus-send.sh /Shutdown shutdown.ManualStart
+  Actually it compares the startup time of vdr with the current set NextWakeupTime.
+  If the startup time is around the NextWakeupTime (600 seconds) "true" will be returned.
+  Remember that NextWakeupTime may change while vdr is running.
+
 - list all supported parameters from setup.conf
   vdr-dbus-send.sh /Setup setup.List
 

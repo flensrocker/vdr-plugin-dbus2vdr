@@ -24,7 +24,7 @@
 #include <vdr/osdbase.h>
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "0.0.7c";
+static const char *VERSION        = "0.0.7d";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -136,6 +136,7 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
 bool cPluginDbus2vdr::Initialize(void)
 {
   // Initialize any background activities the plugin shall perform.
+  cDBusDispatcherShutdown::StartupTime = time(NULL);
   return true;
 }
 
