@@ -100,6 +100,8 @@ cDBusMessageSetup::cDBusMessageSetup(cDBusMessageSetup::eAction action, DBusConn
      _bindings.Add(cSetupBinding::NewInt32(&Setup.ChannelsWrap, "ChannelsWrap", 0, 1));
 #endif
      _bindings.Add(cSetupBinding::NewInt32(&Setup.EmergencyExit, "EmergencyExit", 0, 1));
+
+     _bindings.Sort();
      }
 }
 
@@ -194,12 +196,17 @@ void cDBusMessageSetup::List(void)
           esyslog("dbus2vdr: %s.List: can't close struct container", DBUS_VDR_SETUP_INTERFACE);
       }
   int nolimit = -1;
+  cString name;
   for (cSetupLine *line = Setup.First(); line; line = Setup.Next(line)) {
-      if (line->Plugin() == NULL)
+      // output all plugins and unknown settings
+      if ((line->Plugin() == NULL) && (cSetupBinding::Find(_bindings, line->Name()) != NULL))
          continue;
       if (!dbus_message_iter_open_container(&array, DBUS_TYPE_STRUCT, NULL, &element))
          esyslog("dbus2vdr: %s.List: can't open struct container", DBUS_VDR_SETUP_INTERFACE);
-      cString name = cString::sprintf("%s.%s", line->Plugin(), line->Name());
+      if (line->Plugin() == NULL)
+         name = cString::sprintf("%s", line->Name());
+      else
+         name = cString::sprintf("%s.%s", line->Plugin(), line->Name());
       const char *str = *name;
       if (!dbus_message_iter_append_basic(&element, DBUS_TYPE_STRING, &str))
          esyslog("dbus2vdr: %s.List: out of memory while appending the key name", DBUS_VDR_SETUP_INTERFACE);
@@ -245,26 +252,37 @@ void cDBusMessageSetup::Get(void)
   dbus_int32_t replyCode = 501;
   cString replyMessage = "missing arguments";
   if (name != NULL) {
-     char *point = (char*)strchr(name, '.');
-     if (point) { // this is a plugin setting
-        char *dummy = strdup(name);
-        char *plugin = compactspace(dummy);
-        point = strchr(plugin, '.');
-        *point = 0;
-        char *key = point + 1;
-        isyslog("dbus2vdr: %s.Get: looking for %s.%s", DBUS_VDR_SETUP_INTERFACE, plugin, key);
+     cSetupBinding *b = cSetupBinding::Find(_bindings, name);
+     if (b == NULL) {
+        char *point = (char*)strchr(name, '.');
+        char *plugin = NULL;
+        const char *key = NULL;
+        char *dummy = NULL;
+        if (point == NULL) { // this is an unknown setting
+           key = name;
+           isyslog("dbus2vdr: %s.Get: looking for %s", DBUS_VDR_SETUP_INTERFACE, key);
+           }
+        else { // this is a plugin setting
+           dummy = strdup(name);
+           plugin = compactspace(dummy);
+           point = strchr(plugin, '.');
+           *point = 0;
+           key = point + 1;
+           isyslog("dbus2vdr: %s.Get: looking for %s.%s", DBUS_VDR_SETUP_INTERFACE, plugin, key);
+           }
         const char *value = NULL;
         for (cSetupLine *line = Setup.First(); line; line = Setup.Next(line)) {
-            if (line->Plugin() == NULL)
+            if ((line->Plugin() == NULL) != (plugin == NULL))
                continue;
-            if (strcasecmp(plugin, line->Plugin()) != 0)
+            if ((plugin != NULL) && (strcasecmp(plugin, line->Plugin()) != 0))
                continue;
             if (strcasecmp(key, line->Name()) != 0)
                continue;
             value = line->Value();
             break;
             }
-        free(dummy);
+        if (dummy != NULL)
+           free(dummy);
         if (value == NULL) {
            replyMessage = cString::sprintf("%s not found in setup.conf", name);
            esyslog("dbus2vdr: %s.Get: %s not found in setup.conf", DBUS_VDR_SETUP_INTERFACE, name);
@@ -290,54 +308,49 @@ void cDBusMessageSetup::Get(void)
         return;
         }
 
-     replyMessage = cString::sprintf("%s is not yet implemented", name);
-     for (cSetupBinding *b = _bindings.First(); b; b = _bindings.Next(b)) {
-         if (strcasecmp(name, b->Name) == 0) {
-            replyCode = 900;
-            replyMessage = cString::sprintf("getting %s", name);
+     replyCode = 900;
+     replyMessage = cString::sprintf("getting %s", name);
 
-            DBusMessage *reply = dbus_message_new_method_return(_msg);
-            DBusMessageIter args;
-            dbus_message_iter_init_append(reply, &args);
+     DBusMessage *reply = dbus_message_new_method_return(_msg);
+     DBusMessageIter args;
+     dbus_message_iter_init_append(reply, &args);
 
-            switch (b->Type) {
-              case cSetupBinding::dstString:
-               {
-                const char *str = (const char*)b->Value;
-                if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &str))
-                   esyslog("dbus2vdr: %s.Get: out of memory while appending the string value", DBUS_VDR_SETUP_INTERFACE);
-                break;
-               }
-              case cSetupBinding::dstInt32:
-               {
-                int i32 = *(int*)(b->Value);
-                if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &i32))
-                   esyslog("dbus2vdr: %s.Get: out of memory while appending the integer value", DBUS_VDR_SETUP_INTERFACE);
-                break;
-               }
-              case cSetupBinding::dstTimeT:
-               {
-                time_t i64 = *(time_t*)(b->Value);
-                if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT64, &i64))
-                   esyslog("dbus2vdr: %s.Get: out of memory while appending the integer value", DBUS_VDR_SETUP_INTERFACE);
-                break;
-               }
-              }
+     switch (b->Type) {
+       case cSetupBinding::dstString:
+        {
+         const char *str = (const char*)b->Value;
+         if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &str))
+            esyslog("dbus2vdr: %s.Get: out of memory while appending the string value", DBUS_VDR_SETUP_INTERFACE);
+         break;
+        }
+       case cSetupBinding::dstInt32:
+        {
+         int i32 = *(int*)(b->Value);
+         if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &i32))
+            esyslog("dbus2vdr: %s.Get: out of memory while appending the integer value", DBUS_VDR_SETUP_INTERFACE);
+         break;
+        }
+       case cSetupBinding::dstTimeT:
+        {
+         time_t i64 = *(time_t*)(b->Value);
+         if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT64, &i64))
+            esyslog("dbus2vdr: %s.Get: out of memory while appending the integer value", DBUS_VDR_SETUP_INTERFACE);
+         break;
+        }
+       }
 
-            if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &replyCode))
-               esyslog("dbus2vdr: %s.Get: out of memory while appending the return-code", DBUS_VDR_SETUP_INTERFACE);
+     if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &replyCode))
+        esyslog("dbus2vdr: %s.Get: out of memory while appending the return-code", DBUS_VDR_SETUP_INTERFACE);
 
-            const char *message = replyMessage;
-            if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &message))
-               esyslog("dbus2vdr: %s.Get: out of memory while appending the reply-message", DBUS_VDR_SETUP_INTERFACE);
+     const char *message = replyMessage;
+     if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &message))
+        esyslog("dbus2vdr: %s.Get: out of memory while appending the reply-message", DBUS_VDR_SETUP_INTERFACE);
 
-            dbus_uint32_t serial = 0;
-            if (!dbus_connection_send(_conn, reply, &serial))
-               esyslog("dbus2vdr: %s.Get: out of memory while sending the reply", DBUS_VDR_SETUP_INTERFACE);
-            dbus_message_unref(reply);
-            return;
-            }
-         }
+     dbus_uint32_t serial = 0;
+     if (!dbus_connection_send(_conn, reply, &serial))
+        esyslog("dbus2vdr: %s.Get: out of memory while sending the reply", DBUS_VDR_SETUP_INTERFACE);
+     dbus_message_unref(reply);
+     return;
      }
 
   cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
@@ -460,7 +473,7 @@ void cDBusMessageSetup::Set(void)
                 rc = cDBusHelper::GetNextArg(args, DBUS_TYPE_INT32, &i32);
                 if (rc < 0)
                    replyMessage = cString::sprintf("argument for %s is not a 32bit-integer", name);
-                else if ((i32 < b->Int32MinValue) || (i32 >= b->Int32MaxValue))
+                else if ((i32 < b->Int32MinValue) || (i32 > b->Int32MaxValue))
                    replyMessage = cString::sprintf("argument for %s is out of range", name);
                 else {
                    replyMessage = cString::sprintf("setting %s = %d", name, i32);
