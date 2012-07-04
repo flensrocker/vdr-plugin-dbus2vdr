@@ -179,7 +179,7 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
   If the startup time is around the NextWakeupTime (600 seconds) "true" will be returned.
   Remember that NextWakeupTime may change while vdr is running.
 
-- list all supported parameters from setup.conf
+- list all parameters from setup.conf
   vdr-dbus-send.sh /Setup setup.List
 
 - get parameters from setup.conf
@@ -187,7 +187,8 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
 
 - set parameters to setup.conf
   vdr-dbus-send.sh /Setup setup.Set string:'MinUserInactivity' int32:0
-  (look at setup.c for the supported parameters)
+  Some parameters are known to be integers (look at setup.c) with a valid
+  range. All others are handled as strings.
 
 - delete parameters from setup.conf
   vdr-dbus-send.sh /Setup setup.Del string:'PrimaryLimit'

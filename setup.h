@@ -28,6 +28,12 @@ private:
     int Int32MinValue;
     int Int32MaxValue;
 
+    virtual int Compare(const cListObject &ListObject) const
+    {
+      const cSetupBinding *sb = (cSetupBinding*)&ListObject;
+      return strcasecmp(Name, sb->Name);
+    }
+    
     static cSetupBinding *NewString(void* value, const char *name, int maxLength)
     {
       cSetupBinding *b = new cSetupBinding();
@@ -56,6 +62,16 @@ private:
       b->Type = dstTimeT;
       b->Value = value;
       return b;
+    }
+
+    static cSetupBinding* Find(const cList<cSetupBinding>& bindings, const char *name)
+    {
+      if (name == NULL)
+         return NULL;
+      cSetupBinding *sb = bindings.First();
+      while ((sb != NULL) && (strcasecmp(sb->Name, name) != 0))
+            sb = bindings.Next(sb);
+      return sb;
     }
   };
   static cList<cSetupBinding> _bindings;
