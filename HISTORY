@@ -184,4 +184,5 @@ VDR Plugin 'dbus2vdr' Revision History
 
 2012-07-04: Version 0.0.7e
 - fix value range test in setup.Set for int32
-- add support for all values from setup.conf
+- add support for getting all values from setup.conf
+- add support for storing arbitrary values in setup.conf

@@ -372,40 +372,52 @@ void cDBusMessageSetup::Set(void)
   dbus_int32_t replyCode = 501;
   cString replyMessage = "missing arguments";
   if (name != NULL) {
-     char *point = (char*)strchr(name, '.');
-     if (point) { // this is a plugin setting
+     cSetupBinding *b = cSetupBinding::Find(_bindings, name);
+     if (b == NULL) {
         const char *value = NULL;
         rc = cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &value);
         if (rc < 0)
            replyMessage = cString::sprintf("argument for %s is not a string", name);
         else {
-           char *dummy = strdup(name);
-           char *pluginName = compactspace(dummy);
-           point = strchr(pluginName, '.');
-           *point = 0;
-           char *key = point + 1;
-           isyslog("dbus2vdr: %s.Set: looking for %s.%s", DBUS_VDR_SETUP_INTERFACE, pluginName, key);
-           cPlugin *plugin = cPluginManager::GetPlugin(pluginName);
+           cPlugin *plugin = NULL;
+           char *dummy = NULL;
+           char *pluginName = NULL;
+           const char *key = NULL;
+           char *point = (char*)strchr(name, '.');
+           if (point == NULL) {
+              key = name;
+              isyslog("dbus2vdr: %s.Set: looking for %s", DBUS_VDR_SETUP_INTERFACE, key);
+              }
+           else { // this is a plugin setting
+              dummy = strdup(name);
+              pluginName = compactspace(dummy);
+              point = strchr(pluginName, '.');
+              *point = 0;
+              key = point + 1;
+              isyslog("dbus2vdr: %s.Set: looking for %s.%s", DBUS_VDR_SETUP_INTERFACE, pluginName, key);
+              plugin = cPluginManager::GetPlugin(pluginName);
+              if (plugin == NULL)
+                 isyslog("dbus2vdr: %s.Set: plugin %s not loaded, try to set it directly", DBUS_VDR_SETUP_INTERFACE, pluginName);
+              }
            if (plugin == NULL) {
-              isyslog("dbus2vdr: %s.Set: plugin %s not loaded, try to set it directly", DBUS_VDR_SETUP_INTERFACE, pluginName);
               bool foundLine = false;
               for (cSetupLine *line = Setup.First(); line; line = Setup.Next(line)) {
-                  if (line->Plugin() == NULL)
+                  if ((line->Plugin() == NULL) != (pluginName == NULL))
                      continue;
-                  if (strcasecmp(pluginName, line->Plugin()) != 0)
+                  if ((pluginName != NULL) && (strcasecmp(pluginName, line->Plugin()) != 0))
                      continue;
                   if (strcasecmp(key, line->Name()) != 0)
                      continue;
-                  char *dummy = strdup(*cString::sprintf("%s.%s = %s", pluginName, key, value));
-                  line->Parse(dummy);
+                  char *lineText = strdup(*cString::sprintf("%s.%s = %s", pluginName, key, value));
+                  line->Parse(lineText);
                   foundLine = true;
-                  free(dummy);
+                  free(lineText);
                   break;
                   }
               if (!foundLine)
                  Setup.Add(new cSetupLine(key, value, pluginName));
               replyCode = 900;
-              replyMessage = cString::sprintf("storing %s.%s = %s", pluginName, key, value);
+              replyMessage = cString::sprintf("storing %s%s%s = %s", (pluginName == NULL) ? "" : pluginName, (pluginName == NULL) ? "" : ".", key, value);
               Setup.Save();
               }
            else {
@@ -420,88 +432,83 @@ void cDBusMessageSetup::Set(void)
                  Setup.Save();
                  }
               }
-           free(dummy);
+           if (dummy != NULL)
+              free(dummy);
            }
         cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
         return;
         }
 
-     replyMessage = cString::sprintf("%s is not yet implemented", name);
      bool save = false;
      bool ModifiedAppearance = false;
-     for (cSetupBinding *b = _bindings.First(); b; b = _bindings.Next(b)) {
-         if (strcasecmp(name, b->Name) == 0) {
-            switch (b->Type) {
-              case cSetupBinding::dstString:
-               {
-                const char *str = NULL;
-                rc = cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &str);
-                if (rc < 0)
-                   replyMessage = cString::sprintf("argument for %s is not a string", name);
-                else {
-                   replyMessage = cString::sprintf("setting %s = %s", name, str);
-                   Utf8Strn0Cpy((char*)b->Value, str, b->StrMaxLength);
-                   save = true;
-                   // special handling of some setup values
-                   if ((strcasecmp(name, "OSDLanguage") == 0)
-                    || (strcasecmp(name, "FontOsd") == 0)
-                    || (strcasecmp(name, "FontSml") == 0)
-                    || (strcasecmp(name, "FontFix") == 0)) {
-                      ModifiedAppearance = true;
-                      }
-                   else if (strcasecmp(name, "OSDSkin") == 0) {
-                      Skins.SetCurrent(str);
-                      ModifiedAppearance = true;
-                      }
-                   else if (strcasecmp(name, "OSDTheme") == 0) {
-                      cThemes themes;
-                      themes.Load(Skins.Current()->Name());
-                      if ((themes.NumThemes() > 0) && Skins.Current()->Theme()) {
-                         int themeIndex = themes.GetThemeIndex(str);
-                         if (themeIndex >= 0) {
-                            Skins.Current()->Theme()->Load(themes.FileName(themeIndex));
-                            ModifiedAppearance = true;
-                            }
-                         }
-                      }
+     switch (b->Type) {
+       case cSetupBinding::dstString:
+        {
+         const char *str = NULL;
+         rc = cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &str);
+         if (rc < 0)
+            replyMessage = cString::sprintf("argument for %s is not a string", name);
+         else {
+            replyMessage = cString::sprintf("setting %s = %s", name, str);
+            Utf8Strn0Cpy((char*)b->Value, str, b->StrMaxLength);
+            save = true;
+            // special handling of some setup values
+            if ((strcasecmp(name, "OSDLanguage") == 0)
+             || (strcasecmp(name, "FontOsd") == 0)
+             || (strcasecmp(name, "FontSml") == 0)
+             || (strcasecmp(name, "FontFix") == 0)) {
+               ModifiedAppearance = true;
+               }
+            else if (strcasecmp(name, "OSDSkin") == 0) {
+               Skins.SetCurrent(str);
+               ModifiedAppearance = true;
+               }
+            else if (strcasecmp(name, "OSDTheme") == 0) {
+               cThemes themes;
+               themes.Load(Skins.Current()->Name());
+               if ((themes.NumThemes() > 0) && Skins.Current()->Theme()) {
+                  int themeIndex = themes.GetThemeIndex(str);
+                  if (themeIndex >= 0) {
+                     Skins.Current()->Theme()->Load(themes.FileName(themeIndex));
+                     ModifiedAppearance = true;
+                     }
                   }
-                break;
                }
-              case cSetupBinding::dstInt32:
-               {
-                int i32;
-                rc = cDBusHelper::GetNextArg(args, DBUS_TYPE_INT32, &i32);
-                if (rc < 0)
-                   replyMessage = cString::sprintf("argument for %s is not a 32bit-integer", name);
-                else if ((i32 < b->Int32MinValue) || (i32 > b->Int32MaxValue))
-                   replyMessage = cString::sprintf("argument for %s is out of range", name);
-                else {
-                   replyMessage = cString::sprintf("setting %s = %d", name, i32);
-                   (*((int*)b->Value)) = i32;
-                   save = true;
-                   if (strcasecmp(name, "AntiAlias") == 0) {
-                      ModifiedAppearance = true;
-                      }
-                   }
-                break;
+           }
+         break;
+        }
+       case cSetupBinding::dstInt32:
+        {
+         int i32;
+         rc = cDBusHelper::GetNextArg(args, DBUS_TYPE_INT32, &i32);
+         if (rc < 0)
+            replyMessage = cString::sprintf("argument for %s is not a 32bit-integer", name);
+         else if ((i32 < b->Int32MinValue) || (i32 > b->Int32MaxValue))
+            replyMessage = cString::sprintf("argument for %s is out of range", name);
+         else {
+            replyMessage = cString::sprintf("setting %s = %d", name, i32);
+            (*((int*)b->Value)) = i32;
+            save = true;
+            if (strcasecmp(name, "AntiAlias") == 0) {
+               ModifiedAppearance = true;
                }
-              case cSetupBinding::dstTimeT:
-               {
-                time_t i64;
-                rc = cDBusHelper::GetNextArg(args, DBUS_TYPE_INT64, &i64);
-                if (rc < 0)
-                   replyMessage = cString::sprintf("argument for %s is not a 64bit-integer", name);
-                else {
-                   replyMessage = cString::sprintf("setting %s = %ld", name, i64);
-                   (*((time_t*)b->Value)) = i64;
-                   save = true;
-                   }
-                break;
-               }
-              }
-            break;
             }
-         }
+         break;
+        }
+       case cSetupBinding::dstTimeT:
+        {
+         time_t i64;
+         rc = cDBusHelper::GetNextArg(args, DBUS_TYPE_INT64, &i64);
+         if (rc < 0)
+            replyMessage = cString::sprintf("argument for %s is not a 64bit-integer", name);
+         else {
+            replyMessage = cString::sprintf("setting %s = %ld", name, i64);
+            (*((time_t*)b->Value)) = i64;
+            save = true;
+            }
+         break;
+        }
+       }
 
      if (save) {
         Setup.Save();
