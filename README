@@ -189,6 +189,9 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
   vdr-dbus-send.sh /Setup setup.Set string:'MinUserInactivity' int32:0
   Some parameters are known to be integers (look at setup.c) with a valid
   range. All others are handled as strings.
+  WARNING: Be careful to set values unknown to dbus2vdr. It will trigger a reload
+  of the whole setup.conf including calls to SetupParse of every plugin.
+  This might have unexpected side effects!
 
 - delete parameters from setup.conf
   vdr-dbus-send.sh /Setup setup.Del string:'PrimaryLimit'
