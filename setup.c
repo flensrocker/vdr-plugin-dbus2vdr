@@ -9,6 +9,21 @@
 #include <vdr/recording.h>
 #include <vdr/themes.h>
 
+cSetupLine *FindSetupLine(cConfig<cSetupLine>& config, const char *name, const char *plugin)
+{
+  if (name != NULL) {
+     cSetupLine *sl = config.First();
+     while (sl != NULL) {
+           if (((sl->Plugin() == NULL) == (plugin == NULL))
+            && ((plugin == NULL) || (strcasecmp(sl->Plugin(), plugin) == 0))
+            && (strcasecmp(sl->Name(), name) == 0))
+              return sl;
+           sl = config.Next(sl);
+           }
+     }
+  return NULL;
+}
+
 cList<cDBusMessageSetup::cSetupBinding> cDBusMessageSetup::_bindings;
 
 cDBusMessageSetup::cDBusMessageSetup(cDBusMessageSetup::eAction action, DBusConnection* conn, DBusMessage* msg)
@@ -400,25 +415,32 @@ void cDBusMessageSetup::Set(void)
                  isyslog("dbus2vdr: %s.Set: plugin %s not loaded, try to set it directly", DBUS_VDR_SETUP_INTERFACE, pluginName);
               }
            if (plugin == NULL) {
-              bool foundLine = false;
-              for (cSetupLine *line = Setup.First(); line; line = Setup.Next(line)) {
-                  if ((line->Plugin() == NULL) != (pluginName == NULL))
-                     continue;
-                  if ((pluginName != NULL) && (strcasecmp(pluginName, line->Plugin()) != 0))
-                     continue;
-                  if (strcasecmp(key, line->Name()) != 0)
-                     continue;
-                  char *lineText = strdup(*cString::sprintf("%s.%s = %s", pluginName, key, value));
-                  line->Parse(lineText);
-                  foundLine = true;
-                  free(lineText);
-                  break;
+              // save vdr-setup, load it in own Setup-container
+              // adjust value, save as setup.conf, reload vdr-setup
+              cSetupLine *line = FindSetupLine(Setup, key, pluginName);
+              if (line != NULL) {
+                  isyslog("dbus2vdr: %s.Set: found %s%s%s = %s", DBUS_VDR_SETUP_INTERFACE, (line->Plugin() == NULL) ? "" : line->Plugin(), (line->Plugin() == NULL) ? "" : ".", line->Name(), line->Value());
+                  Setup.Save();
+                  char *filename = strdup(Setup.FileName());
+                  cConfig<cSetupLine> tmpSetup;
+                  tmpSetup.Load(filename, true);
+                  line = FindSetupLine(tmpSetup, key, pluginName);
+                  if (line != NULL) {
+                     cSetupLine *newLine = new cSetupLine(key, value, pluginName);
+                     tmpSetup.Add(newLine, line);
+                     tmpSetup.Del(line);
+                     tmpSetup.Save();
+                     Setup.Load(filename);
+                     }
+                  free(filename);
                   }
-              if (!foundLine)
+              else {
+                 isyslog("dbus2vdr: %s.Set: add new line to setup.conf: %s%s%s = %s", DBUS_VDR_SETUP_INTERFACE, (pluginName == NULL) ? "" : pluginName, (pluginName == NULL) ? "" : ".", key, value);
                  Setup.Add(new cSetupLine(key, value, pluginName));
+                 Setup.Save();
+                 }
               replyCode = 900;
               replyMessage = cString::sprintf("storing %s%s%s = %s", (pluginName == NULL) ? "" : pluginName, (pluginName == NULL) ? "" : ".", key, value);
-              Setup.Save();
               }
            else {
               if (!plugin->SetupParse(key, value)) {
