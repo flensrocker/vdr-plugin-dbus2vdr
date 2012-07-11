@@ -190,3 +190,6 @@ VDR Plugin 'dbus2vdr' Revision History
 2012-07-05: Version 0.0.7f
 - fix a memory leak in setup.Set
 - fix a bug while setting unsupported values in setup.Set
+
+2012-07-12: Version 0.0.8
+- fix the dbus main loop

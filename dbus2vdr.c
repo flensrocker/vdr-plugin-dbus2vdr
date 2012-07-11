@@ -24,7 +24,7 @@
 #include <vdr/osdbase.h>
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "0.0.7f";
+static const char *VERSION        = "0.0.8";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -81,7 +81,9 @@ const char *cPluginDbus2vdr::CommandLineHelp(void)
          "  --osd\n"
          "    creates an OSD provider which will save the OSD as PNG files\n"
          "  --upstart\n"
-         "    enable Upstart started/stopped events\n";
+         "    enable Upstart started/stopped events\n"
+         "  --poll-timeout\n"
+         "    timeout in milliseconds for dbus_connection_read_write_dispatch\n";
 }
 
 bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
@@ -92,12 +94,13 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
     {"shutdown-hooks-wrapper", required_argument, 0, 'w'},
     {"osd", no_argument, 0, 'o'},
     {"upstart", no_argument, 0, 'u'},
+    {"poll-timeout", required_argument, 0, 'p'},
     {0, 0, 0, 0}
   };
 
   while (true) {
         int option_index = 0;
-        int c = getopt_long(argc, argv, "os:uw:", options, &option_index);
+        int c = getopt_long(argc, argv, "op:s:uw:", options, &option_index);
         if (c == -1)
            break;
         switch (c) {
@@ -125,6 +128,14 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
              if (optarg != NULL) {
                 isyslog("dbus2vdr: use shutdown-hooks-wrapper %s", optarg);
                 cDBusMessageShutdown::SetShutdownHooksWrapper(optarg);
+                }
+             break;
+           }
+          case 'p':
+           {
+             if ((optarg != NULL) && isnumber(optarg)) {
+                isyslog("dbus2vdr: use poll-timeout %s", optarg);
+                cDBusMonitor::PollTimeoutMs = strtol(optarg, NULL, 10);
                 }
              break;
            }

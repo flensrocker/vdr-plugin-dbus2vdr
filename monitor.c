@@ -9,13 +9,14 @@
 
 cMutex cDBusMonitor::_mutex;
 cDBusMonitor *cDBusMonitor::_monitor = NULL;
+int cDBusMonitor::PollTimeoutMs = 10;
 
 
 cDBusMonitor::cDBusMonitor(void)
 {
   _conn = NULL;
-  started = false;
-  nameAcquired = false;
+  _started = false;
+  _nameAcquired = false;
 }
 
 cDBusMonitor::~cDBusMonitor(void)
@@ -36,7 +37,7 @@ void cDBusMonitor::StartMonitor(void)
   _monitor = new cDBusMonitor;
   if (_monitor) {
      _monitor->Start();
-     while (!_monitor->started)
+     while (!_monitor->_started)
            cCondWait::SleepMs(10);
      }
   dsyslog("dbus2vdr: StartMonitor Unlock 2");
@@ -67,7 +68,7 @@ bool cDBusMonitor::SendSignal(DBusMessage *msg)
         dsyslog("dbus2vdr: SendSignal Lock");
         if (_monitor != NULL) {
            conn = _monitor->_conn;
-           if ((conn != NULL) && _monitor->nameAcquired) {
+           if ((conn != NULL) && _monitor->_nameAcquired) {
               dsyslog("dbus2vdr: SendSignal Unlock");
               _mutex.Unlock();
               break;
@@ -90,8 +91,6 @@ bool cDBusMonitor::SendSignal(DBusMessage *msg)
      esyslog("dbus2vdr: out of memory while sending signal");
      return false;
      }
-  //dsyslog("dbus2vdr: SendSignal: dbus_connection_flush");
-  //dbus_connection_flush(conn);
   dsyslog("dbus2vdr: SendSignal: dbus_message_unref");
   dbus_message_unref(msg);
   dsyslog("dbus2vdr: signal sent");
@@ -104,14 +103,12 @@ void cDBusMonitor::Action(void)
   dbus_error_init(&err);
   if (!dbus_threads_init_default())
      esyslog("dbus2vdr: dbus_threads_init_default returns an error - not good!");
-  started = true;
+  _started = true;
   isyslog("dbus2vdr: monitor started on bus %s", DBUS_VDR_BUSNAME);
 
   int reconnectLogCount = 0;
   bool isLocked = false;
   while (true) {
-        //if (!Running())
-        //   break;
         if (_conn == NULL) {
            if (!isLocked) {
               _mutex.Lock();
@@ -154,9 +151,14 @@ void cDBusMonitor::Action(void)
            dsyslog("dbus2vdr: Action Unlock");
            _mutex.Unlock();
            }
-        dbus_connection_read_write(_conn, 1000);
-        //if (!Running())
-        //   break;
+        dbus_connection_read_write_dispatch(_conn, PollTimeoutMs);
+        // handle outgoing messages
+        if (dbus_connection_has_messages_to_send(_conn)) {
+           dsyslog("dbus2vdr: connection has messages to send, flushing");
+           dbus_connection_flush(_conn);
+           dsyslog("dbus2vdr: done flushing");
+           }
+        // handle incoming messages
         DBusMessage *msg = dbus_connection_pop_message(_conn);
         if (msg == NULL) {
            if (!Running())
@@ -187,7 +189,7 @@ void cDBusMonitor::Action(void)
               isyslog("dbus2vdr: NameAcquired: get ownership of name %s", name);
            cDBusHelper::SendReply(_conn, msg, "");
            dbus_message_unref(msg);
-           nameAcquired = true;
+           _nameAcquired = true;
            continue;
            }
 
@@ -196,7 +198,7 @@ void cDBusMonitor::Action(void)
          && (strcmp(member, "Disconnected") == 0)) {
            isyslog("dbus2vdr: disconnected from system bus, will try to reconnect");
            _conn = NULL;
-           nameAcquired = false;
+           _nameAcquired = false;
            continue;
            }
 
@@ -345,7 +347,7 @@ void cDBusMonitor::SendUpstartSignal(const char *action)
      cUpstartSignalSender::sender = new cUpstartSignalSender();
   isyslog("dbus2vdr: emit upstart-signal %s for all plugins", action);
   cPlugin *plugin;
-  cUpstartSignal *onesignal =  new cUpstartSignal(action, "vdr-plugin");;
+  cUpstartSignal *onesignal = new cUpstartSignal(action, "vdr-plugin");;
   for (int i = 0; (plugin = cPluginManager::GetPlugin(i)) != NULL; i++)
       onesignal->_parameters.Append(strdup(*cString::sprintf("%s=%s", plugin->Name(), action)));
   cUpstartSignalSender::sender->AddSignal(onesignal, true);

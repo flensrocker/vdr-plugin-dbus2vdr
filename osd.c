@@ -63,7 +63,7 @@ void cDBusOsd::Flush(void)
     const uint8_t *pixel;
     png::image<png::rgba_pixel> *pngfile;
     while (cPixmapMemory *pm = RenderPixmaps()) {
-          //write = true;
+          /*write = true;*/
           vp = &pm->ViewPort();
           vx = vp->X();
           vy = vp->Y();
