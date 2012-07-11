@@ -345,7 +345,7 @@ void cDBusMonitor::SendUpstartSignal(const char *action)
      cUpstartSignalSender::sender = new cUpstartSignalSender();
   isyslog("dbus2vdr: emit upstart-signal %s for all plugins", action);
   cPlugin *plugin;
-  cUpstartSignal *onesignal =  new cUpstartSignal(action, "vdr-plugin");;
+  cUpstartSignal *onesignal = new cUpstartSignal(action, "vdr-plugin");;
   for (int i = 0; (plugin = cPluginManager::GetPlugin(i)) != NULL; i++)
       onesignal->_parameters.Append(strdup(*cString::sprintf("%s=%s", plugin->Name(), action)));
   cUpstartSignalSender::sender->AddSignal(onesignal, true);
