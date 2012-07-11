@@ -57,6 +57,10 @@ Commandline Arguments
         (see comments below at section "OSD")
 -u, --upstart
         enable Upstart started/stopped events
+-p, --poll-timeout
+        timeout in milliseconds for dbus_connection_read_write_dispatch
+        default: 10ms
+        lower values may cause higher cpu load but will increase speed of reaction
 
 Implemented features
 --------------------

@@ -12,13 +12,15 @@ private:
   static cMutex _mutex;
   static cDBusMonitor *_monitor;
 
-  bool started;
-  bool nameAcquired;
+  bool _started;
+  bool _nameAcquired;
   DBusConnection *_conn;
 
   cDBusMonitor(void);
 
 public:
+  static int PollTimeoutMs;
+
   virtual ~cDBusMonitor(void);
 
   static void StartMonitor(void);
