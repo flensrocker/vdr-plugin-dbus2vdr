@@ -183,6 +183,9 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
   If the startup time is around the NextWakeupTime (600 seconds) "true" will be returned.
   Remember that NextWakeupTime may change while vdr is running.
 
+- set vdr to non-interactive mode
+  vdr-dbus-send.sh /Shutdown shutdown.SetUserInactive
+
 - list all parameters from setup.conf
   vdr-dbus-send.sh /Setup setup.List
 
