@@ -42,6 +42,9 @@ void cDBusMessageShutdown::Process(void)
     case dmsManualStart:
       ManualStart();
       break;
+    case dmsSetUserInactive:
+      SetUserInactive();
+      break;
     }
 }
 
@@ -239,6 +242,12 @@ void cDBusMessageShutdown::ManualStart(void)
   dbus_message_unref(reply);
 }
 
+void cDBusMessageShutdown::SetUserInactive(void)
+{
+  ShutdownHandler.SetUserInactive();
+  SendReply(_conn, _msg, 250, "vdr is set to non-interactive mode");
+}
+
 
 time_t cDBusDispatcherShutdown::StartupTime;
 
@@ -266,6 +275,9 @@ cDBusMessage *cDBusDispatcherShutdown::CreateMessage(DBusConnection* conn, DBusM
   if (dbus_message_is_method_call(msg, DBUS_VDR_SHUTDOWN_INTERFACE, "ManualStart"))
      return new cDBusMessageShutdown(cDBusMessageShutdown::dmsManualStart, conn, msg);
 
+  if (dbus_message_is_method_call(msg, DBUS_VDR_SHUTDOWN_INTERFACE, "SetUserInactive"))
+     return new cDBusMessageShutdown(cDBusMessageShutdown::dmsSetUserInactive, conn, msg);
+
   return NULL;
 }
 
@@ -287,6 +299,10 @@ bool          cDBusDispatcherShutdown::OnIntrospect(DBusMessage *msg, cString &D
   "    </method>\n"
   "    <method name=\"ManualStart\">\n"
   "      <arg name=\"manual\"       type=\"b\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"SetUserInactive\">\n"
+  "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"
   "    </method>\n"
   "  </interface>\n"
   "</node>\n";
