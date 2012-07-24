@@ -12,5 +12,12 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, ${vdr:Depends}
 Description: A VDR plugin, control VDR via DBus
  This VDR-plugin will expose some methods via DBus to control the vdr
 
- 
+Package: vdr-plugin-dbus2vdr-dbg
+Architecture: any
+Section: debug
+Priority: extra
+Depends: vdr-plugin-dbus2vdr (= ${binary:Version}), ${misc:Depends}
+Description: debugging symbols for vdr-plugin-dbus2vdr
+ .
+ This package contains only the debugging symbols for vdr-plugin-dbus2vdr 
 
