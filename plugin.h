@@ -9,7 +9,7 @@ class cDBusMessagePlugin : public cDBusMessage
 friend class cDBusDispatcherPlugin;
 
 public:
-  enum eAction { dmpSVDRPCommand, dmpService };
+  enum eAction { dmpList, dmpSVDRPCommand, dmpService };
 
   virtual ~cDBusMessagePlugin(void);
 
@@ -18,6 +18,7 @@ protected:
 
 private:
   cDBusMessagePlugin(eAction action, DBusConnection* conn, DBusMessage* msg);
+  void List(void);
   void SVDRPCommand(void);
   void Service(void);
 

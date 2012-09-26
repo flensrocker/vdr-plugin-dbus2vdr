@@ -18,6 +18,9 @@ cDBusMessagePlugin::~cDBusMessagePlugin(void)
 void cDBusMessagePlugin::Process(void)
 {
   switch (_action) {
+    case dmpList:
+      List();
+      break;
     case dmpSVDRPCommand:
       SVDRPCommand();
       break;
@@ -25,6 +28,40 @@ void cDBusMessagePlugin::Process(void)
       Service();
       break;
     }
+}
+
+void cDBusMessagePlugin::List(void)
+{
+  DBusMessage *reply = dbus_message_new_method_return(_msg);
+  DBusMessageIter args;
+  dbus_message_iter_init_append(reply, &args);
+
+  DBusMessageIter array;
+  if (!dbus_message_iter_open_container(&args, DBUS_TYPE_ARRAY, "(ss)", &array))
+     esyslog("dbus2vdr: %s.List: can't open array container", DBUS_VDR_PLUGIN_INTERFACE);
+
+  DBusMessageIter struc;
+  cPlugin *plugin = NULL;
+  for (int p = 0; (plugin = cPluginManager::GetPlugin(p)) != NULL; p++) {
+      if (!dbus_message_iter_open_container(&array, DBUS_TYPE_STRUCT, NULL, &struc))
+         esyslog("dbus2vdr: %s.List: can't open struct container", DBUS_VDR_PLUGIN_INTERFACE);
+      else {
+         const char *name = plugin->Name();
+         cDBusHelper::AddArg(struc, DBUS_TYPE_STRING, &name);
+         const char *version = plugin->Version();
+         cDBusHelper::AddArg(struc, DBUS_TYPE_STRING, &version);
+         if (!dbus_message_iter_close_container(&array, &struc))
+            esyslog("dbus2vdr: %s.List: can't close struct container", DBUS_VDR_PLUGIN_INTERFACE);
+         }
+      }
+
+  if (!dbus_message_iter_close_container(&args, &array))
+     esyslog("dbus2vdr: %s.List: can't close array container", DBUS_VDR_PLUGIN_INTERFACE);
+
+  dbus_uint32_t serial = 0;
+  if (!dbus_connection_send(_conn, reply, &serial))
+     esyslog("dbus2vdr: %s.List: out of memory while sending the reply", DBUS_VDR_PLUGIN_INTERFACE);
+  dbus_message_unref(reply);
 }
 
 void cDBusMessagePlugin::SVDRPCommand(void)
@@ -138,6 +175,9 @@ cDBusMessage *cDBusDispatcherPlugin::CreateMessage(DBusConnection* conn, DBusMes
   if ((conn == NULL) || (msg == NULL))
      return NULL;
 
+  if (dbus_message_is_method_call(msg, DBUS_VDR_PLUGIN_INTERFACE, "List"))
+     return new cDBusMessagePlugin(cDBusMessagePlugin::dmpList, conn, msg);
+
   if (dbus_message_is_method_call(msg, DBUS_VDR_PLUGIN_INTERFACE, "SVDRPCommand"))
      return new cDBusMessagePlugin(cDBusMessagePlugin::dmpSVDRPCommand, conn, msg);
 
@@ -156,6 +196,9 @@ bool          cDBusDispatcherPlugin::OnIntrospect(DBusMessage *msg, cString &Dat
   "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
   "<node>\n"
   "  <interface name=\""DBUS_VDR_PLUGIN_INTERFACE"\">\n"
+  "    <method name=\"List\">\n"
+  "      <arg name=\"pluginlist\"   type=\"a(ss)\" direction=\"out\"/>\n"
+  "    </method>\n"
   "    <method name=\"SVDRPCommand\">\n"
   "      <arg name=\"command\"      type=\"s\" direction=\"in\"/>\n"
   "      <arg name=\"option\"       type=\"s\" direction=\"in\"/>\n"
