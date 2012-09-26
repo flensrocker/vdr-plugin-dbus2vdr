@@ -197,3 +197,5 @@ VDR Plugin 'dbus2vdr' Revision History
 2012-07-24: Version 0.0.8a
 - add SetUserInactive to shutdown interface
 
+2012-09-26: Version 0.0.8b
+- add List to plugin interface

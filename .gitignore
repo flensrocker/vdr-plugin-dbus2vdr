@@ -1,0 +1,6 @@
+.dependencies
+shutdown-wrapper
+*.o
+*.so
+po/*.pot
+po/*.mo
