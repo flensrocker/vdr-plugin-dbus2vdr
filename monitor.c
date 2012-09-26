@@ -1,7 +1,7 @@
 #include "monitor.h"
 #include "common.h"
 #include "helper.h"
-#include "plugin.h"
+#include "message.h"
 
 #include <vdr/plugin.h>
 #include <vdr/tools.h>
