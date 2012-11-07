@@ -45,6 +45,14 @@ The only part of the names, which could contain other symbols are name of plugin
 there are also no other characters than letters and numbers allowed. And I only knew about
 streamdev-server/-client which break this rule. I think they should get fixed...
 
+Multi Instance Support
+----------------------
+The default destination address is "de.tvdr.vdr". In case of a vdr version above 1.7.4 and an
+instance id (vdr parameter -i) greater than 0, this instance id is appended to this address,
+e.g. "de.tvdr.vdr1". If you use this feature you have to clone the dbus-policy file and change
+the address. Also vdr-dbus-send.sh is not ready for this - use dbus-send or whatever you use to
+communicate with dbus2vdr...
+
 Commandline Arguments
 ---------------------
 -s, --shutdown-hooks=/path/to/shutdown-hooks

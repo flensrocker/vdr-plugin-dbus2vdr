@@ -4,6 +4,7 @@
 #include "message.h"
 
 #include <vdr/plugin.h>
+#include <vdr/recording.h>
 #include <vdr/tools.h>
 
 
@@ -104,7 +105,17 @@ void cDBusMonitor::Action(void)
   if (!dbus_threads_init_default())
      esyslog("dbus2vdr: dbus_threads_init_default returns an error - not good!");
   _started = true;
-  isyslog("dbus2vdr: monitor started on bus %s", DBUS_VDR_BUSNAME);
+  cString busnameMem;
+#if VDRVERSNUM < 10704
+  busnameMem = cString::sprintf("%s", DBUS_VDR_BUSNAME);
+#else
+  if (InstanceId > 0)
+     busnameMem = cString::sprintf("%s%d", DBUS_VDR_BUSNAME, InstanceId);
+  else
+     busnameMem = cString::sprintf("%s", DBUS_VDR_BUSNAME);
+#endif
+  const char *busname = *busnameMem;
+  isyslog("dbus2vdr: monitor started on bus %s", busname);
 
   int reconnectLogCount = 0;
   bool isLocked = false;
@@ -132,13 +143,13 @@ void cDBusMonitor::Action(void)
               }
            dbus_connection_set_exit_on_disconnect(conn, false);
 
-           int ret = dbus_bus_request_name(conn, DBUS_VDR_BUSNAME, DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
+           int ret = dbus_bus_request_name(conn, busname, DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
            if (dbus_error_is_set(&err)) {
               esyslog("dbus2vdr: name error: %s", err.message);
               dbus_error_free(&err);
               }
            if (ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
-              esyslog("dbus2vdr: not primary owner for bus %s", DBUS_VDR_BUSNAME);
+              esyslog("dbus2vdr: not primary owner for bus %s", busname);
               cCondWait::SleepMs(1000);
               continue;
               }
@@ -219,7 +230,7 @@ void cDBusMonitor::Action(void)
            }
         }
   cDBusMessageDispatcher::Stop();
-  isyslog("dbus2vdr: monitor stopped on bus %s", DBUS_VDR_BUSNAME);
+  isyslog("dbus2vdr: monitor stopped on bus %s", busname);
 }
 
 class cUpstartSignal : public cListObject

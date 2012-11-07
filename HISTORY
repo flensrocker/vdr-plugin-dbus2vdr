@@ -199,3 +199,6 @@ VDR Plugin 'dbus2vdr' Revision History
 
 2012-09-26: Version 0.0.8b
 - add List to plugin interface
+
+2012-11-07: Version 0.0.8c
+- add vdr-instance-id to destination name
