@@ -72,7 +72,7 @@ public:
 };
 
 
-cDBusMessageRemote::cDBusMessageRemote(cDBusMessageRemote::eAction action, DBusConnection* conn, DBusMessage* msg)
+cDBusMessageRemote::cDBusMessageRemote(cDBusMessageRemoteAction action, DBusConnection* conn, DBusMessage* msg)
 :cDBusMessage(conn, msg)
 ,_action(action)
 {
@@ -84,29 +84,7 @@ cDBusMessageRemote::~cDBusMessageRemote(void)
 
 void cDBusMessageRemote::Process(void)
 {
-  switch (_action) {
-    case dmrCallPlugin:
-      CallPlugin();
-      break;
-    case dmrEnable:
-      Enable();
-      break;
-    case dmrDisable:
-      Disable();
-      break;
-    case dmrStatus:
-      Status();
-      break;
-    case dmrHitKey:
-      HitKey();
-      break;
-    case dmrAskUser:
-      AskUser();
-      break;
-    case dmrSwitchChannel:
-      SwitchChannel();
-      break;
-    }
+  (this->*_action)();
 }
 
 void cDBusMessageRemote::CallPlugin(void)
@@ -341,6 +319,15 @@ cOsdObject *cDBusDispatcherRemote::MainMenuAction = NULL;
 cDBusDispatcherRemote::cDBusDispatcherRemote(void)
 :cDBusMessageDispatcher(DBUS_VDR_REMOTE_INTERFACE)
 {
+  _actionCount = 0;
+  _action = new cRemoteAction*[7];
+  _action[_actionCount++] = new cRemoteAction("CallPlugin", &cDBusMessageRemote::CallPlugin);
+  _action[_actionCount++] = new cRemoteAction("Enable", &cDBusMessageRemote::Enable);
+  _action[_actionCount++] = new cRemoteAction("Disable", &cDBusMessageRemote::Disable);
+  _action[_actionCount++] = new cRemoteAction("Status", &cDBusMessageRemote::Status);
+  _action[_actionCount++] = new cRemoteAction("HitKey", &cDBusMessageRemote::HitKey);
+  _action[_actionCount++] = new cRemoteAction("AskUser", &cDBusMessageRemote::AskUser);
+  _action[_actionCount++] = new cRemoteAction("SwitchChannel", &cDBusMessageRemote::SwitchChannel);
 }
 
 cDBusDispatcherRemote::~cDBusDispatcherRemote(void)
@@ -356,26 +343,10 @@ cDBusMessage *cDBusDispatcherRemote::CreateMessage(DBusConnection* conn, DBusMes
   if ((object == NULL) || (strcmp(object, "/Remote") != 0))
      return NULL;
 
-  if (dbus_message_is_method_call(msg, DBUS_VDR_REMOTE_INTERFACE, "CallPlugin"))
-     return new cDBusMessageRemote(cDBusMessageRemote::dmrCallPlugin, conn, msg);
-
-  if (dbus_message_is_method_call(msg, DBUS_VDR_REMOTE_INTERFACE, "Enable"))
-     return new cDBusMessageRemote(cDBusMessageRemote::dmrEnable, conn, msg);
-
-  if (dbus_message_is_method_call(msg, DBUS_VDR_REMOTE_INTERFACE, "Disable"))
-     return new cDBusMessageRemote(cDBusMessageRemote::dmrDisable, conn, msg);
-
-  if (dbus_message_is_method_call(msg, DBUS_VDR_REMOTE_INTERFACE, "Status"))
-     return new cDBusMessageRemote(cDBusMessageRemote::dmrStatus, conn, msg);
-
-  if (dbus_message_is_method_call(msg, DBUS_VDR_REMOTE_INTERFACE, "HitKey"))
-     return new cDBusMessageRemote(cDBusMessageRemote::dmrHitKey, conn, msg);
-
-  if (dbus_message_is_method_call(msg, DBUS_VDR_REMOTE_INTERFACE, "AskUser"))
-     return new cDBusMessageRemote(cDBusMessageRemote::dmrAskUser, conn, msg);
-
-  if (dbus_message_is_method_call(msg, DBUS_VDR_REMOTE_INTERFACE, "SwitchChannel"))
-     return new cDBusMessageRemote(cDBusMessageRemote::dmrSwitchChannel, conn, msg);
+  for (int a = 0; a < _actionCount; a++) {
+      if (dbus_message_is_method_call(msg, DBUS_VDR_REMOTE_INTERFACE, _action[a]->Name))
+         return new cDBusMessageRemote(_action[a]->Action, conn, msg);
+      }
 
   return NULL;
 }
