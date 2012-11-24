@@ -202,3 +202,6 @@ VDR Plugin 'dbus2vdr' Revision History
 
 2012-11-07: Version 0.0.8c
 - add vdr-instance-id to destination name
+
+2012-11-24: Version 0.0.8d
+- add SwitchChannel to remote interface

@@ -11,7 +11,7 @@ class cDBusMessageRemote : public cDBusMessage
 friend class cDBusDispatcherRemote;
 
 public:
-  enum eAction { dmrCallPlugin, dmrEnable, dmrDisable, dmrStatus, dmrHitKey, dmrAskUser };
+  enum eAction { dmrCallPlugin, dmrEnable, dmrDisable, dmrStatus, dmrHitKey, dmrAskUser, dmrSwitchChannel };
 
   virtual ~cDBusMessageRemote(void);
 
@@ -26,6 +26,7 @@ private:
   void Status(void);
   void HitKey(void);
   void AskUser(void);
+  void SwitchChannel(void);
 
   eAction _action;
 };

@@ -103,6 +103,9 @@ void cDBusMessageRemote::Process(void)
     case dmrAskUser:
       AskUser();
       break;
+    case dmrSwitchChannel:
+      SwitchChannel();
+      break;
     }
 }
 
@@ -252,6 +255,86 @@ void cDBusMessageRemote::AskUser(void)
   cDBusHelper::SendReply(_conn, _msg, 250, "display selection menu");
 }
 
+void cDBusMessageRemote::SwitchChannel(void)
+{
+  dbus_int32_t replyCode = 500;
+  cString replyMessage;
+  char *Option = NULL;
+  if (dbus_message_get_args(_msg, NULL, DBUS_TYPE_STRING, &Option, DBUS_TYPE_INVALID) && (Option != NULL)) {
+     int n = -1;
+     int d = 0;
+     if (isnumber(Option)) {
+        int o = strtol(Option, NULL, 10);
+        if (o >= 1 && o <= Channels.MaxNumber())
+           n = o;
+        }
+     else if (strcmp(Option, "-") == 0) {
+        n = cDevice::CurrentChannel();
+        if (n > 1) {
+           n--;
+           d = -1;
+           }
+        }
+     else if (strcmp(Option, "+") == 0) {
+        n = cDevice::CurrentChannel();
+        if (n < Channels.MaxNumber()) {
+           n++;
+           d = 1;
+           }
+        }
+     else {
+        cChannel *channel = Channels.GetByChannelID(tChannelID::FromString(Option));
+        if (channel)
+           n = channel->Number();
+        else {
+           for (cChannel *channel = Channels.First(); channel; channel = Channels.Next(channel)) {
+               if (!channel->GroupSep()) {
+                  if (strcasecmp(channel->Name(), Option) == 0) {
+                     n = channel->Number();
+                     break;
+                     }
+                  }
+               }
+           }
+        }
+     if (n < 0) {
+        replyCode = 501;
+        replyMessage = cString::sprintf("Undefined channel \"%s\"", Option);
+        cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
+        return;
+        }
+     if (!d) {
+        cChannel *channel = Channels.GetByNumber(n);
+        if (channel) {
+           if (!cDevice::PrimaryDevice()->SwitchChannel(channel, true)) {
+              replyCode = 554;
+              replyMessage = cString::sprintf("Error switching to channel \"%d\"", channel->Number());
+              cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
+              return;
+              }
+           }
+        else {
+           replyCode = 550;
+           replyMessage = cString::sprintf("Unable to find channel \"%s\"", Option);
+           cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
+           return;
+           }
+        }
+     else
+        cDevice::SwitchChannel(d);
+     }
+  cChannel *channel = Channels.GetByNumber(cDevice::CurrentChannel());
+  if (channel) {
+     replyCode = 250;
+     replyMessage = cString::sprintf("%d %s", channel->Number(), channel->Name());
+     }
+  else {
+     replyCode = 550;
+     replyMessage = cString::sprintf("Unable to find channel \"%d\"", cDevice::CurrentChannel());
+     }
+  cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
+}
+
 
 cOsdObject *cDBusDispatcherRemote::MainMenuAction = NULL;
 
@@ -290,6 +373,9 @@ cDBusMessage *cDBusDispatcherRemote::CreateMessage(DBusConnection* conn, DBusMes
 
   if (dbus_message_is_method_call(msg, DBUS_VDR_REMOTE_INTERFACE, "AskUser"))
      return new cDBusMessageRemote(cDBusMessageRemote::dmrAskUser, conn, msg);
+
+  if (dbus_message_is_method_call(msg, DBUS_VDR_REMOTE_INTERFACE, "SwitchChannel"))
+     return new cDBusMessageRemote(cDBusMessageRemote::dmrSwitchChannel, conn, msg);
 
   return NULL;
 }
@@ -334,6 +420,11 @@ bool          cDBusDispatcherRemote::OnIntrospect(DBusMessage *msg, cString &Dat
   "      <arg name=\"title\"        type=\"s\"/>\n"
   "      <arg name=\"index\"        type=\"i\"/>\n"
   "    </signal>\n"
+  "    <method name=\"SwitchChannel\">\n"
+  "      <arg name=\"channel\"      type=\"s\" direction=\"in\"/>\n"
+  "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
   "  </interface>\n"
   "</node>\n";
   return true;
