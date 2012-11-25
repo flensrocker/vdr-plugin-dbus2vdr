@@ -10,15 +10,34 @@
 class cDBusMessage;
 class cDBusMessageHandler;
 
+typedef void (*cDBusMessageActionFunc)(DBusConnection* conn, DBusMessage* msg);
+
+class cDBusMessageAction : public cListObject
+{
+public:
+  const char *Name;
+  cDBusMessageActionFunc Action;
+
+  cDBusMessageAction(const char *name, cDBusMessageActionFunc action)
+   :Name(name),Action(action)
+  {
+  };
+};
+
 class cDBusMessageDispatcher : public cListObject
 {
 private:
   static cList<cDBusMessageDispatcher> _dispatcher;
 
   const char *_interface;
+  cStringList _paths;
+  cList<cDBusMessageAction> _actions;
 
 protected:
-  virtual cDBusMessage *CreateMessage(DBusConnection* conn, DBusMessage* msg) = 0;
+  void                  AddPath(const char *path);
+  void                  AddAction(cDBusMessageAction *action);
+  
+  virtual cDBusMessage *CreateMessage(DBusConnection* conn, DBusMessage* msg) { return NULL; };
   virtual bool          OnIntrospect(DBusMessage *msg, cString &Data) { return false; }
   virtual void          OnStop(void) {}
 
@@ -34,6 +53,7 @@ public:
 
 class cDBusMessage
 {
+friend class cDBusMessageDispatcher;
 friend class cDBusMessageHandler;
 
 public:
@@ -41,10 +61,14 @@ public:
 
 protected:
   cDBusMessage(DBusConnection *conn, DBusMessage *msg);
-  virtual void Process(void) = 0;
+  cDBusMessage(DBusConnection *conn, DBusMessage *msg, cDBusMessageActionFunc action);
+  virtual void Process(void);
 
   DBusConnection *_conn;
   DBusMessage    *_msg;
+
+private:
+  cDBusMessageActionFunc _action;
 };
 
 #endif

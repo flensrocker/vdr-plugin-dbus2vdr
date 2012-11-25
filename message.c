@@ -90,14 +90,41 @@ void cDBusMessageHandler::Action(void)
 
 cList<cDBusMessageDispatcher> cDBusMessageDispatcher::_dispatcher;
 
+void cDBusMessageDispatcher::AddPath(const char *path)
+{
+  if (path != NULL)
+     _paths.Append(strdup(path));
+}
+
+void cDBusMessageDispatcher::AddAction(cDBusMessageAction *action)
+{
+  if (action != NULL)
+     _actions.Add(action);
+}
+
 bool cDBusMessageDispatcher::Dispatch(DBusConnection* conn, DBusMessage* msg)
 {
   const char *interface = dbus_message_get_interface(msg);
   if (interface == NULL)
      return false;
+  const char *path = dbus_message_get_path(msg);
+  if (path == NULL)
+     return false;
   for (cDBusMessageDispatcher *d = _dispatcher.First(); d; d = _dispatcher.Next(d)) {
       if (strcmp(d->_interface, interface) == 0) {
-         cDBusMessage *m = d->CreateMessage(conn, msg);
+         cDBusMessage *m = NULL;
+         if ((d->_paths.Size() > 0) && (d->_actions.Count() > 0)) {
+            if (d->_paths.Find(path) >= 0) {
+               for (cDBusMessageAction *a = d->_actions.First(); a; a = d->_actions.Next(a)) {
+                   if (dbus_message_is_method_call(msg, d->_interface, a->Name)) {
+                      m = new cDBusMessage(conn, msg, a->Action);
+                      break;
+                      }
+                   }
+               }
+            }
+         if (m == NULL)
+            m = d->CreateMessage(conn, msg);
          if (m == NULL)
             return false;
          cDBusMessageHandler::NewHandler(m);
@@ -145,6 +172,14 @@ cDBusMessageDispatcher::~cDBusMessageDispatcher(void)
 cDBusMessage::cDBusMessage(DBusConnection *conn, DBusMessage *msg)
 :_conn(conn)
 ,_msg(msg)
+,_action(NULL)
+{
+}
+
+cDBusMessage::cDBusMessage(DBusConnection *conn, DBusMessage *msg, cDBusMessageActionFunc action)
+:_conn(conn)
+,_msg(msg)
+,_action(action)
 {
 }
 
@@ -152,4 +187,12 @@ cDBusMessage::~cDBusMessage(void)
 {
   if (_msg)
      dbus_message_unref(_msg);
+}
+
+void cDBusMessage::Process(void)
+{
+  if (_action != NULL)
+     _action(_conn, _msg);
+  else
+     esyslog("dbus2vdr: no action in message, looks like an error by the developer...");
 }

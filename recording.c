@@ -5,54 +5,27 @@
 #include <vdr/recording.h>
 
 
-cDBusMessageRecording::cDBusMessageRecording(cDBusMessageRecording::eAction action, DBusConnection* conn, DBusMessage* msg)
-:cDBusMessage(conn, msg)
-,_action(action)
+class cDBusRecordingActions
 {
-}
-
-cDBusMessageRecording::~cDBusMessageRecording(void)
-{
-}
-
-void cDBusMessageRecording::Process(void)
-{
-  switch (_action) {
-    case dmrUpdate:
-      Update();
-      break;
-    }
-}
-
-void cDBusMessageRecording::Update(void)
-{
-  Recordings.Update(false);
-  cDBusHelper::SendReply(_conn, _msg, 250, "update of recordings triggered");
-}
+public:
+  static void Update(DBusConnection* conn, DBusMessage* msg)
+  {
+    Recordings.Update(false);
+    cDBusHelper::SendReply(conn, msg, 250, "update of recordings triggered");
+  };
+};
 
 
 cDBusDispatcherRecording::cDBusDispatcherRecording(void)
 :cDBusMessageDispatcher(DBUS_VDR_RECORDING_INTERFACE)
 {
+  AddPath("/Recording");
+  AddPath("/Recordings");
+  AddAction(new cDBusMessageAction("Update", cDBusRecordingActions::Update));
 }
 
 cDBusDispatcherRecording::~cDBusDispatcherRecording(void)
 {
-}
-
-cDBusMessage *cDBusDispatcherRecording::CreateMessage(DBusConnection* conn, DBusMessage* msg)
-{
-  if ((conn == NULL) || (msg == NULL))
-     return NULL;
-
-  const char *object = dbus_message_get_path(msg);
-  if ((object == NULL) || (strcmp(object, "/Recording") != 0))
-     return NULL;
-
-  if (dbus_message_is_method_call(msg, DBUS_VDR_RECORDING_INTERFACE, "Update"))
-     return new cDBusMessageRecording(cDBusMessageRecording::dmrUpdate, conn, msg);
-
-  return NULL;
 }
 
 bool          cDBusDispatcherRecording::OnIntrospect(DBusMessage *msg, cString &Data)
