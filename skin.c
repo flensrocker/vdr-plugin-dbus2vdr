@@ -5,147 +5,110 @@
 #include <vdr/skins.h>
 
 
-cDBusMessageSkin::cDBusMessageSkin(cDBusMessageSkin::eAction action, DBusConnection* conn, DBusMessage* msg)
-:cDBusMessage(conn, msg)
-,_action(action)
+class cDBusSkinActions
 {
-}
+private:
+  static void AddSkin(DBusMessageIter& args, cSkin *skin)
+  {
+    if (skin == NULL)
+       return;
 
-cDBusMessageSkin::~cDBusMessageSkin(void)
-{
-}
+    DBusMessageIter struc;
+    if (!dbus_message_iter_open_container(&args, DBUS_TYPE_STRUCT, NULL, &struc))
+       esyslog("dbus2vdr: %s.AddSkin: can't open struct container", DBUS_VDR_SKIN_INTERFACE);
+    else {
+       dbus_int32_t index = skin->Index();
+       cDBusHelper::AddArg(struc, DBUS_TYPE_INT32, &index);
+       const char *name = skin->Name();
+       cDBusHelper::AddArg(struc, DBUS_TYPE_STRING, &name);
+       const char *desc = skin->Description();
+       cDBusHelper::AddArg(struc, DBUS_TYPE_STRING, &desc);
+       if (!dbus_message_iter_close_container(&args, &struc))
+          esyslog("dbus2vdr: %s.AddSkin: can't close struct container", DBUS_VDR_SKIN_INTERFACE);
+       }
+  }
 
-void cDBusMessageSkin::Process(void)
-{
-  switch (_action) {
-    case dmsCurrentSkin:
-      CurrentSkin();
-      break;
-    case dmsListSkins:
-      ListSkins();
-      break;
-    case dmsQueueMessage:
-      QueueMessage();
-      break;
-    }
-}
+public:
+  static void CurrentSkin(DBusConnection* conn, DBusMessage* msg)
+  {
+    DBusMessage *reply = dbus_message_new_method_return(msg);
+    DBusMessageIter args;
+    dbus_message_iter_init_append(reply, &args);
 
-void AddSkin(DBusMessageIter& args, cSkin *skin)
-{
-  if (skin == NULL)
-     return;
+    dbus_int32_t replyCode = 900;
+    cDBusHelper::AddArg(args, DBUS_TYPE_INT32, &replyCode);
 
-  DBusMessageIter struc;
-  if (!dbus_message_iter_open_container(&args, DBUS_TYPE_STRUCT, NULL, &struc))
-     esyslog("dbus2vdr: %s.AddSkin: can't open struct container", DBUS_VDR_SKIN_INTERFACE);
-  else {
-     dbus_int32_t index = skin->Index();
-     cDBusHelper::AddArg(struc, DBUS_TYPE_INT32, &index);
-     const char *name = skin->Name();
-     cDBusHelper::AddArg(struc, DBUS_TYPE_STRING, &name);
-     const char *desc = skin->Description();
-     cDBusHelper::AddArg(struc, DBUS_TYPE_STRING, &desc);
-     if (!dbus_message_iter_close_container(&args, &struc))
-        esyslog("dbus2vdr: %s.AddSkin: can't close struct container", DBUS_VDR_SKIN_INTERFACE);
-     }
-}
+    AddSkin(args, Skins.Current());
 
-void cDBusMessageSkin::CurrentSkin(void)
-{
-  DBusMessage *reply = dbus_message_new_method_return(_msg);
-  DBusMessageIter args;
-  dbus_message_iter_init_append(reply, &args);
+    dbus_uint32_t serial = 0;
+    if (!dbus_connection_send(conn, reply, &serial))
+       esyslog("dbus2vdr: %s.CurrentSkin: out of memory while sending the reply", DBUS_VDR_SKIN_INTERFACE);
+    dbus_message_unref(reply);
+  }
 
-  dbus_int32_t replyCode = 900;
-  cDBusHelper::AddArg(args, DBUS_TYPE_INT32, &replyCode);
+  static void ListSkins(DBusConnection* conn, DBusMessage* msg)
+  {
+    DBusMessage *reply = dbus_message_new_method_return(msg);
+    DBusMessageIter args;
+    dbus_message_iter_init_append(reply, &args);
 
-  AddSkin(args, Skins.Current());
+    dbus_int32_t replyCode = 900;
+    cDBusHelper::AddArg(args, DBUS_TYPE_INT32, &replyCode);
 
-  dbus_uint32_t serial = 0;
-  if (!dbus_connection_send(_conn, reply, &serial))
-     esyslog("dbus2vdr: %s.CurrentSkin: out of memory while sending the reply", DBUS_VDR_SKIN_INTERFACE);
-  dbus_message_unref(reply);
-}
+    DBusMessageIter array;
+    if (!dbus_message_iter_open_container(&args, DBUS_TYPE_ARRAY, "(iss)", &array))
+       esyslog("dbus2vdr: %s.GetNames: can't open array container", DBUS_VDR_SKIN_INTERFACE);
 
-void cDBusMessageSkin::ListSkins(void)
-{
-  DBusMessage *reply = dbus_message_new_method_return(_msg);
-  DBusMessageIter args;
-  dbus_message_iter_init_append(reply, &args);
+    for (cSkin* skin = Skins.First(); skin; skin = Skins.Next(skin))
+        AddSkin(array, skin);
 
-  dbus_int32_t replyCode = 900;
-  cDBusHelper::AddArg(args, DBUS_TYPE_INT32, &replyCode);
+    if (!dbus_message_iter_close_container(&args, &array))
+       esyslog("dbus2vdr: %s.GetNames: can't close array container", DBUS_VDR_SKIN_INTERFACE);
 
-  DBusMessageIter array;
-  if (!dbus_message_iter_open_container(&args, DBUS_TYPE_ARRAY, "(iss)", &array))
-     esyslog("dbus2vdr: %s.GetNames: can't open array container", DBUS_VDR_SKIN_INTERFACE);
+    dbus_uint32_t serial = 0;
+    if (!dbus_connection_send(conn, reply, &serial))
+       esyslog("dbus2vdr: %s.GetNames: out of memory while sending the reply", DBUS_VDR_SKIN_INTERFACE);
+    dbus_message_unref(reply);
+  }
 
-  for (cSkin* skin = Skins.First(); skin; skin = Skins.Next(skin))
-      AddSkin(array, skin);
+  static void QueueMessage(DBusConnection* conn, DBusMessage* msg)
+  {
+    const char *messageText = NULL;
+    DBusMessageIter args;
+    if (!dbus_message_iter_init(msg, &args))
+       esyslog("dbus2vdr: %s.QueueMessage: message misses an argument for the message text", DBUS_VDR_SKIN_INTERFACE);
+    else {
+       int rc = cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &messageText);
+       if (rc < 0)
+          esyslog("dbus2vdr: %s.QueueMessage: 'messageText' argument is not a string", DBUS_VDR_SKIN_INTERFACE);
+       }
 
-  if (!dbus_message_iter_close_container(&args, &array))
-     esyslog("dbus2vdr: %s.GetNames: can't close array container", DBUS_VDR_SKIN_INTERFACE);
+    dbus_int32_t replyCode = 501;
+    cString replyMessage;
+    if (messageText != NULL) {
+       Skins.QueueMessage(mtInfo, messageText);
+       replyCode = 250;
+       replyMessage = "Message queued";
+       }
+    else
+       replyMessage = "Missing message";
 
-  dbus_uint32_t serial = 0;
-  if (!dbus_connection_send(_conn, reply, &serial))
-     esyslog("dbus2vdr: %s.GetNames: out of memory while sending the reply", DBUS_VDR_SKIN_INTERFACE);
-  dbus_message_unref(reply);
-}
-
-void cDBusMessageSkin::QueueMessage(void)
-{
-  const char *messageText = NULL;
-  DBusMessageIter args;
-  if (!dbus_message_iter_init(_msg, &args))
-     esyslog("dbus2vdr: %s.QueueMessage: message misses an argument for the message text", DBUS_VDR_SKIN_INTERFACE);
-  else {
-     int rc = cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &messageText);
-     if (rc < 0)
-        esyslog("dbus2vdr: %s.QueueMessage: 'messageText' argument is not a string", DBUS_VDR_SKIN_INTERFACE);
-     }
-
-  dbus_int32_t replyCode = 501;
-  cString replyMessage;
-  if (messageText != NULL) {
-     Skins.QueueMessage(mtInfo, messageText);
-     replyCode = 250;
-     replyMessage = "Message queued";
-     }
-  else
-     replyMessage = "Missing message";
-
-  cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
-}
+    cDBusHelper::SendReply(conn, msg, replyCode, replyMessage);
+  }
+};
 
 
 cDBusDispatcherSkin::cDBusDispatcherSkin(void)
 :cDBusMessageDispatcher(DBUS_VDR_SKIN_INTERFACE)
 {
+  AddPath("/Skin");
+  AddAction("CurrentSkin", cDBusSkinActions::CurrentSkin);
+  AddAction("ListSkins", cDBusSkinActions::ListSkins);
+  AddAction("QueueMessage", cDBusSkinActions::QueueMessage);
 }
 
 cDBusDispatcherSkin::~cDBusDispatcherSkin(void)
 {
-}
-
-cDBusMessage *cDBusDispatcherSkin::CreateMessage(DBusConnection* conn, DBusMessage* msg)
-{
-  if ((conn == NULL) || (msg == NULL))
-     return NULL;
-
-  const char *object = dbus_message_get_path(msg);
-  if ((object == NULL) || (strcmp(object, "/Skin") != 0))
-     return NULL;
-
-  if (dbus_message_is_method_call(msg, DBUS_VDR_SKIN_INTERFACE, "CurrentSkin"))
-     return new cDBusMessageSkin(cDBusMessageSkin::dmsCurrentSkin, conn, msg);
-
-  if (dbus_message_is_method_call(msg, DBUS_VDR_SKIN_INTERFACE, "ListSkins"))
-     return new cDBusMessageSkin(cDBusMessageSkin::dmsListSkins, conn, msg);
-
-  if (dbus_message_is_method_call(msg, DBUS_VDR_SKIN_INTERFACE, "QueueMessage"))
-     return new cDBusMessageSkin(cDBusMessageSkin::dmsQueueMessage, conn, msg);
-
-  return NULL;
 }
 
 bool          cDBusDispatcherSkin::OnIntrospect(DBusMessage *msg, cString &Data)

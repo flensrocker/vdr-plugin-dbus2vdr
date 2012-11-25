@@ -32,7 +32,6 @@ public:
   virtual ~cDBusDispatcherSkin(void);
 
 protected:
-  virtual cDBusMessage *CreateMessage(DBusConnection* conn, DBusMessage* msg);
   virtual bool          OnIntrospect(DBusMessage *msg, cString &Data);
 };
 
