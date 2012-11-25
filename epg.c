@@ -391,14 +391,14 @@ cDBusDispatcherEpg::cDBusDispatcherEpg(void)
 :cDBusMessageDispatcher(DBUS_VDR_EPG_INTERFACE)
 {
   AddPath("/EPG");
-  AddAction(new cDBusMessageAction("DisableScanner", cDBusEpgActions::DisableScanner));
-  AddAction(new cDBusMessageAction("EnableScanner", cDBusEpgActions::EnableScanner));
-  AddAction(new cDBusMessageAction("ClearEPG", cDBusEpgActions::ClearEPG));
-  AddAction(new cDBusMessageAction("PutEntry", cDBusEpgActions::PutEntry));
-  AddAction(new cDBusMessageAction("PutFile", cDBusEpgActions::PutFile));
-  AddAction(new cDBusMessageAction("Now", cDBusEpgActions::Now));
-  AddAction(new cDBusMessageAction("Next", cDBusEpgActions::Next));
-  AddAction(new cDBusMessageAction("At", cDBusEpgActions::At));
+  AddAction("DisableScanner", cDBusEpgActions::DisableScanner);
+  AddAction("EnableScanner", cDBusEpgActions::EnableScanner);
+  AddAction("ClearEPG", cDBusEpgActions::ClearEPG);
+  AddAction("PutEntry", cDBusEpgActions::PutEntry);
+  AddAction("PutFile", cDBusEpgActions::PutFile);
+  AddAction("Now", cDBusEpgActions::Now);
+  AddAction("Next", cDBusEpgActions::Next);
+  AddAction("At", cDBusEpgActions::At);
 }
 
 cDBusDispatcherEpg::~cDBusDispatcherEpg(void)

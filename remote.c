@@ -308,13 +308,13 @@ cDBusDispatcherRemote::cDBusDispatcherRemote(void)
 :cDBusMessageDispatcher(DBUS_VDR_REMOTE_INTERFACE)
 {
   AddPath("/Remote");
-  AddAction(new cDBusMessageAction("CallPlugin", cDBusRemoteActions::CallPlugin));
-  AddAction(new cDBusMessageAction("Enable", cDBusRemoteActions::Enable));
-  AddAction(new cDBusMessageAction("Disable", cDBusRemoteActions::Disable));
-  AddAction(new cDBusMessageAction("Status", cDBusRemoteActions::Status));
-  AddAction(new cDBusMessageAction("HitKey", cDBusRemoteActions::HitKey));
-  AddAction(new cDBusMessageAction("AskUser", cDBusRemoteActions::AskUser));
-  AddAction(new cDBusMessageAction("SwitchChannel", cDBusRemoteActions::SwitchChannel));
+  AddAction("CallPlugin", cDBusRemoteActions::CallPlugin);
+  AddAction("Enable", cDBusRemoteActions::Enable);
+  AddAction("Disable", cDBusRemoteActions::Disable);
+  AddAction("Status", cDBusRemoteActions::Status);
+  AddAction("HitKey", cDBusRemoteActions::HitKey);
+  AddAction("AskUser", cDBusRemoteActions::AskUser);
+  AddAction("SwitchChannel", cDBusRemoteActions::SwitchChannel);
 }
 
 cDBusDispatcherRemote::~cDBusDispatcherRemote(void)

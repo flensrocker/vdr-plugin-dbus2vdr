@@ -10,6 +10,7 @@
 #include <signal.h>
 
 #include "common.h"
+#include "channel.h"
 #include "epg.h"
 #include "plugin.h"
 #include "monitor.h"
@@ -113,7 +114,7 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
            {
              if (optarg != NULL) {
                 isyslog("dbus2vdr: use shutdown-hooks in %s", optarg);
-                cDBusMessageShutdown::SetShutdownHooksDir(optarg);
+                cDBusShutdownActions::SetShutdownHooksDir(optarg);
                 }
              break;
            }
@@ -127,7 +128,7 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
            {
              if (optarg != NULL) {
                 isyslog("dbus2vdr: use shutdown-hooks-wrapper %s", optarg);
-                cDBusMessageShutdown::SetShutdownHooksWrapper(optarg);
+                cDBusShutdownActions::SetShutdownHooksWrapper(optarg);
                 }
              break;
            }
@@ -154,6 +155,7 @@ bool cPluginDbus2vdr::Initialize(void)
 bool cPluginDbus2vdr::Start(void)
 {
   // Start any background activities the plugin shall perform.
+  new cDBusDispatcherChannel;
   new cDBusDispatcherEpg;
   new cDBusDispatcherOsd;
   new cDBusDispatcherPlugin;

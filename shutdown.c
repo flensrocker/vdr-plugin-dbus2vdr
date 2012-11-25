@@ -10,42 +10,17 @@
 #include <vdr/timers.h>
 
 
-cString  cDBusMessageShutdown::_shutdownHooksDir;
-cString  cDBusMessageShutdown::_shutdownHooksWrapper;
+cString  cDBusShutdownActions::_shutdownHooksDir;
+cString  cDBusShutdownActions::_shutdownHooksWrapper;
 
-void cDBusMessageShutdown::SetShutdownHooksDir(const char *Dir)
+void cDBusShutdownActions::SetShutdownHooksDir(const char *Dir)
 {
   _shutdownHooksDir = cString( Dir);
 }
 
-void cDBusMessageShutdown::SetShutdownHooksWrapper(const char *Wrapper)
+void cDBusShutdownActions::SetShutdownHooksWrapper(const char *Wrapper)
 {
   _shutdownHooksWrapper = cString( Wrapper);
-}
-
-cDBusMessageShutdown::cDBusMessageShutdown(cDBusMessageShutdown::eAction action, DBusConnection* conn, DBusMessage* msg)
-:cDBusMessage(conn, msg)
-,_action(action)
-{
-}
-
-cDBusMessageShutdown::~cDBusMessageShutdown(void)
-{
-}
-
-void cDBusMessageShutdown::Process(void)
-{
-  switch (_action) {
-    case dmsConfirmShutdown:
-      ConfirmShutdown();
-      break;
-    case dmsManualStart:
-      ManualStart();
-      break;
-    case dmsSetUserInactive:
-      SetUserInactive();
-      break;
-    }
 }
 
 static void SendReply(DBusConnection *conn, DBusMessage *msg, int  returncode, const char *message, int  shexitcode = 0, const char *shparameter = "")
@@ -74,24 +49,24 @@ static void SendReply(DBusConnection *conn, DBusMessage *msg, int  returncode, c
   if (!dbus_connection_send(conn, reply, &serial))
      esyslog("dbus2vdr: SendReply: out of memory while sending the reply");
   dbus_message_unref(reply);
-};
+}
 
-void cDBusMessageShutdown::ConfirmShutdown(void)
+void cDBusShutdownActions::ConfirmShutdown(DBusConnection* conn, DBusMessage* msg)
 {
   int ignoreuser = 0;
-  if (!dbus_message_get_args(_msg, NULL, DBUS_TYPE_BOOLEAN, &ignoreuser, DBUS_TYPE_INVALID))
+  if (!dbus_message_get_args(msg, NULL, DBUS_TYPE_BOOLEAN, &ignoreuser, DBUS_TYPE_INVALID))
      ignoreuser = 0;
 
   // this is nearly a copy of vdr's cShutdownHandler::ConfirmShutdown
   // if the original changes take this into account
 
   if ((ignoreuser == 0) && !ShutdownHandler.IsUserInactive()) {
-     SendReply(_conn, _msg, 901, "user is active");
+     SendReply(conn, msg, 901, "user is active");
      return;
      }
 
   if (cCutter::Active()) {
-     SendReply(_conn, _msg, 902, "cutter is active");
+     SendReply(conn, msg, 902, "cutter is active");
      return;
      }
 
@@ -101,17 +76,17 @@ void cDBusMessageShutdown::ConfirmShutdown(void)
   time_t Delta = timer ? Next - Now : 0;
   if (cRecordControls::Active() || (Next && Delta <= 0)) {
      // VPS recordings in timer end margin may cause Delta <= 0
-     SendReply(_conn, _msg, 903, "recording is active");
+     SendReply(conn, msg, 903, "recording is active");
      return;
      }
   else if (Next && Delta <= Setup.MinEventTimeout * 60) {
      // Timer within Min Event Timeout
-     SendReply(_conn, _msg, 904, "recording is active in the near future");
+     SendReply(conn, msg, 904, "recording is active in the near future");
      return;
      }
 
   if (cPluginManager::Active(NULL)) {
-     SendReply(_conn, _msg, 905, "some plugin is active");
+     SendReply(conn, msg, 905, "some plugin is active");
      return;
      }
 
@@ -121,13 +96,13 @@ void cDBusMessageShutdown::ConfirmShutdown(void)
   if (NextPlugin && Delta <= Setup.MinEventTimeout * 60) {
      // Plugin wakeup within Min Event Timeout
      cString buf = cString::sprintf("plugin %s wakes up in %ld min", Plugin->Name(), Delta / 60);
-     SendReply(_conn, _msg, 906, *buf);
+     SendReply(conn, msg, 906, *buf);
      return;
      }
 
   // insanity check: ask vdr again, if implementation of ConfirmShutdown has changed...
   if (cRemote::Enabled() && !ShutdownHandler.ConfirmShutdown(false)) {
-     SendReply(_conn, _msg, 550, "vdr is not ready for shutdown");
+     SendReply(conn, msg, 550, "vdr is not ready for shutdown");
      return;
      }
 
@@ -185,11 +160,11 @@ void cDBusMessageShutdown::ConfirmShutdown(void)
            if ((strlen(*result) > strlen(message)) && startswith(*result, message)) {
               cString abort_message = tmp + strlen(message);
               abort_message.Truncate(-1);
-              SendReply(_conn, _msg, 992, *abort_message, ret);
+              SendReply(conn, msg, 992, *abort_message, ret);
               return;
               }
            }
-        SendReply(_conn, _msg, 999, "shutdown-hook returned a non-zero exit code", ret);
+        SendReply(conn, msg, 999, "shutdown-hook returned a non-zero exit code", ret);
         return;
         }
 
@@ -201,7 +176,7 @@ void cDBusMessageShutdown::ConfirmShutdown(void)
            if ((strlen(*s_try_again) > 0) && isnumber(*s_try_again)) {
               int try_again = strtol(s_try_again, NULL, 10);
               if (try_again > 0) {
-                 SendReply(_conn, _msg, 991, *s_try_again);
+                 SendReply(conn, msg, 991, *s_try_again);
                  return;
                  }
               }
@@ -216,36 +191,36 @@ void cDBusMessageShutdown::ConfirmShutdown(void)
            }
         }
      if (*shutdowncmd && (strlen(*shutdowncmd) > 0)) {
-        SendReply(_conn, _msg, 990, *shutdowncmd, 0, *params);
+        SendReply(conn, msg, 990, *shutdowncmd, 0, *params);
         return;
         }
      }
 
-  SendReply(_conn, _msg, 250, "vdr is ready for shutdown");
+  SendReply(conn, msg, 250, "vdr is ready for shutdown");
 }
 
-void cDBusMessageShutdown::ManualStart(void)
+void cDBusShutdownActions::ManualStart(DBusConnection* conn, DBusMessage* msg)
 {
   int manual = 0;
   time_t Delta = Setup.NextWakeupTime ? Setup.NextWakeupTime - cDBusDispatcherShutdown::StartupTime : 0;
   if (!Setup.NextWakeupTime || (abs(Delta) > 600)) // 600 comes from vdr's MANUALSTART constant in vdr.c
      manual = 1;
 
-  DBusMessage *reply = dbus_message_new_method_return(_msg);
+  DBusMessage *reply = dbus_message_new_method_return(msg);
   DBusMessageIter args;
   dbus_message_iter_init_append(reply, &args);
   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_BOOLEAN, &manual))
      esyslog("dbus2vdr: %s.ManualStart: out of memory while appending the return value", DBUS_VDR_SHUTDOWN_INTERFACE);
   dbus_uint32_t serial = 0;
-  if (!dbus_connection_send(_conn, reply, &serial))
+  if (!dbus_connection_send(conn, reply, &serial))
      esyslog("dbus2vdr: %s.ManualStart: out of memory while sending the reply", DBUS_VDR_SHUTDOWN_INTERFACE);
   dbus_message_unref(reply);
 }
 
-void cDBusMessageShutdown::SetUserInactive(void)
+void cDBusShutdownActions::SetUserInactive(DBusConnection* conn, DBusMessage* msg)
 {
   ShutdownHandler.SetUserInactive();
-  SendReply(_conn, _msg, 250, "vdr is set to non-interactive mode");
+  SendReply(conn, msg, 250, "vdr is set to non-interactive mode");
 }
 
 
@@ -254,31 +229,14 @@ time_t cDBusDispatcherShutdown::StartupTime;
 cDBusDispatcherShutdown::cDBusDispatcherShutdown(void)
 :cDBusMessageDispatcher(DBUS_VDR_SHUTDOWN_INTERFACE)
 {
+  AddPath("/Shutdown");
+  AddAction("ConfirmShutdown" , cDBusShutdownActions::ConfirmShutdown);
+  AddAction("ManualStart" , cDBusShutdownActions::ManualStart);
+  AddAction("SetUserInactive" , cDBusShutdownActions::SetUserInactive);
 }
 
 cDBusDispatcherShutdown::~cDBusDispatcherShutdown(void)
 {
-}
-
-cDBusMessage *cDBusDispatcherShutdown::CreateMessage(DBusConnection* conn, DBusMessage* msg)
-{
-  if ((conn == NULL) || (msg == NULL))
-     return NULL;
-
-  const char *object = dbus_message_get_path(msg);
-  if ((object == NULL) || (strcmp(object, "/Shutdown") != 0))
-     return NULL;
-
-  if (dbus_message_is_method_call(msg, DBUS_VDR_SHUTDOWN_INTERFACE, "ConfirmShutdown"))
-     return new cDBusMessageShutdown(cDBusMessageShutdown::dmsConfirmShutdown, conn, msg);
-
-  if (dbus_message_is_method_call(msg, DBUS_VDR_SHUTDOWN_INTERFACE, "ManualStart"))
-     return new cDBusMessageShutdown(cDBusMessageShutdown::dmsManualStart, conn, msg);
-
-  if (dbus_message_is_method_call(msg, DBUS_VDR_SHUTDOWN_INTERFACE, "SetUserInactive"))
-     return new cDBusMessageShutdown(cDBusMessageShutdown::dmsSetUserInactive, conn, msg);
-
-  return NULL;
 }
 
 bool          cDBusDispatcherShutdown::OnIntrospect(DBusMessage *msg, cString &Data)

@@ -96,10 +96,10 @@ void cDBusMessageDispatcher::AddPath(const char *path)
      _paths.Append(strdup(path));
 }
 
-void cDBusMessageDispatcher::AddAction(cDBusMessageAction *action)
+void cDBusMessageDispatcher::AddAction(const char *name, cDBusMessageActionFunc action)
 {
-  if (action != NULL)
-     _actions.Add(action);
+  if ((name != NULL) && (action != NULL))
+     _actions.Add(new cDBusMessageAction(name, action));
 }
 
 bool cDBusMessageDispatcher::Dispatch(DBusConnection* conn, DBusMessage* msg)

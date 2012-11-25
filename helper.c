@@ -5,7 +5,7 @@
 #include <unistd.h>
 
 
-void cDBusHelper::AddArg(DBusMessageIter &args, int type, void *value)
+void cDBusHelper::AddArg(DBusMessageIter &args, int type, const void *value)
 {
   if (value == NULL)
      return;

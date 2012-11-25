@@ -8,7 +8,7 @@
 class cDBusHelper
 {
 public:
-  static void AddArg(DBusMessageIter &args, int type, void *value);
+  static void AddArg(DBusMessageIter &args, int type, const void *value);
   static void AddKeyValue(DBusMessageIter &array, const char *key, int type, const char *vtype, void *value);
 
   static int  GetNextArg(DBusMessageIter &args, int type, void *value);

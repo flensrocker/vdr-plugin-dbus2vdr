@@ -21,7 +21,7 @@ cDBusDispatcherRecording::cDBusDispatcherRecording(void)
 {
   AddPath("/Recording");
   AddPath("/Recordings");
-  AddAction(new cDBusMessageAction("Update", cDBusRecordingActions::Update));
+  AddAction("Update", cDBusRecordingActions::Update);
 }
 
 cDBusDispatcherRecording::~cDBusDispatcherRecording(void)
