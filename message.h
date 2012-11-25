@@ -35,6 +35,7 @@ private:
 
 protected:
   void                  AddPath(const char *path);
+  void                  AddAction(const char *name, cDBusMessageActionFunc action);
   void                  AddAction(cDBusMessageAction *action);
   
   virtual cDBusMessage *CreateMessage(DBusConnection* conn, DBusMessage* msg) { return NULL; };
