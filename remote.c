@@ -225,7 +225,7 @@ public:
     dbus_int32_t replyCode = 500;
     cString replyMessage;
     char *Option = NULL;
-    if (dbus_message_get_args(msg, NULL, DBUS_TYPE_STRING, &Option, DBUS_TYPE_INVALID) && (Option != NULL)) {
+    if (dbus_message_get_args(msg, NULL, DBUS_TYPE_STRING, &Option, DBUS_TYPE_INVALID) && (Option != NULL) && (*Option != NULL)) {
        int n = -1;
        int d = 0;
        if (isnumber(Option)) {
