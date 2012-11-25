@@ -208,3 +208,4 @@ VDR Plugin 'dbus2vdr' Revision History
 - refactoring of message handling, it's now simpler to add new methods
 - add channel interface
 - add List to channel interface
+- add List to recording interface

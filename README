@@ -135,7 +135,29 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
 Interface "recording"
 ---------------------
 - trigger an update of the list of recordings
-  vdr-dbus-send.sh /Recording recording.Update
+  vdr-dbus-send.sh /Recordings recording.Update
+
+- list recordings
+  vdr-dbus-send.sh /Recordings recording.List
+
+  returned is an array of structs as with "Get".
+  
+TODO:
+- get info about one recording
+  vdr-dbus-send.sh /Recordings recording.Get int32:number
+
+  The following is returned:
+  struct of
+    int32  number of recording
+    array of
+      string   key
+      variant  value
+
+  possible keys: Path, Name, Title, Start, Priority, Lifetime,
+  FramesPerSecond, NumFrames, LengthInSeconds, FileSizeMB, IsPesRecording
+
+- play recording given by path
+  vdr-dbus-send.sh /Recordings recording.PlayPath string:'path-to-recording'
 
 Interface "remote"
 ------------------

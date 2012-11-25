@@ -16,6 +16,7 @@ public:
    ///<          0 on success and this was the last argument
    ///<          1 on success and there are arguments left
 
+  static void SendReply(DBusConnection *conn, DBusMessage *msg, DBusMessage *reply);
   static void SendReply(DBusConnection *conn, DBusMessage *msg, int  returncode, const char *message);
   static void SendReply(DBusConnection *conn, DBusMessage *msg, const char *message);
 };
