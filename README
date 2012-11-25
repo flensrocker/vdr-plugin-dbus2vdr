@@ -35,7 +35,7 @@ you can call:
 Dependencies
 ------------
 Debian/Ubuntu packages:
-libdbus-1-dev, pkg-config, libjpeg62-dev, libpng++-dev
+libdbus-1-dev, pkg-config, libjpeg-dev, libpng++-dev
 
 Restrictions
 ------------
@@ -312,10 +312,12 @@ How to implement new interfaces
 - add the interface name to common.h
 - create a subclass of cDBusMessageDispatcher and pass the interface name
   to its base constructor
-- return subclasses of cDBusMessage in its CreateMessage method depending
-  on object path, method name etc.
+simple:
+- call AddPath and AddAction for supported methods
+complicated:
+- if you need special processing of object paths and method names then
+  override CreateMessage and return objects derived from cDBusMessage
 - return introspection data in OnIntrospect
-- add your code to the Process method of your cDBusMessage classes
 - add a 'new cDBusDispatcherYourName' to cPluginDbus2vdr::Start
 
 Notes to myself
