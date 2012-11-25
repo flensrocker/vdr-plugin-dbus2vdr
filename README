@@ -152,6 +152,9 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
 - open the main menu entry of a plugin
   vdr-dbus-send.sh /Remote remote.CallPlugin string:'name-of-plugin'
 
+- switch channel like SVDRP command CHAN
+  vdr-dbus-send.sh /Remote remote.SwitchChannel string:'[ + | - | <number> | <name> | <id> ]'
+
 - trigger an update of the list of recordings
   vdr-dbus-send.sh /Recording recording.Update
 
