@@ -2,6 +2,7 @@
 #define __DBUS2VDR_COMMON_H
 
 #define DBUS_VDR_BUSNAME              "de.tvdr.vdr"
+#define DBUS_VDR_CHANNEL_INTERFACE    DBUS_VDR_BUSNAME".channel"
 #define DBUS_VDR_EPG_INTERFACE        DBUS_VDR_BUSNAME".epg"
 #define DBUS_VDR_OSD_INTERFACE        DBUS_VDR_BUSNAME".osd"
 #define DBUS_VDR_PLUGIN_INTERFACE     DBUS_VDR_BUSNAME".plugin"

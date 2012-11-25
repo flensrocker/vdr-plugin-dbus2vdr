@@ -10,6 +10,7 @@
 #include <signal.h>
 
 #include "common.h"
+#include "channel.h"
 #include "epg.h"
 #include "plugin.h"
 #include "monitor.h"
@@ -154,6 +155,7 @@ bool cPluginDbus2vdr::Initialize(void)
 bool cPluginDbus2vdr::Start(void)
 {
   // Start any background activities the plugin shall perform.
+  new cDBusDispatcherChannel;
   new cDBusDispatcherEpg;
   new cDBusDispatcherOsd;
   new cDBusDispatcherPlugin;

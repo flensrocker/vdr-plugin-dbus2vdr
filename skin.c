@@ -57,17 +57,17 @@ public:
 
     DBusMessageIter array;
     if (!dbus_message_iter_open_container(&args, DBUS_TYPE_ARRAY, "(iss)", &array))
-       esyslog("dbus2vdr: %s.GetNames: can't open array container", DBUS_VDR_SKIN_INTERFACE);
+       esyslog("dbus2vdr: %s.ListSkins: can't open array container", DBUS_VDR_SKIN_INTERFACE);
 
     for (cSkin* skin = Skins.First(); skin; skin = Skins.Next(skin))
         AddSkin(array, skin);
 
     if (!dbus_message_iter_close_container(&args, &array))
-       esyslog("dbus2vdr: %s.GetNames: can't close array container", DBUS_VDR_SKIN_INTERFACE);
+       esyslog("dbus2vdr: %s.ListSkins: can't close array container", DBUS_VDR_SKIN_INTERFACE);
 
     dbus_uint32_t serial = 0;
     if (!dbus_connection_send(conn, reply, &serial))
-       esyslog("dbus2vdr: %s.GetNames: out of memory while sending the reply", DBUS_VDR_SKIN_INTERFACE);
+       esyslog("dbus2vdr: %s.ListSkins: out of memory while sending the reply", DBUS_VDR_SKIN_INTERFACE);
     dbus_message_unref(reply);
   }
 

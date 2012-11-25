@@ -70,20 +70,13 @@ Commandline Arguments
         default: 10ms
         lower values may cause higher cpu load but will increase speed of reaction
 
-Implemented features
---------------------
-- send SVDRP commands to plugins
-  vdr-dbus-send.sh /Plugins/<pluginname> plugin.SVDRPCommand string:'command' string:'parameter'
+Interface "channel"
+-------------------
+- list channels like SVDRP command CHAN
+  vdr-dbus-send.sh /Channels channel.List [string:'[ :groups | <number> | <name> | <id> ]']
 
-If the SVDRP command doesn't take a parameter you can ommit it or pass an empty string.
-
-- call Service method of plugins
-  vdr-dbus-send.sh /Plugins/<pluginname> plugin.Service string:'id' string:'data'
-
-- list all loaded plugins
-  vdr-dbus-send.sh /Plugins plugin.List
-  You'll get an array of structs containing two strings, the name and the version of the plugins.
-
+Interface "epg"
+---------------
 - disable EIT scanner with timeout (default: 3600)
   vdr-dbus-send.sh /EPG epg.DisableScanner int32:3600
 
@@ -123,17 +116,27 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
   ContentID[i]   int32  (0 <= i <= MaxEventContents)
   Content[i]     string (0 <= i <= MaxEventContents)
 
-- get infos about the next timer
-  vdr-dbus-send.sh /Timers timer.Next
+Interface "plugin"
+------------------
+- send SVDRP commands to plugins
+  vdr-dbus-send.sh /Plugins/<pluginname> plugin.SVDRPCommand string:'command' string:'parameter'
 
-  The following is returned:
-    int32   reply code (250 for success, 550 on error)
-    int32   timer id (-1 if there's no timer at all)
-    int32   'rel' seconds (see SVDRP NEXT REL)
-    uint64  starttime in seconds since epoch (time_t format)
-    uint64  stoptime in seconds since epoch (time_t format)
-    string  title of the event
+If the SVDRP command doesn't take a parameter you can ommit it or pass an empty string.
 
+- call Service method of plugins
+  vdr-dbus-send.sh /Plugins/<pluginname> plugin.Service string:'id' string:'data'
+
+- list all loaded plugins
+  vdr-dbus-send.sh /Plugins plugin.List
+  You'll get an array of structs containing two strings, the name and the version of the plugins.
+
+Interface "recording"
+---------------------
+- trigger an update of the list of recordings
+  vdr-dbus-send.sh /Recording recording.Update
+
+Interface "remote"
+------------------
 - enable/disable the remote
   vdr-dbus-send.sh /Remote remote.Enable
   vdr-dbus-send.sh /Remote remote.Disable
@@ -153,22 +156,41 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
   vdr-dbus-send.sh /Remote remote.CallPlugin string:'name-of-plugin'
 
 - switch channel like SVDRP command CHAN
-  vdr-dbus-send.sh /Remote remote.SwitchChannel string:'[ + | - | <number> | <name> | <id> ]'
+  vdr-dbus-send.sh /Remote remote.SwitchChannel [string:'[ + | - | <number> | <name> | <id> ]']
 
-- trigger an update of the list of recordings
-  vdr-dbus-send.sh /Recording recording.Update
+Interface "setup"
+-----------------
+- list all parameters from setup.conf
+  vdr-dbus-send.sh /Setup setup.List
 
-- display a message at the OSD
-  vdr-dbus-send.sh /Skin skin.QueueMessage string:'message text'
+- get parameters from setup.conf
+  vdr-dbus-send.sh /Setup setup.Get string:'MinUserInactivity'
 
-- get information about available skins
-  vdr-dbus-send.sh /Skin skin.ListSkins
-  You will get an array of index, name and description.
+- set parameters to setup.conf
+  vdr-dbus-send.sh /Setup setup.Set string:'MinUserInactivity' int32:0
+  Some parameters are known to be integers (look at setup.c) with a valid
+  range. All others are handled as strings.
+  WARNING: Be careful to set values unknown to dbus2vdr. It will trigger a reload
+  of the whole setup.conf including calls to SetupParse of every plugin.
+  This might have unexpected side effects!
 
-- get information about current skin
-  vdr-dbus-send.sh /Skin skin.CurrentSkin
-  You will get the index, name and description.
+- delete parameters from setup.conf
+  vdr-dbus-send.sh /Setup setup.Del string:'PrimaryLimit'
 
+You may also get/set/delete parameters for plugins with
+  vdr-dbus-send.sh /Setup setup.Get string:'pluginname.parameter'
+  vdr-dbus-send.sh /Setup setup.Set string:'pluginname.parameter' string:'value'
+  vdr-dbus-send.sh /Setup setup.Del string:'pluginname.parameter'
+but it is not guaranteed that it will work and that changes will affect the plugin's
+behaviour immediately.
+dbus2vdr will call the plugin's "SetupParse" function. If it returns true the value
+is stored in the setup.conf. You may need to restart vdr.
+
+- delete all settings of one plugin
+  vdr-dbus-send.sh /Setup setup.Del string:'pluginname.*'
+
+Interface "shutdown"
+--------------------
 - ask vdr if it is ready for shutdown
   vdr-dbus-send.sh /Shutdown shutdown.ConfirmShutdown [boolean:true]
   possible reply codes:
@@ -201,34 +223,31 @@ If the SVDRP command doesn't take a parameter you can ommit it or pass an empty 
 - set vdr to non-interactive mode
   vdr-dbus-send.sh /Shutdown shutdown.SetUserInactive
 
-- list all parameters from setup.conf
-  vdr-dbus-send.sh /Setup setup.List
+Interface "skin"
+----------------
+- display a message at the OSD
+  vdr-dbus-send.sh /Skin skin.QueueMessage string:'message text'
 
-- get parameters from setup.conf
-  vdr-dbus-send.sh /Setup setup.Get string:'MinUserInactivity'
+- get information about available skins
+  vdr-dbus-send.sh /Skin skin.ListSkins
+  You will get an array of index, name and description.
 
-- set parameters to setup.conf
-  vdr-dbus-send.sh /Setup setup.Set string:'MinUserInactivity' int32:0
-  Some parameters are known to be integers (look at setup.c) with a valid
-  range. All others are handled as strings.
-  WARNING: Be careful to set values unknown to dbus2vdr. It will trigger a reload
-  of the whole setup.conf including calls to SetupParse of every plugin.
-  This might have unexpected side effects!
+- get information about current skin
+  vdr-dbus-send.sh /Skin skin.CurrentSkin
+  You will get the index, name and description.
 
-- delete parameters from setup.conf
-  vdr-dbus-send.sh /Setup setup.Del string:'PrimaryLimit'
+Interface "timer"
+-----------------
+- get infos about the next timer
+  vdr-dbus-send.sh /Timers timer.Next
 
-You may also get/set/delete parameters for plugins with
-  vdr-dbus-send.sh /Setup setup.Get string:'pluginname.parameter'
-  vdr-dbus-send.sh /Setup setup.Set string:'pluginname.parameter' string:'value'
-  vdr-dbus-send.sh /Setup setup.Del string:'pluginname.parameter'
-but it is not guaranteed that it will work and that changes will affect the plugin's
-behaviour immediately.
-dbus2vdr will call the plugin's "SetupParse" function. If it returns true the value
-is stored in the setup.conf. You may need to restart vdr.
-
-- delete all settings of one plugin
-  vdr-dbus-send.sh /Setup setup.Del string:'pluginname.*'
+  The following is returned:
+    int32   reply code (250 for success, 550 on error)
+    int32   timer id (-1 if there's no timer at all)
+    int32   'rel' seconds (see SVDRP NEXT REL)
+    uint64  starttime in seconds since epoch (time_t format)
+    uint64  stoptime in seconds since epoch (time_t format)
+    string  title of the event
 
 OSD
 ---
