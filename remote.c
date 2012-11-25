@@ -362,7 +362,7 @@ bool          cDBusDispatcherRemote::OnIntrospect(DBusMessage *msg, cString &Dat
   "      <arg name=\"index\"        type=\"i\"/>\n"
   "    </signal>\n"
   "    <method name=\"SwitchChannel\">\n"
-  "      <arg name=\"channel\"      type=\"s\" direction=\"in\"/>\n"
+  "      <arg name=\"option\"       type=\"s\" direction=\"in\"/>\n"
   "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
   "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"
   "    </method>\n"
