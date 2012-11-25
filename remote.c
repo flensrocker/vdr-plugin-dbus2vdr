@@ -72,246 +72,234 @@ public:
 };
 
 
-cDBusMessageRemote::cDBusMessageRemote(cDBusMessageRemoteAction action, DBusConnection* conn, DBusMessage* msg)
-:cDBusMessage(conn, msg)
-,_action(action)
+class cDBusRemoteActions
 {
-}
+public:
+  static void CallPlugin(DBusConnection* conn, DBusMessage* msg)
+  {
+    const char *pluginName = NULL;
+    DBusMessageIter args;
+    if (!dbus_message_iter_init(msg, &args))
+       esyslog("dbus2vdr: %s.CallPlugin: message misses an argument for the keyName", DBUS_VDR_REMOTE_INTERFACE);
+    else {
+       int rc = cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &pluginName);
+       if (rc < 0)
+          esyslog("dbus2vdr: %s.CallPlugin: 'pluginName' argument is not a string", DBUS_VDR_REMOTE_INTERFACE);
+       }
 
-cDBusMessageRemote::~cDBusMessageRemote(void)
-{
-}
+    dbus_int32_t replyCode = 550;
+    cString replyMessage;
+    if (pluginName) {
+       // The parameter of cRemote::CallPlugin has to be static,
+       // since it's stored by vdr and used later.
+       // Hence this workaround to get a 'long-life' pointer to a string with the same content without storing it.
+       cPlugin *plugin = cPluginManager::GetPlugin(pluginName);
+       if (plugin) {
+          if (cRemote::CallPlugin(plugin->Name())) {
+             replyCode = 250;
+             replyMessage = cString::sprintf("plugin %s called", pluginName);
+             }
+          else
+             replyMessage = cString::sprintf("plugin %s not called, another call is pending", pluginName);
+          }
+       else
+          replyMessage = cString::sprintf("plugin %s not found", pluginName);
+       }
+    else
+       replyMessage = "name of plugin to be called is missing";
 
-void cDBusMessageRemote::Process(void)
-{
-  (this->*_action)();
-}
+    cDBusHelper::SendReply(conn, msg, replyCode, replyMessage);
+  }
 
-void cDBusMessageRemote::CallPlugin(void)
-{
-  const char *pluginName = NULL;
-  DBusMessageIter args;
-  if (!dbus_message_iter_init(_msg, &args))
-     esyslog("dbus2vdr: %s.CallPlugin: message misses an argument for the keyName", DBUS_VDR_REMOTE_INTERFACE);
-  else {
-     int rc = cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &pluginName);
-     if (rc < 0)
-        esyslog("dbus2vdr: %s.CallPlugin: 'pluginName' argument is not a string", DBUS_VDR_REMOTE_INTERFACE);
-     }
+  static void Enable(DBusConnection* conn, DBusMessage* msg)
+  {
+    cRemote::SetEnabled(true);
+    cDBusHelper::SendReply(conn, msg, 250, "Remote control enabled");
+  }
 
-  dbus_int32_t replyCode = 550;
-  cString replyMessage;
-  if (pluginName) {
-     // The parameter of cRemote::CallPlugin has to be static,
-     // since it's stored by vdr and used later.
-     // Hence this workaround to get a 'long-life' pointer to a string with the same content without storing it.
-     cPlugin *plugin = cPluginManager::GetPlugin(pluginName);
-     if (plugin) {
-        if (cRemote::CallPlugin(plugin->Name())) {
-           replyCode = 250;
-           replyMessage = cString::sprintf("plugin %s called", pluginName);
-           }
-        else
-           replyMessage = cString::sprintf("plugin %s not called, another call is pending", pluginName);
-        }
-     else
-        replyMessage = cString::sprintf("plugin %s not found", pluginName);
-     }
-  else
-     replyMessage = "name of plugin to be called is missing";
+  static void Disable(DBusConnection* conn, DBusMessage* msg)
+  {
+    cRemote::SetEnabled(false);
+    cDBusHelper::SendReply(conn, msg, 250, "Remote control disabled");
+  }
 
-  cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
-}
+  static void Status(DBusConnection* conn, DBusMessage* msg)
+  {
+    int enabled = 0;
+    if (cRemote::Enabled())
+       enabled = 1;
+    DBusMessage *reply = dbus_message_new_method_return(msg);
+    DBusMessageIter args;
+    dbus_message_iter_init_append(reply, &args);
 
-void cDBusMessageRemote::Enable(void)
-{
-  cRemote::SetEnabled(true);
-  cDBusHelper::SendReply(_conn, _msg, 250, "Remote control enabled");
-}
+    if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_BOOLEAN, &enabled))
+       esyslog("dbus2vdr: %s.Status: out of memory while appending the status", DBUS_VDR_REMOTE_INTERFACE);
 
-void cDBusMessageRemote::Disable(void)
-{
-  cRemote::SetEnabled(false);
-  cDBusHelper::SendReply(_conn, _msg, 250, "Remote control disabled");
-}
+    dbus_uint32_t serial = 0;
+    if (!dbus_connection_send(conn, reply, &serial))
+       esyslog("dbus2vdr: %s.Status: out of memory while sending the reply", DBUS_VDR_REMOTE_INTERFACE);
+    dbus_message_unref(reply);
+  }
 
-void cDBusMessageRemote::Status(void)
-{
-  int enabled = 0;
-  if (cRemote::Enabled())
-     enabled = 1;
-  DBusMessage *reply = dbus_message_new_method_return(_msg);
-  DBusMessageIter args;
-  dbus_message_iter_init_append(reply, &args);
+  static void HitKey(DBusConnection* conn, DBusMessage* msg)
+  {
+    cVector<eKeys> keys;
+    DBusMessageIter args;
+    dbus_int32_t replyCode = 500;
+    cString replyMessage;
+    if (!dbus_message_iter_init(msg, &args)) {
+       esyslog("dbus2vdr: %s.HitKey: message misses an argument for the keyName", DBUS_VDR_REMOTE_INTERFACE);
+       cDBusHelper::SendReply(conn, msg, replyCode, replyMessage);
+       return;
+       }
 
-  if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_BOOLEAN, &enabled))
-     esyslog("dbus2vdr: %s.Status: out of memory while appending the status", DBUS_VDR_REMOTE_INTERFACE);
+    const char *keyName = NULL;
+    while (cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &keyName) >= 0) {
+          eKeys k = cKey::FromString(keyName);
+          if (k == kNone) {
+             replyCode = 504;
+             replyMessage = cString::sprintf("Unknown key: \"%s\"", keyName);
+             keys.Clear();
+             break; // just get the keys until first error
+             }
+          isyslog("dbus2vdr: %s.HitKey: get key '%s'", DBUS_VDR_REMOTE_INTERFACE, keyName);
+          keys.Append(k);
+          }
 
-  dbus_uint32_t serial = 0;
-  if (!dbus_connection_send(_conn, reply, &serial))
-     esyslog("dbus2vdr: %s.Status: out of memory while sending the reply", DBUS_VDR_REMOTE_INTERFACE);
-  dbus_message_unref(reply);
-}
+    if (keys.Size() == 0) {
+       esyslog("dbus2vdr: %s.HitKey: no valid 'keyName' given", DBUS_VDR_REMOTE_INTERFACE);
+       cDBusHelper::SendReply(conn, msg, replyCode, replyMessage);
+       return;
+       }
 
-void cDBusMessageRemote::HitKey(void)
-{
-  cVector<eKeys> keys;
-  DBusMessageIter args;
-  dbus_int32_t replyCode = 500;
-  cString replyMessage;
-  if (!dbus_message_iter_init(_msg, &args)) {
-     esyslog("dbus2vdr: %s.HitKey: message misses an argument for the keyName", DBUS_VDR_REMOTE_INTERFACE);
-     cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
-     return;
-     }
+    for (int i = 0; i < keys.Size(); i++)
+        cRemote::Put(keys.At(i));
 
-  const char *keyName = NULL;
-  while (cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &keyName) >= 0) {
-        eKeys k = cKey::FromString(keyName);
-        if (k == kNone) {
-           replyCode = 504;
-           replyMessage = cString::sprintf("Unknown key: \"%s\"", keyName);
-           keys.Clear();
-           break; // just get the keys until first error
-           }
-        isyslog("dbus2vdr: %s.HitKey: get key '%s'", DBUS_VDR_REMOTE_INTERFACE, keyName);
-        keys.Append(k);
-        }
+    replyCode = 250;
+    replyMessage = cString::sprintf("Key%s accepted", keys.Size() > 1 ? "s" : "");
+    cDBusHelper::SendReply(conn, msg, replyCode, replyMessage);
+  }
 
-  if (keys.Size() == 0) {
-     esyslog("dbus2vdr: %s.HitKey: no valid 'keyName' given", DBUS_VDR_REMOTE_INTERFACE);
-     cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
-     return;
-     }
+  static void AskUser(DBusConnection* conn, DBusMessage* msg)
+  {
+    if (cDBusDispatcherRemote::MainMenuAction != NULL) {
+       cDBusHelper::SendReply(conn, msg, 550, "another selection menu already open");
+       return;
+       }
 
-  for (int i = 0; i < keys.Size(); i++)
-      cRemote::Put(keys.At(i));
+    char *title = NULL;
+    char **item = NULL;
+    int num = 0;
+    if (!dbus_message_get_args(msg, NULL, DBUS_TYPE_STRING, &title, DBUS_TYPE_ARRAY, DBUS_TYPE_STRING, &item, &num, DBUS_TYPE_INVALID)) {
+       if (item != NULL)
+          dbus_free_string_array(item);
+       cDBusHelper::SendReply(conn, msg, 501, "arguments are not as expected");
+       return;
+       }
+    if (num < 1) {
+       if (item != NULL)
+          dbus_free_string_array(item);
+       cDBusHelper::SendReply(conn, msg, 501, "no items for selection menu given");
+       return;
+       }
 
-  replyCode = 250;
-  replyMessage = cString::sprintf("Key%s accepted", keys.Size() > 1 ? "s" : "");
-  cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
-}
+    cDbusSelectMenu *menu = new cDbusSelectMenu(title);
+    for (int i = 0; i < num; i++)
+        menu->Add(new cOsdItem(item[i], (eOSState)(osUser1 + i)));
+    if (item != NULL)
+       dbus_free_string_array(item);
 
+    cDBusDispatcherRemote::MainMenuAction = menu;
+    if (!cRemote::CallPlugin("dbus2vdr")) {
+       cDBusDispatcherRemote::MainMenuAction = NULL;
+       delete menu;
+       cDBusHelper::SendReply(conn, msg, 550, "can't display selection menu");
+       return;
+       }
 
-void cDBusMessageRemote::AskUser(void)
-{
-  if (cDBusDispatcherRemote::MainMenuAction != NULL) {
-     cDBusHelper::SendReply(_conn, _msg, 550, "another selection menu already open");
-     return;
-     }
+    cDBusHelper::SendReply(conn, msg, 250, "display selection menu");
+  }
 
-  char *title = NULL;
-  char **item = NULL;
-  int num = 0;
-  if (!dbus_message_get_args(_msg, NULL, DBUS_TYPE_STRING, &title, DBUS_TYPE_ARRAY, DBUS_TYPE_STRING, &item, &num, DBUS_TYPE_INVALID)) {
-     if (item != NULL)
-        dbus_free_string_array(item);
-     cDBusHelper::SendReply(_conn, _msg, 501, "arguments are not as expected");
-     return;
-     }
-  if (num < 1) {
-     if (item != NULL)
-        dbus_free_string_array(item);
-     cDBusHelper::SendReply(_conn, _msg, 501, "no items for selection menu given");
-     return;
-     }
-
-  cDbusSelectMenu *menu = new cDbusSelectMenu(title);
-  for (int i = 0; i < num; i++)
-      menu->Add(new cOsdItem(item[i], (eOSState)(osUser1 + i)));
-  if (item != NULL)
-     dbus_free_string_array(item);
-
-  cDBusDispatcherRemote::MainMenuAction = menu;
-  if (!cRemote::CallPlugin("dbus2vdr")) {
-     cDBusDispatcherRemote::MainMenuAction = NULL;
-     delete menu;
-     cDBusHelper::SendReply(_conn, _msg, 550, "can't display selection menu");
-     return;
-     }
-
-  cDBusHelper::SendReply(_conn, _msg, 250, "display selection menu");
-}
-
-void cDBusMessageRemote::SwitchChannel(void)
-{
-  dbus_int32_t replyCode = 500;
-  cString replyMessage;
-  char *Option = NULL;
-  if (dbus_message_get_args(_msg, NULL, DBUS_TYPE_STRING, &Option, DBUS_TYPE_INVALID) && (Option != NULL)) {
-     int n = -1;
-     int d = 0;
-     if (isnumber(Option)) {
-        int o = strtol(Option, NULL, 10);
-        if (o >= 1 && o <= Channels.MaxNumber())
-           n = o;
-        }
-     else if (strcmp(Option, "-") == 0) {
-        n = cDevice::CurrentChannel();
-        if (n > 1) {
-           n--;
-           d = -1;
-           }
-        }
-     else if (strcmp(Option, "+") == 0) {
-        n = cDevice::CurrentChannel();
-        if (n < Channels.MaxNumber()) {
-           n++;
-           d = 1;
-           }
-        }
-     else {
-        cChannel *channel = Channels.GetByChannelID(tChannelID::FromString(Option));
-        if (channel)
-           n = channel->Number();
-        else {
-           for (cChannel *channel = Channels.First(); channel; channel = Channels.Next(channel)) {
-               if (!channel->GroupSep()) {
-                  if (strcasecmp(channel->Name(), Option) == 0) {
-                     n = channel->Number();
-                     break;
-                     }
-                  }
-               }
-           }
-        }
-     if (n < 0) {
-        replyCode = 501;
-        replyMessage = cString::sprintf("Undefined channel \"%s\"", Option);
-        cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
-        return;
-        }
-     if (!d) {
-        cChannel *channel = Channels.GetByNumber(n);
-        if (channel) {
-           if (!cDevice::PrimaryDevice()->SwitchChannel(channel, true)) {
-              replyCode = 554;
-              replyMessage = cString::sprintf("Error switching to channel \"%d\"", channel->Number());
-              cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
-              return;
-              }
-           }
-        else {
-           replyCode = 550;
-           replyMessage = cString::sprintf("Unable to find channel \"%s\"", Option);
-           cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
-           return;
-           }
-        }
-     else
-        cDevice::SwitchChannel(d);
-     }
-  cChannel *channel = Channels.GetByNumber(cDevice::CurrentChannel());
-  if (channel) {
-     replyCode = 250;
-     replyMessage = cString::sprintf("%d %s", channel->Number(), channel->Name());
-     }
-  else {
-     replyCode = 550;
-     replyMessage = cString::sprintf("Unable to find channel \"%d\"", cDevice::CurrentChannel());
-     }
-  cDBusHelper::SendReply(_conn, _msg, replyCode, replyMessage);
-}
+  static void SwitchChannel(DBusConnection* conn, DBusMessage* msg)
+  {
+    dbus_int32_t replyCode = 500;
+    cString replyMessage;
+    char *Option = NULL;
+    if (dbus_message_get_args(msg, NULL, DBUS_TYPE_STRING, &Option, DBUS_TYPE_INVALID) && (Option != NULL)) {
+       int n = -1;
+       int d = 0;
+       if (isnumber(Option)) {
+          int o = strtol(Option, NULL, 10);
+          if (o >= 1 && o <= Channels.MaxNumber())
+             n = o;
+          }
+       else if (strcmp(Option, "-") == 0) {
+          n = cDevice::CurrentChannel();
+          if (n > 1) {
+             n--;
+             d = -1;
+             }
+          }
+       else if (strcmp(Option, "+") == 0) {
+          n = cDevice::CurrentChannel();
+          if (n < Channels.MaxNumber()) {
+             n++;
+             d = 1;
+             }
+          }
+       else {
+          cChannel *channel = Channels.GetByChannelID(tChannelID::FromString(Option));
+          if (channel)
+             n = channel->Number();
+          else {
+             for (cChannel *channel = Channels.First(); channel; channel = Channels.Next(channel)) {
+                 if (!channel->GroupSep()) {
+                    if (strcasecmp(channel->Name(), Option) == 0) {
+                       n = channel->Number();
+                       break;
+                       }
+                    }
+                 }
+             }
+          }
+       if (n < 0) {
+          replyCode = 501;
+          replyMessage = cString::sprintf("Undefined channel \"%s\"", Option);
+          cDBusHelper::SendReply(conn, msg, replyCode, replyMessage);
+          return;
+          }
+       if (!d) {
+          cChannel *channel = Channels.GetByNumber(n);
+          if (channel) {
+             if (!cDevice::PrimaryDevice()->SwitchChannel(channel, true)) {
+                replyCode = 554;
+                replyMessage = cString::sprintf("Error switching to channel \"%d\"", channel->Number());
+                cDBusHelper::SendReply(conn, msg, replyCode, replyMessage);
+                return;
+                }
+             }
+          else {
+             replyCode = 550;
+             replyMessage = cString::sprintf("Unable to find channel \"%s\"", Option);
+             cDBusHelper::SendReply(conn, msg, replyCode, replyMessage);
+             return;
+             }
+          }
+       else
+          cDevice::SwitchChannel(d);
+       }
+    cChannel *channel = Channels.GetByNumber(cDevice::CurrentChannel());
+    if (channel) {
+       replyCode = 250;
+       replyMessage = cString::sprintf("%d %s", channel->Number(), channel->Name());
+       }
+    else {
+       replyCode = 550;
+       replyMessage = cString::sprintf("Unable to find channel \"%d\"", cDevice::CurrentChannel());
+       }
+    cDBusHelper::SendReply(conn, msg, replyCode, replyMessage);
+  }
+};
 
 
 cOsdObject *cDBusDispatcherRemote::MainMenuAction = NULL;
@@ -319,36 +307,18 @@ cOsdObject *cDBusDispatcherRemote::MainMenuAction = NULL;
 cDBusDispatcherRemote::cDBusDispatcherRemote(void)
 :cDBusMessageDispatcher(DBUS_VDR_REMOTE_INTERFACE)
 {
-  _actionCount = 0;
-  _action = new cRemoteAction*[7];
-  _action[_actionCount++] = new cRemoteAction("CallPlugin", &cDBusMessageRemote::CallPlugin);
-  _action[_actionCount++] = new cRemoteAction("Enable", &cDBusMessageRemote::Enable);
-  _action[_actionCount++] = new cRemoteAction("Disable", &cDBusMessageRemote::Disable);
-  _action[_actionCount++] = new cRemoteAction("Status", &cDBusMessageRemote::Status);
-  _action[_actionCount++] = new cRemoteAction("HitKey", &cDBusMessageRemote::HitKey);
-  _action[_actionCount++] = new cRemoteAction("AskUser", &cDBusMessageRemote::AskUser);
-  _action[_actionCount++] = new cRemoteAction("SwitchChannel", &cDBusMessageRemote::SwitchChannel);
+  AddPath("/Remote");
+  AddAction(new cDBusMessageAction("CallPlugin", cDBusRemoteActions::CallPlugin));
+  AddAction(new cDBusMessageAction("Enable", cDBusRemoteActions::Enable));
+  AddAction(new cDBusMessageAction("Disable", cDBusRemoteActions::Disable));
+  AddAction(new cDBusMessageAction("Status", cDBusRemoteActions::Status));
+  AddAction(new cDBusMessageAction("HitKey", cDBusRemoteActions::HitKey));
+  AddAction(new cDBusMessageAction("AskUser", cDBusRemoteActions::AskUser));
+  AddAction(new cDBusMessageAction("SwitchChannel", cDBusRemoteActions::SwitchChannel));
 }
 
 cDBusDispatcherRemote::~cDBusDispatcherRemote(void)
 {
-}
-
-cDBusMessage *cDBusDispatcherRemote::CreateMessage(DBusConnection* conn, DBusMessage* msg)
-{
-  if ((conn == NULL) || (msg == NULL))
-     return NULL;
-
-  const char *object = dbus_message_get_path(msg);
-  if ((object == NULL) || (strcmp(object, "/Remote") != 0))
-     return NULL;
-
-  for (int a = 0; a < _actionCount; a++) {
-      if (dbus_message_is_method_call(msg, DBUS_VDR_REMOTE_INTERFACE, _action[a]->Name))
-         return new cDBusMessageRemote(_action[a]->Action, conn, msg);
-      }
-
-  return NULL;
 }
 
 bool          cDBusDispatcherRemote::OnIntrospect(DBusMessage *msg, cString &Data)
