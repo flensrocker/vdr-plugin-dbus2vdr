@@ -4,31 +4,19 @@
 #include "message.h"
 
 
-class cDBusMessageShutdown : public cDBusMessage
+class cDBusShutdownActions
 {
-friend class cDBusDispatcherShutdown;
-
 public:
-  enum eAction { dmsConfirmShutdown, dmsManualStart, dmsSetUserInactive };
-
   static void SetShutdownHooksDir(const char *Dir);
   static void SetShutdownHooksWrapper(const char *Wrapper);
 
-  virtual ~cDBusMessageShutdown(void);
-
-protected:
-  virtual void Process(void);
+  static void ConfirmShutdown(DBusConnection* conn, DBusMessage* msg);
+  static void ManualStart(DBusConnection* conn, DBusMessage* msg);
+  static void SetUserInactive(DBusConnection* conn, DBusMessage* msg);
 
 private:
   static cString  _shutdownHooksDir;
   static cString  _shutdownHooksWrapper;
-
-  cDBusMessageShutdown(eAction action, DBusConnection* conn, DBusMessage* msg);
-  void ConfirmShutdown(void);
-  void ManualStart(void);
-  void SetUserInactive(void);
-
-  eAction _action;
 };
 
 class cDBusDispatcherShutdown : public cDBusMessageDispatcher
@@ -40,7 +28,6 @@ public:
   virtual ~cDBusDispatcherShutdown(void);
 
 protected:
-  virtual cDBusMessage *CreateMessage(DBusConnection* conn, DBusMessage* msg);
   virtual bool          OnIntrospect(DBusMessage *msg, cString &Data);
 };
 
