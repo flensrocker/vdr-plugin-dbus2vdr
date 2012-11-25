@@ -75,6 +75,8 @@ Interface "channel"
 - list channels like SVDRP command CHAN
   vdr-dbus-send.sh /Channels channel.List [string:'[ :groups | <number> | <name> | <id> ]']
 
+  The returned array contains the channel number and the string from the channels.conf.
+
 Interface "epg"
 ---------------
 - disable EIT scanner with timeout (default: 3600)
