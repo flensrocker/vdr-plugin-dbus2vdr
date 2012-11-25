@@ -4,27 +4,6 @@
 #include "message.h"
 
 
-class cDBusMessageSkin : public cDBusMessage
-{
-friend class cDBusDispatcherSkin;
-
-public:
-  enum eAction { dmsQueueMessage, dmsListSkins, dmsCurrentSkin };
-
-  virtual ~cDBusMessageSkin(void);
-
-protected:
-  virtual void Process(void);
-
-private:
-  cDBusMessageSkin(eAction action, DBusConnection* conn, DBusMessage* msg);
-  void CurrentSkin(void);
-  void ListSkins(void);
-  void QueueMessage(void);
-
-  eAction _action;
-};
-
 class cDBusDispatcherSkin : public cDBusMessageDispatcher
 {
 public:

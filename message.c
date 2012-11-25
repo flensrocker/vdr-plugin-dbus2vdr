@@ -102,12 +102,6 @@ void cDBusMessageDispatcher::AddAction(const char *name, cDBusMessageActionFunc 
      _actions.Add(new cDBusMessageAction(name, action));
 }
 
-void cDBusMessageDispatcher::AddAction(cDBusMessageAction *action)
-{
-  if (action != NULL)
-     _actions.Add(action);
-}
-
 bool cDBusMessageDispatcher::Dispatch(DBusConnection* conn, DBusMessage* msg)
 {
   const char *interface = dbus_message_get_interface(msg);

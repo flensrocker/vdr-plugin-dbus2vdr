@@ -8,13 +8,16 @@
 
 
 class cDBusMessage;
+class cDBusMessageDispatcher;
 class cDBusMessageHandler;
 
 typedef void (*cDBusMessageActionFunc)(DBusConnection* conn, DBusMessage* msg);
 
 class cDBusMessageAction : public cListObject
 {
-public:
+friend class cDBusMessageDispatcher;
+
+private:
   const char *Name;
   cDBusMessageActionFunc Action;
 
@@ -36,7 +39,6 @@ private:
 protected:
   void                  AddPath(const char *path);
   void                  AddAction(const char *name, cDBusMessageActionFunc action);
-  void                  AddAction(cDBusMessageAction *action);
   
   virtual cDBusMessage *CreateMessage(DBusConnection* conn, DBusMessage* msg) { return NULL; };
   virtual bool          OnIntrospect(DBusMessage *msg, cString &Data) { return false; }

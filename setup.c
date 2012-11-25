@@ -650,10 +650,10 @@ cDBusDispatcherSetup::cDBusDispatcherSetup(void)
 {
   cDBusSetupActions::InitBindings();
   AddPath("/Setup");
-  AddAction(new cDBusMessageAction("List", cDBusSetupActions::List));
-  AddAction(new cDBusMessageAction("Get", cDBusSetupActions::Get));
-  AddAction(new cDBusMessageAction("Set", cDBusSetupActions::Set));
-  AddAction(new cDBusMessageAction("Del", cDBusSetupActions::Del));
+  AddAction("List", cDBusSetupActions::List);
+  AddAction("Get", cDBusSetupActions::Get);
+  AddAction("Set", cDBusSetupActions::Set);
+  AddAction("Del", cDBusSetupActions::Del);
 }
 
 cDBusDispatcherSetup::~cDBusDispatcherSetup(void)
