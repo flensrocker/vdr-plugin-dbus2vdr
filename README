@@ -138,7 +138,7 @@ Interface "recording"
   vdr-dbus-send.sh /Recordings recording.Update
 
 - get info about one recording
-  vdr-dbus-send.sh /Recordings recording.Get [ int32:number | string:'path' ]
+  vdr-dbus-send.sh /Recordings recording.Get [ variant:int32:number | variant:string:'path' ]
 
   The following is returned:
   struct of
@@ -155,10 +155,10 @@ Interface "recording"
 
   returned is an array of the same structs as with "Get".
   
-- play recording given by path
-  vdr-dbus-send.sh /Recordings recording.PlayPath string:'path' [ string:'hh:mm:ss.f' | int32:framenumber ]
+- play recording given by path or number
+  vdr-dbus-send.sh /Recordings recording.Play [ variant:int32:number | variant:string:'path' ] [ variant:string:'hh:mm:ss.f' | variant:int32:framenumber ]
   
-  If framenumber is -1, playing is resumed at the last save position.
+  If framenumber is -1, playing is resumed at the last saved position.
 
 Interface "remote"
 ------------------
