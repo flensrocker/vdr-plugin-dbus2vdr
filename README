@@ -192,7 +192,7 @@ Interface "setup"
   vdr-dbus-send.sh /Setup setup.Get string:'MinUserInactivity'
 
 - set parameters to setup.conf
-  vdr-dbus-send.sh /Setup setup.Set string:'MinUserInactivity' int32:0
+  vdr-dbus-send.sh /Setup setup.Set string:'MinUserInactivity' variant:int32:0
   Some parameters are known to be integers (look at setup.c) with a valid
   range. All others are handled as strings.
   WARNING: Be careful to set values unknown to dbus2vdr. It will trigger a reload
@@ -204,7 +204,7 @@ Interface "setup"
 
 You may also get/set/delete parameters for plugins with
   vdr-dbus-send.sh /Setup setup.Get string:'pluginname.parameter'
-  vdr-dbus-send.sh /Setup setup.Set string:'pluginname.parameter' string:'value'
+  vdr-dbus-send.sh /Setup setup.Set string:'pluginname.parameter' variant:string:'value'
   vdr-dbus-send.sh /Setup setup.Del string:'pluginname.parameter'
 but it is not guaranteed that it will work and that changes will affect the plugin's
 behaviour immediately.
