@@ -40,6 +40,14 @@ int  cDBusHelper::GetNextArg(DBusMessageIter& args, int type, void *value)
   return 0;
 }
 
+void  cDBusHelper::SendReply(DBusConnection *conn, DBusMessage *msg, DBusMessage *reply)
+{
+  dbus_uint32_t serial = 0;
+  if (!dbus_connection_send(conn, reply, &serial))
+     esyslog("dbus2vdr: SendReply: out of memory while sending the reply");
+  dbus_message_unref(reply);
+}
+
 void  cDBusHelper::SendReply(DBusConnection *conn, DBusMessage *msg, int  returncode, const char *message)
 {
   DBusMessage *reply = dbus_message_new_method_return(msg);
