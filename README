@@ -142,6 +142,11 @@ Interface "recording"
 
   returned is an array of structs as with "Get".
   
+- play recording given by path
+  vdr-dbus-send.sh /Recordings recording.PlayPath string:'path-to-recording' [ string:'hh:mm:ss.f' | int32:framenumber ]
+  
+  If framenumber is -1, playing is resumed at the last save position.
+
 TODO:
 - get info about one recording
   vdr-dbus-send.sh /Recordings recording.Get int32:number
@@ -155,9 +160,6 @@ TODO:
 
   possible keys: Path, Name, Title, Start, Priority, Lifetime,
   FramesPerSecond, NumFrames, LengthInSeconds, FileSizeMB, IsPesRecording
-
-- play recording given by path
-  vdr-dbus-send.sh /Recordings recording.PlayPath string:'path-to-recording'
 
 Interface "remote"
 ------------------

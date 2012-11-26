@@ -2,6 +2,7 @@
 #include "common.h"
 #include "helper.h"
 
+#include <vdr/menu.h>
 #include <vdr/recording.h>
 
 
@@ -82,7 +83,64 @@ public:
 
   static void PlayPath(DBusConnection* conn, DBusMessage* msg)
   {
-    cDBusHelper::SendReply(conn, msg, 501, "PlayPath is not implemented yet");
+    cRecording *recording = NULL;
+    const char *path = NULL;
+    int position = -1; // default: resume
+    const char *hmsf = NULL;
+    DBusMessageIter args;
+    if (dbus_message_iter_init(msg, &args)) {
+       if (dbus_message_iter_get_arg_type(&args) == DBUS_TYPE_STRING) {
+          if ((cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &path) >= 0) && (path != NULL) && *path) {
+             recording = Recordings.GetByName(path);
+             if (recording == NULL) {
+                Recordings.Update(true);
+                recording = Recordings.GetByName(path);
+                }
+             if (recording != NULL) {
+                if (dbus_message_iter_get_arg_type(&args) == DBUS_TYPE_STRING) {
+                   if ((cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &hmsf) >= 0) && (hmsf != NULL) && *hmsf) {
+                      if (strcasecmp(hmsf, "begin") == 0) {
+                         position = 0;
+                         hmsf = NULL;
+                         }
+                      else
+                         position = HMSFToIndex(hmsf, recording->FramesPerSecond());
+                      }
+                   else
+                      hmsf = NULL;
+                   }
+                else if (dbus_message_iter_get_arg_type(&args) == DBUS_TYPE_INT32)
+                   cDBusHelper::GetNextArg(args, DBUS_TYPE_INT32, &position);
+                }
+             }
+          }
+       }
+    int replyCode = 501;
+    cString replyMessage;
+    if (recording != NULL) {
+       cReplayControl::SetRecording(NULL);
+       cControl::Shutdown();
+       if (position >= 0) {
+          cResumeFile resume(recording->FileName(), recording->IsPesRecording());
+          if (position == 0)
+             resume.Delete();
+          else
+             resume.Save(position);
+          }
+       cReplayControl::SetRecording(recording->FileName());
+       cControl::Launch(new cReplayControl);
+       cControl::Attach();
+
+       if (hmsf != NULL)
+          replyMessage = cString::sprintf("Playing recording \"%s\" from position %s", path, hmsf);
+       else if (position >= 0)
+          replyMessage = cString::sprintf("Playing recording \"%s\" from position %d", path, position);
+       else
+          replyMessage = cString::sprintf("Resume playing recording \"%s\"", path);
+       }
+    else
+       replyMessage = cString::sprintf("recording \"%s\" not found", path);
+    cDBusHelper::SendReply(conn, msg, replyCode, *replyMessage);
   };
 };
 
@@ -127,6 +185,7 @@ bool          cDBusDispatcherRecording::OnIntrospect(DBusMessage *msg, cString &
   "    </method>\n"
   "    <method name=\"PlayPath\">\n"
   "      <arg name=\"path\"         type=\"s\" direction=\"in\"/>\n"
+  "      <arg name=\"begin\"        type=\"v\" direction=\"in\"/>\n"
   "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
   "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"
   "    </method>\n"
