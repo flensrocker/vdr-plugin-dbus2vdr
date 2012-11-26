@@ -210,3 +210,4 @@ VDR Plugin 'dbus2vdr' Revision History
 - add List to channel interface
 - add List to recording interface
 - add Get and Play to recording interface
+- fix handling of variant arguments
