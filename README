@@ -137,19 +137,8 @@ Interface "recording"
 - trigger an update of the list of recordings
   vdr-dbus-send.sh /Recordings recording.Update
 
-- list recordings
-  vdr-dbus-send.sh /Recordings recording.List
-
-  returned is an array of structs as with "Get".
-  
-- play recording given by path
-  vdr-dbus-send.sh /Recordings recording.PlayPath string:'path-to-recording' [ string:'hh:mm:ss.f' | int32:framenumber ]
-  
-  If framenumber is -1, playing is resumed at the last save position.
-
-TODO:
 - get info about one recording
-  vdr-dbus-send.sh /Recordings recording.Get int32:number
+  vdr-dbus-send.sh /Recordings recording.Get [ int32:number | string:'path' ]
 
   The following is returned:
   struct of
@@ -160,6 +149,16 @@ TODO:
 
   possible keys: Path, Name, Title, Start, Priority, Lifetime,
   FramesPerSecond, NumFrames, LengthInSeconds, FileSizeMB, IsPesRecording
+
+- list recordings
+  vdr-dbus-send.sh /Recordings recording.List
+
+  returned is an array of the same structs as with "Get".
+  
+- play recording given by path
+  vdr-dbus-send.sh /Recordings recording.PlayPath string:'path' [ string:'hh:mm:ss.f' | int32:framenumber ]
+  
+  If framenumber is -1, playing is resumed at the last save position.
 
 Interface "remote"
 ------------------

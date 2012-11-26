@@ -60,7 +60,28 @@ public:
 
   static void Get(DBusConnection* conn, DBusMessage* msg)
   {
-    cDBusHelper::SendReply(conn, msg, 501, "Get is not implemented yet");
+    // only update recordings list if empty
+    if (recordings.Count() == 0)
+       recordings.Update(true);
+    cRecording *recording = NULL;
+    DBusMessageIter args;
+    if (dbus_message_iter_init(msg, &args)) {
+       if (dbus_message_iter_get_arg_type(&args) == DBUS_TYPE_STRING) {
+          const char *path = NULL;
+          if ((cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &path) >= 0) && (path != NULL) && *path)
+             recording = recordings.GetByName(path);
+          }
+       else if (dbus_message_iter_get_arg_type(&args) == DBUS_TYPE_INT32) {
+          int number = 0;
+          if ((cDBusHelper::GetNextArg(args, DBUS_TYPE_INT32, &number) >= 0) && (number > 0) && (number <= recordings.Count()))
+             recording = recordings.Get(number - 1);
+          }
+       }
+    DBusMessage *reply = dbus_message_new_method_return(msg);
+    DBusMessageIter replyArgs;
+    dbus_message_iter_init_append(reply, &replyArgs);
+    AddRecording(replyArgs, recording);
+    cDBusHelper::SendReply(conn, msg, reply);
   };
 
   static void List(DBusConnection* conn, DBusMessage* msg)
@@ -91,10 +112,10 @@ public:
     if (dbus_message_iter_init(msg, &args)) {
        if (dbus_message_iter_get_arg_type(&args) == DBUS_TYPE_STRING) {
           if ((cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &path) >= 0) && (path != NULL) && *path) {
-             recording = Recordings.GetByName(path);
+             recording = recordings.GetByName(path);
              if (recording == NULL) {
-                Recordings.Update(true);
-                recording = Recordings.GetByName(path);
+                recordings.Update(true);
+                recording = recordings.GetByName(path);
                 }
              if (recording != NULL) {
                 if (dbus_message_iter_get_arg_type(&args) == DBUS_TYPE_STRING) {
