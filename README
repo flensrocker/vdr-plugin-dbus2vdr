@@ -183,6 +183,18 @@ Interface "remote"
 - switch channel like SVDRP command CHAN
   vdr-dbus-send.sh /Remote remote.SwitchChannel [string:'[ + | - | <number> | <name> | <id> ]']
 
+- get/set volume like SVDRP command VOLU
+  vdr-dbus-send.sh /Remote remote.GetVolume
+  vdr-dbus-send.sh /Remote remote.SetVolume variant:string:'[ <number> | + | - | mute ]'
+  vdr-dbus-send.sh /Remote remote.SetVolume variant:int32:<number>
+
+  return type:
+  - int32   with the current volume
+  - bool    with the current mute status
+  additional return values at SetVolume:
+  - int32   reply code
+  - string  reply message
+
 Interface "setup"
 -----------------
 - list all parameters from setup.conf

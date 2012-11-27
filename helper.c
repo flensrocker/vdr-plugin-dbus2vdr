@@ -40,7 +40,7 @@ int  cDBusHelper::GetNextArg(DBusMessageIter& args, int type, void *value)
   return 0;
 }
 
-void  cDBusHelper::SendReply(DBusConnection *conn, DBusMessage *msg, DBusMessage *reply)
+void  cDBusHelper::SendReply(DBusConnection *conn, DBusMessage *reply)
 {
   dbus_uint32_t serial = 0;
   if (!dbus_connection_send(conn, reply, &serial))

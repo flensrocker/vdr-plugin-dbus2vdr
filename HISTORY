@@ -212,3 +212,4 @@ VDR Plugin 'dbus2vdr' Revision History
 - add Get and Play to recording interface
 - fix handling of variant arguments
 - fix return type of setup.Get and setup.List
+- add GetVolume/SetVolume to remote interface
