@@ -239,15 +239,11 @@ public:
           }
          case cSetupBinding::dstTimeT:
           {
-           if (!dbus_message_iter_open_container(&element, DBUS_TYPE_VARIANT, "(x)", &variant))
+           if (!dbus_message_iter_open_container(&element, DBUS_TYPE_VARIANT, "x", &variant))
               esyslog("dbus2vdr: %s.List: can't open variant container", DBUS_VDR_SETUP_INTERFACE);
-           if (!dbus_message_iter_open_container(&variant, DBUS_TYPE_STRUCT, NULL, &vstruct))
-              esyslog("dbus2vdr: %s.List: can't open struct container", DBUS_VDR_SETUP_INTERFACE);
            time_t i64 = *(time_t*)(b->Value);
-           if (!dbus_message_iter_append_basic(&vstruct, DBUS_TYPE_INT64, &i64))
+           if (!dbus_message_iter_append_basic(&variant, DBUS_TYPE_INT64, &i64))
               esyslog("dbus2vdr: %s.List: out of memory while appending the integer value", DBUS_VDR_SETUP_INTERFACE);
-           if (!dbus_message_iter_close_container(&variant, &vstruct))
-              esyslog("dbus2vdr: %s.List: can't close struct container", DBUS_VDR_SETUP_INTERFACE);
            break;
           }
          }
