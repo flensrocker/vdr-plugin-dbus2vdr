@@ -354,12 +354,14 @@ public:
           replyMessage = cString::sprintf("getting %s", name);
 
           DBusMessage *reply = dbus_message_new_method_return(msg);
-          DBusMessageIter args;
-          dbus_message_iter_init_append(reply, &args);
-          if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &value))
+          DBusMessageIter replyArgs;
+          dbus_message_iter_init_append(reply, &replyArgs);
+          if (!dbus_message_iter_append_basic(&replyArgs, DBUS_TYPE_STRING, &value))
              esyslog("dbus2vdr: %s.Get: out of memory while appending the string value", DBUS_VDR_SETUP_INTERFACE);
+          if (!dbus_message_iter_append_basic(&replyArgs, DBUS_TYPE_INT32, &replyCode))
+             esyslog("dbus2vdr: %s.Get: out of memory while appending the return-code", DBUS_VDR_SETUP_INTERFACE);
           const char *message = replyMessage;
-          if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &message))
+          if (!dbus_message_iter_append_basic(&replyArgs, DBUS_TYPE_STRING, &message))
              esyslog("dbus2vdr: %s.Get: out of memory while appending the reply-message", DBUS_VDR_SETUP_INTERFACE);
 
           dbus_uint32_t serial = 0;
@@ -373,38 +375,38 @@ public:
        replyMessage = cString::sprintf("getting %s", name);
 
        DBusMessage *reply = dbus_message_new_method_return(msg);
-       DBusMessageIter args;
-       dbus_message_iter_init_append(reply, &args);
+       DBusMessageIter replyArgs;
+       dbus_message_iter_init_append(reply, &replyArgs);
 
        switch (b->Type) {
          case cSetupBinding::dstString:
           {
            const char *str = (const char*)b->Value;
-           if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &str))
+           if (!dbus_message_iter_append_basic(&replyArgs, DBUS_TYPE_STRING, &str))
               esyslog("dbus2vdr: %s.Get: out of memory while appending the string value", DBUS_VDR_SETUP_INTERFACE);
            break;
           }
          case cSetupBinding::dstInt32:
           {
            int i32 = *(int*)(b->Value);
-           if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &i32))
+           if (!dbus_message_iter_append_basic(&replyArgs, DBUS_TYPE_INT32, &i32))
               esyslog("dbus2vdr: %s.Get: out of memory while appending the integer value", DBUS_VDR_SETUP_INTERFACE);
            break;
           }
          case cSetupBinding::dstTimeT:
           {
            time_t i64 = *(time_t*)(b->Value);
-           if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT64, &i64))
+           if (!dbus_message_iter_append_basic(&replyArgs, DBUS_TYPE_INT64, &i64))
               esyslog("dbus2vdr: %s.Get: out of memory while appending the integer value", DBUS_VDR_SETUP_INTERFACE);
            break;
           }
          }
 
-       if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &replyCode))
+       if (!dbus_message_iter_append_basic(&replyArgs, DBUS_TYPE_INT32, &replyCode))
           esyslog("dbus2vdr: %s.Get: out of memory while appending the return-code", DBUS_VDR_SETUP_INTERFACE);
 
        const char *message = replyMessage;
-       if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &message))
+       if (!dbus_message_iter_append_basic(&replyArgs, DBUS_TYPE_STRING, &message))
           esyslog("dbus2vdr: %s.Get: out of memory while appending the reply-message", DBUS_VDR_SETUP_INTERFACE);
 
        dbus_uint32_t serial = 0;
