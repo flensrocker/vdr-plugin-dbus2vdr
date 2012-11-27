@@ -444,17 +444,17 @@ public:
 
     dbus_int32_t replyCode = 501;
     cString replyMessage = "missing arguments";
-    DBusMessageIter &argsref = args;
+    DBusMessageIter *refArgs = &args;
     DBusMessageIter sub;
     if (dbus_message_iter_get_arg_type(&args) == DBUS_TYPE_VARIANT) {
        dbus_message_iter_recurse(&args, &sub);
-       argsref = sub;
+       refArgs = &sub;
        }
     if (name != NULL) {
        cSetupBinding *b = cSetupBinding::Find(_bindings, name);
        if (b == NULL) {
           const char *value = NULL;
-          rc = cDBusHelper::GetNextArg(argsref, DBUS_TYPE_STRING, &value);
+          rc = cDBusHelper::GetNextArg(*refArgs, DBUS_TYPE_STRING, &value);
           if (rc < 0)
              replyMessage = cString::sprintf("argument for %s is not a string", name);
           else {
@@ -531,7 +531,7 @@ public:
          case cSetupBinding::dstString:
           {
            const char *str = NULL;
-           rc = cDBusHelper::GetNextArg(argsref, DBUS_TYPE_STRING, &str);
+           rc = cDBusHelper::GetNextArg(*refArgs, DBUS_TYPE_STRING, &str);
            if (rc < 0)
               replyMessage = cString::sprintf("argument for %s is not a string", name);
            else {
@@ -566,7 +566,7 @@ public:
          case cSetupBinding::dstInt32:
           {
            int i32;
-           rc = cDBusHelper::GetNextArg(argsref, DBUS_TYPE_INT32, &i32);
+           rc = cDBusHelper::GetNextArg(*refArgs, DBUS_TYPE_INT32, &i32);
            if (rc < 0)
               replyMessage = cString::sprintf("argument for %s is not a 32bit-integer", name);
            else if ((i32 < b->Int32MinValue) || (i32 > b->Int32MaxValue))
@@ -584,7 +584,7 @@ public:
          case cSetupBinding::dstTimeT:
           {
            time_t i64;
-           rc = cDBusHelper::GetNextArg(argsref, DBUS_TYPE_INT64, &i64);
+           rc = cDBusHelper::GetNextArg(*refArgs, DBUS_TYPE_INT64, &i64);
            if (rc < 0)
               replyMessage = cString::sprintf("argument for %s is not a 64bit-integer", name);
            else {
