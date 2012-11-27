@@ -85,7 +85,7 @@ public:
     DBusMessageIter replyArgs;
     dbus_message_iter_init_append(reply, &replyArgs);
     AddRecording(replyArgs, recording);
-    cDBusHelper::SendReply(conn, msg, reply);
+    cDBusHelper::SendReply(conn, reply);
   };
 
   static void List(DBusConnection* conn, DBusMessage* msg)
@@ -103,7 +103,7 @@ public:
     if (!dbus_message_iter_close_container(&replyArgs, &array))
        esyslog("dbus2vdr: %s.List: can't close array container", DBUS_VDR_RECORDING_INTERFACE);
     
-    cDBusHelper::SendReply(conn, msg, reply);
+    cDBusHelper::SendReply(conn, reply);
   };
 
   static void Play(DBusConnection* conn, DBusMessage* msg)

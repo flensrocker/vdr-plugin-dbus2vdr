@@ -299,6 +299,79 @@ public:
        }
     cDBusHelper::SendReply(conn, msg, replyCode, replyMessage);
   }
+
+  static void GetVolume(DBusConnection* conn, DBusMessage* msg)
+  {
+    int currentVol = cDevice::CurrentVolume();
+    dbus_bool_t mute = cDevice::PrimaryDevice()->IsMute();
+    DBusMessage *reply = dbus_message_new_method_return(msg);
+    DBusMessageIter replyArgs;
+    dbus_message_iter_init_append(reply, &replyArgs);
+    if (!dbus_message_iter_append_basic(&replyArgs, DBUS_TYPE_INT32, &currentVol))
+       esyslog("dbus2vdr: %s.GetVolume: out of memory while appending the current volume", DBUS_VDR_REMOTE_INTERFACE);
+    if (!dbus_message_iter_append_basic(&replyArgs, DBUS_TYPE_BOOLEAN, &mute))
+       esyslog("dbus2vdr: %s.GetVolume: out of memory while appending the mute status", DBUS_VDR_REMOTE_INTERFACE);
+    cDBusHelper::SendReply(conn, reply);
+  }
+
+  static void SetVolume(DBusConnection* conn, DBusMessage* msg)
+  {
+    dbus_int32_t replyCode = 250;
+    cString replyMessage;
+    const char *option = NULL;
+    int volume = -1;
+    DBusMessageIter args;
+    DBusMessageIter sub;
+    if (dbus_message_iter_init(msg, &args)) {
+       DBusMessageIter *refArgs = &args;
+       if (dbus_message_iter_get_arg_type(&args) == DBUS_TYPE_VARIANT) {
+          dbus_message_iter_recurse(&args, &sub);
+          refArgs = &sub;
+          }
+       if (dbus_message_iter_get_arg_type(refArgs) == DBUS_TYPE_STRING)
+          dbus_message_iter_get_basic(refArgs, &option);
+       else if (dbus_message_iter_get_arg_type(refArgs) == DBUS_TYPE_INT32)
+          dbus_message_iter_get_basic(refArgs, &volume);
+       }
+    if (option != NULL) {
+       if (isnumber(option))
+          cDevice::PrimaryDevice()->SetVolume(strtol(option, NULL, 10), true);
+       else if (strcmp(option, "+") == 0)
+          cDevice::PrimaryDevice()->SetVolume(VOLUMEDELTA);
+       else if (strcmp(option, "-") == 0)
+          cDevice::PrimaryDevice()->SetVolume(-VOLUMEDELTA);
+       else if (strcasecmp(option, "mute") == 0)
+          cDevice::PrimaryDevice()->ToggleMute();
+       else {
+          replyCode = 501;
+          replyMessage = cString::sprintf("Unknown option: \"%s\"", option);
+          }
+       }
+    else {
+       cDevice::PrimaryDevice()->SetVolume(volume, true);
+       }
+
+    int currentVol = cDevice::CurrentVolume();
+    dbus_bool_t mute = cDevice::PrimaryDevice()->IsMute();
+    if (mute)
+       replyMessage = "Audio is mute";
+    else
+       replyMessage = cString::sprintf("Audio volume is %d", currentVol);
+ 
+    DBusMessage *reply = dbus_message_new_method_return(msg);
+    DBusMessageIter replyArgs;
+    dbus_message_iter_init_append(reply, &replyArgs);
+    if (!dbus_message_iter_append_basic(&replyArgs, DBUS_TYPE_INT32, &currentVol))
+       esyslog("dbus2vdr: %s.SetVolume: out of memory while appending the current volume", DBUS_VDR_REMOTE_INTERFACE);
+    if (!dbus_message_iter_append_basic(&replyArgs, DBUS_TYPE_BOOLEAN, &mute))
+       esyslog("dbus2vdr: %s.SetVolume: out of memory while appending the mute status", DBUS_VDR_REMOTE_INTERFACE);
+    if (!dbus_message_iter_append_basic(&replyArgs, DBUS_TYPE_INT32, &replyCode))
+       esyslog("dbus2vdr: %s.SetVolume: out of memory while appending the reply-code", DBUS_VDR_REMOTE_INTERFACE);
+    const char *message = *replyMessage;
+    if (!dbus_message_iter_append_basic(&replyArgs, DBUS_TYPE_STRING, &message))
+       esyslog("dbus2vdr: %s.SetVolume: out of memory while appending the reply-message", DBUS_VDR_REMOTE_INTERFACE);
+    cDBusHelper::SendReply(conn, reply);
+  }
 };
 
 
@@ -315,6 +388,8 @@ cDBusDispatcherRemote::cDBusDispatcherRemote(void)
   AddAction("HitKey", cDBusRemoteActions::HitKey);
   AddAction("AskUser", cDBusRemoteActions::AskUser);
   AddAction("SwitchChannel", cDBusRemoteActions::SwitchChannel);
+  AddAction("GetVolume", cDBusRemoteActions::GetVolume);
+  AddAction("SetVolume", cDBusRemoteActions::SetVolume);
 }
 
 cDBusDispatcherRemote::~cDBusDispatcherRemote(void)
@@ -363,6 +438,17 @@ bool          cDBusDispatcherRemote::OnIntrospect(DBusMessage *msg, cString &Dat
   "    </signal>\n"
   "    <method name=\"SwitchChannel\">\n"
   "      <arg name=\"option\"       type=\"s\" direction=\"in\"/>\n"
+  "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"GetVolume\">\n"
+  "      <arg name=\"volume\"       type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"mute\"         type=\"b\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"SetVolume\">\n"
+  "      <arg name=\"option\"       type=\"v\" direction=\"in\"/>\n"
+  "      <arg name=\"volume\"       type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"mute\"         type=\"b\" direction=\"out\"/>\n"
   "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
   "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"
   "    </method>\n"
