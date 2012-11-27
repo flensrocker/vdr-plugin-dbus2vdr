@@ -188,6 +188,16 @@ Interface "setup"
 - list all parameters from setup.conf
   vdr-dbus-send.sh /Setup setup.List
 
+  return type is an array of structs containing a string and a variant.
+  The string contains the key of the line from the setup.conf.
+  The variant can be:
+  - struct of three integers "(iii)":
+    value of the option and its min and max values
+  - struct of string and integer "(si)":
+    value of the option and its max length (-1 for unknown)
+  - 64bit integer "x":
+    value of the option (timestamp)
+
 - get parameters from setup.conf
   vdr-dbus-send.sh /Setup setup.Get string:'MinUserInactivity'
 
