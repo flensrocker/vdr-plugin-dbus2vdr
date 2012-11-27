@@ -356,8 +356,13 @@ public:
           DBusMessage *reply = dbus_message_new_method_return(msg);
           DBusMessageIter replyArgs;
           dbus_message_iter_init_append(reply, &replyArgs);
-          if (!dbus_message_iter_append_basic(&replyArgs, DBUS_TYPE_STRING, &value))
+          DBusMessageIter variant;
+          if (!dbus_message_iter_open_container(&replyArgs, DBUS_TYPE_VARIANT, "s", &variant))
+             esyslog("dbus2vdr: %s.Get: can't open variant container", DBUS_VDR_SETUP_INTERFACE);
+          if (!dbus_message_iter_append_basic(&variant, DBUS_TYPE_STRING, &value))
              esyslog("dbus2vdr: %s.Get: out of memory while appending the string value", DBUS_VDR_SETUP_INTERFACE);
+          if (!dbus_message_iter_close_container(&replyArgs, &variant))
+             esyslog("dbus2vdr: %s.Get: can't close variant container", DBUS_VDR_SETUP_INTERFACE);
           if (!dbus_message_iter_append_basic(&replyArgs, DBUS_TYPE_INT32, &replyCode))
              esyslog("dbus2vdr: %s.Get: out of memory while appending the return-code", DBUS_VDR_SETUP_INTERFACE);
           const char *message = replyMessage;
@@ -377,30 +382,39 @@ public:
        DBusMessage *reply = dbus_message_new_method_return(msg);
        DBusMessageIter replyArgs;
        dbus_message_iter_init_append(reply, &replyArgs);
+       DBusMessageIter variant;
 
        switch (b->Type) {
          case cSetupBinding::dstString:
           {
+           if (!dbus_message_iter_open_container(&replyArgs, DBUS_TYPE_VARIANT, "s", &variant))
+              esyslog("dbus2vdr: %s.Get: can't open variant container", DBUS_VDR_SETUP_INTERFACE);
            const char *str = (const char*)b->Value;
-           if (!dbus_message_iter_append_basic(&replyArgs, DBUS_TYPE_STRING, &str))
+           if (!dbus_message_iter_append_basic(&variant, DBUS_TYPE_STRING, &str))
               esyslog("dbus2vdr: %s.Get: out of memory while appending the string value", DBUS_VDR_SETUP_INTERFACE);
            break;
           }
          case cSetupBinding::dstInt32:
           {
+           if (!dbus_message_iter_open_container(&replyArgs, DBUS_TYPE_VARIANT, "i", &variant))
+              esyslog("dbus2vdr: %s.Get: can't open variant container", DBUS_VDR_SETUP_INTERFACE);
            int i32 = *(int*)(b->Value);
-           if (!dbus_message_iter_append_basic(&replyArgs, DBUS_TYPE_INT32, &i32))
+           if (!dbus_message_iter_append_basic(&variant, DBUS_TYPE_INT32, &i32))
               esyslog("dbus2vdr: %s.Get: out of memory while appending the integer value", DBUS_VDR_SETUP_INTERFACE);
            break;
           }
          case cSetupBinding::dstTimeT:
           {
+           if (!dbus_message_iter_open_container(&replyArgs, DBUS_TYPE_VARIANT, "x", &variant))
+              esyslog("dbus2vdr: %s.Get: can't open variant container", DBUS_VDR_SETUP_INTERFACE);
            time_t i64 = *(time_t*)(b->Value);
-           if (!dbus_message_iter_append_basic(&replyArgs, DBUS_TYPE_INT64, &i64))
+           if (!dbus_message_iter_append_basic(&variant, DBUS_TYPE_INT64, &i64))
               esyslog("dbus2vdr: %s.Get: out of memory while appending the integer value", DBUS_VDR_SETUP_INTERFACE);
            break;
           }
          }
+       if (!dbus_message_iter_close_container(&replyArgs, &variant))
+          esyslog("dbus2vdr: %s.Get: can't close variant container", DBUS_VDR_SETUP_INTERFACE);
 
        if (!dbus_message_iter_append_basic(&replyArgs, DBUS_TYPE_INT32, &replyCode))
           esyslog("dbus2vdr: %s.Get: out of memory while appending the return-code", DBUS_VDR_SETUP_INTERFACE);
