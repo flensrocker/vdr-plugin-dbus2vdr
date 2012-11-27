@@ -432,163 +432,165 @@ public:
 
     dbus_int32_t replyCode = 501;
     cString replyMessage = "missing arguments";
+    DBusMessageIter &argsref = args;
+    DBusMessageIter sub;
     if (dbus_message_iter_get_arg_type(&args) == DBUS_TYPE_VARIANT) {
-       DBusMessageIter sub;
        dbus_message_iter_recurse(&args, &sub);
-       if (name != NULL) {
-          cSetupBinding *b = cSetupBinding::Find(_bindings, name);
-          if (b == NULL) {
-             const char *value = NULL;
-             rc = cDBusHelper::GetNextArg(sub, DBUS_TYPE_STRING, &value);
-             if (rc < 0)
-                replyMessage = cString::sprintf("argument for %s is not a string", name);
-             else {
-                cPlugin *plugin = NULL;
-                char *dummy = NULL;
-                char *pluginName = NULL;
-                const char *key = NULL;
-                char *point = (char*)strchr(name, '.');
-                if (point == NULL) {
-                   key = name;
-                   isyslog("dbus2vdr: %s.Set: looking for %s", DBUS_VDR_SETUP_INTERFACE, key);
-                   }
-                else { // this is a plugin setting
-                   dummy = strdup(name);
-                   pluginName = compactspace(dummy);
-                   point = strchr(pluginName, '.');
-                   *point = 0;
-                   key = point + 1;
-                   isyslog("dbus2vdr: %s.Set: looking for %s.%s", DBUS_VDR_SETUP_INTERFACE, pluginName, key);
-                   plugin = cPluginManager::GetPlugin(pluginName);
-                   if (plugin == NULL)
-                      isyslog("dbus2vdr: %s.Set: plugin %s not loaded, try to set it directly", DBUS_VDR_SETUP_INTERFACE, pluginName);
-                   }
-                if (plugin == NULL) {
-                   // save vdr-setup, load it in own Setup-container
-                   // adjust value, save as setup.conf, reload vdr-setup
-                   cSetupLine *line = FindSetupLine(Setup, key, pluginName);
-                   if (line != NULL) {
-                       isyslog("dbus2vdr: %s.Set: found %s%s%s = %s", DBUS_VDR_SETUP_INTERFACE, (line->Plugin() == NULL) ? "" : line->Plugin(), (line->Plugin() == NULL) ? "" : ".", line->Name(), line->Value());
-                       Setup.Save();
-                       char *filename = strdup(Setup.FileName());
-                       cConfig<cSetupLine> tmpSetup;
-                       tmpSetup.Load(filename, true);
-                       line = FindSetupLine(tmpSetup, key, pluginName);
-                       if (line != NULL) {
-                          cSetupLine *newLine = new cSetupLine(key, value, pluginName);
-                          tmpSetup.Add(newLine, line);
-                          tmpSetup.Del(line);
-                          tmpSetup.Save();
-                          Setup.Load(filename);
-                          }
-                       free(filename);
+       argsref = sub;
+       }
+    if (name != NULL) {
+       cSetupBinding *b = cSetupBinding::Find(_bindings, name);
+       if (b == NULL) {
+          const char *value = NULL;
+          rc = cDBusHelper::GetNextArg(argsref, DBUS_TYPE_STRING, &value);
+          if (rc < 0)
+             replyMessage = cString::sprintf("argument for %s is not a string", name);
+          else {
+             cPlugin *plugin = NULL;
+             char *dummy = NULL;
+             char *pluginName = NULL;
+             const char *key = NULL;
+             char *point = (char*)strchr(name, '.');
+             if (point == NULL) {
+                key = name;
+                isyslog("dbus2vdr: %s.Set: looking for %s", DBUS_VDR_SETUP_INTERFACE, key);
+                }
+             else { // this is a plugin setting
+                dummy = strdup(name);
+                pluginName = compactspace(dummy);
+                point = strchr(pluginName, '.');
+                *point = 0;
+                key = point + 1;
+                isyslog("dbus2vdr: %s.Set: looking for %s.%s", DBUS_VDR_SETUP_INTERFACE, pluginName, key);
+                plugin = cPluginManager::GetPlugin(pluginName);
+                if (plugin == NULL)
+                   isyslog("dbus2vdr: %s.Set: plugin %s not loaded, try to set it directly", DBUS_VDR_SETUP_INTERFACE, pluginName);
+                }
+             if (plugin == NULL) {
+                // save vdr-setup, load it in own Setup-container
+                // adjust value, save as setup.conf, reload vdr-setup
+                cSetupLine *line = FindSetupLine(Setup, key, pluginName);
+                if (line != NULL) {
+                    isyslog("dbus2vdr: %s.Set: found %s%s%s = %s", DBUS_VDR_SETUP_INTERFACE, (line->Plugin() == NULL) ? "" : line->Plugin(), (line->Plugin() == NULL) ? "" : ".", line->Name(), line->Value());
+                    Setup.Save();
+                    char *filename = strdup(Setup.FileName());
+                    cConfig<cSetupLine> tmpSetup;
+                    tmpSetup.Load(filename, true);
+                    line = FindSetupLine(tmpSetup, key, pluginName);
+                    if (line != NULL) {
+                       cSetupLine *newLine = new cSetupLine(key, value, pluginName);
+                       tmpSetup.Add(newLine, line);
+                       tmpSetup.Del(line);
+                       tmpSetup.Save();
+                       Setup.Load(filename);
                        }
-                   else {
-                      isyslog("dbus2vdr: %s.Set: add new line to setup.conf: %s%s%s = %s", DBUS_VDR_SETUP_INTERFACE, (pluginName == NULL) ? "" : pluginName, (pluginName == NULL) ? "" : ".", key, value);
-                      Setup.Add(new cSetupLine(key, value, pluginName));
-                      Setup.Save();
-                      }
-                   replyCode = 900;
-                   replyMessage = cString::sprintf("storing %s%s%s = %s", (pluginName == NULL) ? "" : pluginName, (pluginName == NULL) ? "" : ".", key, value);
+                    free(filename);
+                    }
+                else {
+                   isyslog("dbus2vdr: %s.Set: add new line to setup.conf: %s%s%s = %s", DBUS_VDR_SETUP_INTERFACE, (pluginName == NULL) ? "" : pluginName, (pluginName == NULL) ? "" : ".", key, value);
+                   Setup.Add(new cSetupLine(key, value, pluginName));
+                   Setup.Save();
+                   }
+                replyCode = 900;
+                replyMessage = cString::sprintf("storing %s%s%s = %s", (pluginName == NULL) ? "" : pluginName, (pluginName == NULL) ? "" : ".", key, value);
+                }
+             else {
+                if (!plugin->SetupParse(key, value)) {
+                   replyMessage = cString::sprintf("plugin %s can't parse %s = %s", pluginName, key, value);
+                   esyslog("dbus2vdr: %s.Set: plugin %s can't parse %s = %s", DBUS_VDR_SETUP_INTERFACE, pluginName, key, value);
                    }
                 else {
-                   if (!plugin->SetupParse(key, value)) {
-                      replyMessage = cString::sprintf("plugin %s can't parse %s = %s", pluginName, key, value);
-                      esyslog("dbus2vdr: %s.Set: plugin %s can't parse %s = %s", DBUS_VDR_SETUP_INTERFACE, pluginName, key, value);
-                      }
-                   else {
-                      replyCode = 900;
-                      replyMessage = cString::sprintf("storing %s = %s", name, value);
-                      plugin->SetupStore(key, value);
-                      Setup.Save();
-                      }
+                   replyCode = 900;
+                   replyMessage = cString::sprintf("storing %s = %s", name, value);
+                   plugin->SetupStore(key, value);
+                   Setup.Save();
                    }
-                if (dummy != NULL)
-                   free(dummy);
                 }
-             cDBusHelper::SendReply(conn, msg, replyCode, replyMessage);
-             return;
+             if (dummy != NULL)
+                free(dummy);
              }
+          cDBusHelper::SendReply(conn, msg, replyCode, replyMessage);
+          return;
+          }
 
-          bool save = false;
-          bool ModifiedAppearance = false;
-          switch (b->Type) {
-            case cSetupBinding::dstString:
-             {
-              const char *str = NULL;
-              rc = cDBusHelper::GetNextArg(sub, DBUS_TYPE_STRING, &str);
-              if (rc < 0)
-                 replyMessage = cString::sprintf("argument for %s is not a string", name);
-              else {
-                 replyMessage = cString::sprintf("setting %s = %s", name, str);
-                 Utf8Strn0Cpy((char*)b->Value, str, b->StrMaxLength);
-                 save = true;
-                 // special handling of some setup values
-                 if ((strcasecmp(name, "OSDLanguage") == 0)
-                  || (strcasecmp(name, "FontOsd") == 0)
-                  || (strcasecmp(name, "FontSml") == 0)
-                  || (strcasecmp(name, "FontFix") == 0)) {
-                    ModifiedAppearance = true;
-                    }
-                 else if (strcasecmp(name, "OSDSkin") == 0) {
-                    Skins.SetCurrent(str);
-                    ModifiedAppearance = true;
-                    }
-                 else if (strcasecmp(name, "OSDTheme") == 0) {
-                    cThemes themes;
-                    themes.Load(Skins.Current()->Name());
-                    if ((themes.NumThemes() > 0) && Skins.Current()->Theme()) {
-                       int themeIndex = themes.GetThemeIndex(str);
-                       if (themeIndex >= 0) {
-                          Skins.Current()->Theme()->Load(themes.FileName(themeIndex));
-                          ModifiedAppearance = true;
-                          }
+       bool save = false;
+       bool ModifiedAppearance = false;
+       switch (b->Type) {
+         case cSetupBinding::dstString:
+          {
+           const char *str = NULL;
+           rc = cDBusHelper::GetNextArg(argsref, DBUS_TYPE_STRING, &str);
+           if (rc < 0)
+              replyMessage = cString::sprintf("argument for %s is not a string", name);
+           else {
+              replyMessage = cString::sprintf("setting %s = %s", name, str);
+              Utf8Strn0Cpy((char*)b->Value, str, b->StrMaxLength);
+              save = true;
+              // special handling of some setup values
+              if ((strcasecmp(name, "OSDLanguage") == 0)
+               || (strcasecmp(name, "FontOsd") == 0)
+               || (strcasecmp(name, "FontSml") == 0)
+               || (strcasecmp(name, "FontFix") == 0)) {
+                 ModifiedAppearance = true;
+                 }
+              else if (strcasecmp(name, "OSDSkin") == 0) {
+                 Skins.SetCurrent(str);
+                 ModifiedAppearance = true;
+                 }
+              else if (strcasecmp(name, "OSDTheme") == 0) {
+                 cThemes themes;
+                 themes.Load(Skins.Current()->Name());
+                 if ((themes.NumThemes() > 0) && Skins.Current()->Theme()) {
+                    int themeIndex = themes.GetThemeIndex(str);
+                    if (themeIndex >= 0) {
+                       Skins.Current()->Theme()->Load(themes.FileName(themeIndex));
+                       ModifiedAppearance = true;
                        }
                     }
-                }
-              break;
-             }
-            case cSetupBinding::dstInt32:
-             {
-              int i32;
-              rc = cDBusHelper::GetNextArg(sub, DBUS_TYPE_INT32, &i32);
-              if (rc < 0)
-                 replyMessage = cString::sprintf("argument for %s is not a 32bit-integer", name);
-              else if ((i32 < b->Int32MinValue) || (i32 > b->Int32MaxValue))
-                 replyMessage = cString::sprintf("argument for %s is out of range", name);
-              else {
-                 replyMessage = cString::sprintf("setting %s = %d", name, i32);
-                 (*((int*)b->Value)) = i32;
-                 save = true;
-                 if (strcasecmp(name, "AntiAlias") == 0) {
-                    ModifiedAppearance = true;
-                    }
                  }
-              break;
              }
-            case cSetupBinding::dstTimeT:
-             {
-              time_t i64;
-              rc = cDBusHelper::GetNextArg(sub, DBUS_TYPE_INT64, &i64);
-              if (rc < 0)
-                 replyMessage = cString::sprintf("argument for %s is not a 64bit-integer", name);
-              else {
-                 replyMessage = cString::sprintf("setting %s = %ld", name, i64);
-                 (*((time_t*)b->Value)) = i64;
-                 save = true;
+           break;
+          }
+         case cSetupBinding::dstInt32:
+          {
+           int i32;
+           rc = cDBusHelper::GetNextArg(argsref, DBUS_TYPE_INT32, &i32);
+           if (rc < 0)
+              replyMessage = cString::sprintf("argument for %s is not a 32bit-integer", name);
+           else if ((i32 < b->Int32MinValue) || (i32 > b->Int32MaxValue))
+              replyMessage = cString::sprintf("argument for %s is out of range", name);
+           else {
+              replyMessage = cString::sprintf("setting %s = %d", name, i32);
+              (*((int*)b->Value)) = i32;
+              save = true;
+              if (strcasecmp(name, "AntiAlias") == 0) {
+                 ModifiedAppearance = true;
                  }
-              break;
-             }
-            }
+              }
+           break;
+          }
+         case cSetupBinding::dstTimeT:
+          {
+           time_t i64;
+           rc = cDBusHelper::GetNextArg(argsref, DBUS_TYPE_INT64, &i64);
+           if (rc < 0)
+              replyMessage = cString::sprintf("argument for %s is not a 64bit-integer", name);
+           else {
+              replyMessage = cString::sprintf("setting %s = %ld", name, i64);
+              (*((time_t*)b->Value)) = i64;
+              save = true;
+              }
+           break;
+          }
+         }
 
-          if (save) {
-             Setup.Save();
-             replyCode = 900;
+       if (save) {
+          Setup.Save();
+          replyCode = 900;
 #if VDRVERSNUM > 10706
-             if (ModifiedAppearance)
-                cOsdProvider::UpdateOsdSize(true);
+          if (ModifiedAppearance)
+             cOsdProvider::UpdateOsdSize(true);
 #endif
-             }
           }
        }
 
