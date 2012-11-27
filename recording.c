@@ -114,56 +114,63 @@ public:
     int position = -1; // default: resume
     const char *hmsf = NULL;
     DBusMessageIter args;
+    DBusMessageIter sub1;
+    DBusMessageIter sub2;
     if (dbus_message_iter_init(msg, &args)) {
+       DBusMessageIter *refArgs = &args;
        if (dbus_message_iter_get_arg_type(&args) == DBUS_TYPE_VARIANT) {
-          DBusMessageIter sub;
-          dbus_message_iter_recurse(&args, &sub);
-          if (dbus_message_iter_get_arg_type(&sub) == DBUS_TYPE_STRING) {
-             const char *path = NULL;
-             if ((cDBusHelper::GetNextArg(sub, DBUS_TYPE_STRING, &path) >= 0) && (path != NULL) && *path) {
+          dbus_message_iter_recurse(&args, &sub1);
+          refArgs = &sub1;
+          }
+       if (dbus_message_iter_get_arg_type(refArgs) == DBUS_TYPE_STRING) {
+          const char *path = NULL;
+          dbus_message_iter_get_basic(refArgs, &path);
+          if ((path != NULL) && *path) {
+             recording = recordings.GetByName(path);
+             if (recording == NULL) {
+                recordings.Update(true);
                 recording = recordings.GetByName(path);
-                if (recording == NULL) {
-                   recordings.Update(true);
-                   recording = recordings.GetByName(path);
-                   if (recording == NULL)
-                      replyMessage = cString::sprintf("recording \"%s\" not found", path);
-                   }
+                if (recording == NULL)
+                   replyMessage = cString::sprintf("recording \"%s\" not found", path);
                 }
              }
-          else if (dbus_message_iter_get_arg_type(&sub) == DBUS_TYPE_INT32) {
-             int number = 0;
-             if ((cDBusHelper::GetNextArg(sub, DBUS_TYPE_INT32, &number) >= 0) && (number > 0)) {
+          }
+       else if (dbus_message_iter_get_arg_type(refArgs) == DBUS_TYPE_INT32) {
+          int number = 0;
+          dbus_message_iter_get_basic(refArgs, &number);
+          if (number > 0) {
+             recording = recordings.Get(number - 1);
+             if (recording == NULL) {
+                recordings.Update(true);
                 recording = recordings.Get(number - 1);
-                if (recording == NULL) {
-                   recordings.Update(true);
-                   recording = recordings.Get(number - 1);
-                   if (recording == NULL)
-                      replyMessage = cString::sprintf("recording \"%d\" not found", number);
-                   }
+                if (recording == NULL)
+                   replyMessage = cString::sprintf("recording \"%d\" not found", number);
                 }
              }
           }
 
        if (recording != NULL) {
           dbus_message_iter_next(&args);
+          refArgs = &args;
           if (dbus_message_iter_get_arg_type(&args) == DBUS_TYPE_VARIANT) {
-             DBusMessageIter sub;
-             dbus_message_iter_recurse(&args, &sub);
-             if (dbus_message_iter_get_arg_type(&sub) == DBUS_TYPE_STRING) {
-                if ((cDBusHelper::GetNextArg(sub, DBUS_TYPE_STRING, &hmsf) >= 0) && (hmsf != NULL) && *hmsf) {
-                   if (strcasecmp(hmsf, "begin") == 0) {
-                      position = 0;
-                      hmsf = NULL;
-                      }
-                   else
-                      position = HMSFToIndex(hmsf, recording->FramesPerSecond());
+             dbus_message_iter_recurse(&args, &sub2);
+             refArgs = &sub2;
+             }
+          if (dbus_message_iter_get_arg_type(refArgs) == DBUS_TYPE_STRING) {
+             dbus_message_iter_get_basic(refArgs, &hmsf);
+             if ((hmsf != NULL) && *hmsf) {
+                if (strcasecmp(hmsf, "begin") == 0) {
+                   position = 0;
+                   hmsf = NULL;
                    }
                 else
-                   hmsf = NULL;
+                   position = HMSFToIndex(hmsf, recording->FramesPerSecond());
                 }
-             else if (dbus_message_iter_get_arg_type(&sub) == DBUS_TYPE_INT32)
-                cDBusHelper::GetNextArg(sub, DBUS_TYPE_INT32, &position);
+             else
+                hmsf = NULL;
              }
+          else if (dbus_message_iter_get_arg_type(refArgs) == DBUS_TYPE_INT32)
+             dbus_message_iter_get_basic(refArgs, &position);
           }
        }
 
