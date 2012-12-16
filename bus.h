@@ -10,7 +10,8 @@
 class cDBusBus
 {
 private:
-  cString    _busname;
+  cString          _name;
+  cString          _busname;
   DBusConnection  *_conn;
 
 protected:
@@ -19,10 +20,14 @@ protected:
   virtual DBusConnection *GetConnection(void) = 0;
 
 public:
-  cDBusBus(const char *busname);
+  cDBusBus(const char *name, const char *busname);
   virtual ~cDBusBus(void);
 
+  const char *Name(void) const { return *_name; }
+  const char *Busname(void) const { return *_busname; }
+
   DBusConnection*  Connect(void);
+
   virtual void  Disconnect(void);
 };
 

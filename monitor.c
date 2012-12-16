@@ -13,8 +13,9 @@ cDBusMonitor *cDBusMonitor::_monitor = NULL;
 int cDBusMonitor::PollTimeoutMs = 10;
 
 
-cDBusMonitor::cDBusMonitor(void)
+cDBusMonitor::cDBusMonitor(cDBusBus *bus)
 {
+  _bus = bus;
   _conn = NULL;
   _started = false;
   _nameAcquired = false;
@@ -22,9 +23,10 @@ cDBusMonitor::cDBusMonitor(void)
 
 cDBusMonitor::~cDBusMonitor(void)
 {
-  if (_conn != NULL)
-     dbus_connection_unref(_conn);
   _conn = NULL;
+  if (_bus != NULL)
+     delete _bus;
+  _bus = NULL;
 }
 
 void cDBusMonitor::StartMonitor(void)
@@ -35,7 +37,18 @@ void cDBusMonitor::StartMonitor(void)
      dsyslog("dbus2vdr: StartMonitor Unlock 1");
      return;
      }
-  _monitor = new cDBusMonitor;
+
+  cString busname;
+#if VDRVERSNUM < 10704
+  busname = cString::sprintf("%s", DBUS_VDR_BUSNAME);
+#else
+  if (InstanceId > 0)
+     busname = cString::sprintf("%s%d", DBUS_VDR_BUSNAME, InstanceId);
+  else
+     busname = cString::sprintf("%s", DBUS_VDR_BUSNAME);
+#endif
+
+  _monitor = new cDBusMonitor(new cDBusSystemBus(*busname));
   if (_monitor) {
      _monitor->Start();
      while (!_monitor->_started)
@@ -100,22 +113,8 @@ bool cDBusMonitor::SendSignal(DBusMessage *msg)
 
 void cDBusMonitor::Action(void)
 {
-  DBusError err;
-  dbus_error_init(&err);
-  if (!dbus_threads_init_default())
-     esyslog("dbus2vdr: dbus_threads_init_default returns an error - not good!");
   _started = true;
-  cString busnameMem;
-#if VDRVERSNUM < 10704
-  busnameMem = cString::sprintf("%s", DBUS_VDR_BUSNAME);
-#else
-  if (InstanceId > 0)
-     busnameMem = cString::sprintf("%s%d", DBUS_VDR_BUSNAME, InstanceId);
-  else
-     busnameMem = cString::sprintf("%s", DBUS_VDR_BUSNAME);
-#endif
-  const char *busname = *busnameMem;
-  isyslog("dbus2vdr: monitor started on bus %s", busname);
+  isyslog("dbus2vdr: monitor started on bus %s", _bus->Busname());
 
   int reconnectLogCount = 0;
   bool isLocked = false;
@@ -131,30 +130,15 @@ void cDBusMonitor::Action(void)
               isyslog("dbus2vdr: try to connect to system bus");
            else if (reconnectLogCount > 15) // ...and too quiet
               reconnectLogCount = 0;
-           DBusConnection *conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
-           if (dbus_error_is_set(&err)) {
-              esyslog("dbus2vdr: connection error: %s", err.message);
-              dbus_error_free(&err);
-              }
+           DBusConnection *conn = _bus->Connect();
            if (conn == NULL) {
               cCondWait::SleepMs(1000);
               reconnectLogCount++;
               continue;
               }
-           dbus_connection_set_exit_on_disconnect(conn, false);
 
-           int ret = dbus_bus_request_name(conn, busname, DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
-           if (dbus_error_is_set(&err)) {
-              esyslog("dbus2vdr: name error: %s", err.message);
-              dbus_error_free(&err);
-              }
-           if (ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
-              esyslog("dbus2vdr: not primary owner for bus %s", busname);
-              cCondWait::SleepMs(1000);
-              continue;
-              }
            _conn = conn;
-           isyslog("dbus2vdr: connect to system bus successful, unique name is %s, id is %s", dbus_bus_get_unique_name(_conn), dbus_bus_get_id(_conn, &err));
+           isyslog("dbus2vdr: connect to %s bus successful, unique name is %s", _bus->Name(), dbus_bus_get_unique_name(_conn));
            reconnectLogCount = 0;
            }
         if (isLocked) {
@@ -207,9 +191,10 @@ void cDBusMonitor::Action(void)
         if ((strcmp(interface, "org.freedesktop.DBus.Local") == 0)
          && (strcmp(object, "/org/freedesktop/DBus/Local") == 0)
          && (strcmp(member, "Disconnected") == 0)) {
-           isyslog("dbus2vdr: disconnected from system bus, will try to reconnect");
+           isyslog("dbus2vdr: disconnected from %s bus, will try to reconnect", _bus->Name());
            _conn = NULL;
            _nameAcquired = false;
+           _bus->Disconnect();
            continue;
            }
 
@@ -227,7 +212,7 @@ void cDBusMonitor::Action(void)
            dbus_message_unref(msg);
         }
   cDBusMessageDispatcher::Stop();
-  isyslog("dbus2vdr: monitor stopped on bus %s", busname);
+  isyslog("dbus2vdr: monitor stopped on bus %s", _bus->Busname());
 }
 
 class cUpstartSignal : public cListObject

@@ -1,6 +1,8 @@
 #ifndef __DBUS2VDR_MONITOR_H
 #define __DBUS2VDR_MONITOR_H
 
+#include "bus.h"
+
 #include <dbus/dbus.h>
 
 #include <vdr/thread.h>
@@ -14,9 +16,10 @@ private:
 
   bool _started;
   bool _nameAcquired;
+  cDBusBus *_bus;
   DBusConnection *_conn;
 
-  cDBusMonitor(void);
+  cDBusMonitor(cDBusBus *bus);
 
 public:
   static int PollTimeoutMs;

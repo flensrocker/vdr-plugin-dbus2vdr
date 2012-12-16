@@ -1,13 +1,14 @@
 #include "bus.h"
 
 
-cDBusBus::cDBusBus(const char *busname)
- :_busname(busname)
+cDBusBus::cDBusBus(const char *name, const char *busname)
+ :_name(name)
+ ,_busname(busname)
  ,_conn(NULL)
 {
   dbus_error_init(&_err);
   if (!dbus_threads_init_default())
-     esyslog("dbus2vdr: dbus_threads_init_default returns an error - not good!");
+     esyslog("dbus2vdr: bus %s: dbus_threads_init_default returns an error - not good!", name);
 }
 
 cDBusBus::~cDBusBus(void)
@@ -20,7 +21,7 @@ DBusConnection*  cDBusBus::Connect(void)
   DBusConnection *conn = GetConnection();
   if ((conn == NULL) || dbus_error_is_set(&_err)) {
      if (dbus_error_is_set(&_err)) {
-        esyslog("dbus2vdr: connection error: %s", _err.message);
+        esyslog("dbus2vdr: bus %s: connection error: %s", *_name, _err.message);
         dbus_error_free(&_err);
         }
      return NULL;
@@ -32,12 +33,12 @@ DBusConnection*  cDBusBus::Connect(void)
   const char *busname = *_busname;
   int ret = dbus_bus_request_name(conn, busname, DBUS_NAME_FLAG_REPLACE_EXISTING, &_err);
   if (dbus_error_is_set(&_err)) {
-     esyslog("dbus2vdr: name error: %s", _err.message);
+     esyslog("dbus2vdr: bus %s: name error: %s", *_name, _err.message);
      dbus_error_free(&_err);
      return NULL;
      }
   if (ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
-     esyslog("dbus2vdr: not primary owner for bus %s", busname);
+     esyslog("dbus2vdr: bus %s: not primary owner for bus %s", *_name, busname);
      return NULL;
      }
 
@@ -54,7 +55,7 @@ void  cDBusBus::Disconnect(void)
 
 
 cDBusSystemBus::cDBusSystemBus(const char *busname)
- :cDBusBus(busname)
+ :cDBusBus("system", busname)
 {
 }
 
@@ -69,7 +70,7 @@ DBusConnection*  cDBusSystemBus::GetConnection(void)
 
 
 cDBusCustomBus::cDBusCustomBus(const char *busname, const char *address)
- :cDBusBus(busname)
+ :cDBusBus("custom", busname)
  ,_address(address)
 {
 }
