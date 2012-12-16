@@ -203,7 +203,7 @@ VDR Plugin 'dbus2vdr' Revision History
 2012-11-07: Version 0.0.8c
 - add vdr-instance-id to destination name
 
-2012-11-27: Version 0.0.8d
+2012-12-16: Version 0.0.8d
 - add SwitchChannel to remote interface
 - refactoring of message handling, it's now simpler to add new methods
 - add channel interface
@@ -213,3 +213,4 @@ VDR Plugin 'dbus2vdr' Revision History
 - fix handling of variant arguments
 - fix return type of setup.Get and setup.List
 - add GetVolume/SetVolume to remote interface
+- return proper DBus errors on unknown messages
