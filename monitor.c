@@ -154,7 +154,7 @@ void cDBusMonitor::Action(void)
               continue;
               }
            _conn = conn;
-           isyslog("dbus2vdr: connect to system bus successful");
+           isyslog("dbus2vdr: connect to system bus successful, unique name is %s, id is %s", dbus_bus_get_unique_name(_conn), dbus_bus_get_id(_conn, &err));
            reconnectLogCount = 0;
            }
         if (isLocked) {
