@@ -35,7 +35,7 @@ cDBusMonitor::~cDBusMonitor(void)
   _bus = NULL;
 }
 
-void cDBusMonitor::StartMonitor(cDBusTcpAddress *networkAddress)
+void cDBusMonitor::StartMonitor(bool enableNetwork)
 {
   cMutexLock lock(&_mutex);
   dsyslog("dbus2vdr: StartMonitor Lock");
@@ -52,8 +52,8 @@ void cDBusMonitor::StartMonitor(cDBusTcpAddress *networkAddress)
 
   if (_monitor[busSystem] == NULL)
      _monitor[busSystem] = new cDBusMonitor(new cDBusSystemBus(*busname), busSystem);
-  if ((networkAddress != NULL) && (_monitor[busNetwork] == NULL))
-     _monitor[busNetwork] = new cDBusMonitor(new cDBusCustomBus(*busname, networkAddress), busNetwork);
+  if (enableNetwork && (_monitor[busNetwork] == NULL))
+     _monitor[busNetwork] = new cDBusMonitor(new cDBusNetworkBus(*busname), busNetwork);
 
   dsyslog("dbus2vdr: StartMonitor Unlock 2");
 }

@@ -10,7 +10,11 @@ class cDBusTcpAddress;
 
 class cDBusHelper
 {
+private:
+  static cString  _pluginConfigDir;
+
 public:
+  static void SetConfigDirectory(const char *configDir) { _pluginConfigDir = configDir; };
   static void AddArg(DBusMessageIter &args, int type, const void *value);
   static void AddKeyValue(DBusMessageIter &array, const char *key, int type, const char *vtype, void *value);
 

@@ -6,6 +6,8 @@
 #include <unistd.h>
 
 
+cString  cDBusHelper::_pluginConfigDir;
+
 void cDBusHelper::AddArg(DBusMessageIter &args, int type, const void *value)
 {
   if (value == NULL)
@@ -82,7 +84,7 @@ void  cDBusHelper::SendReply(DBusConnection *conn, DBusMessage *msg, const char 
 
 cDBusTcpAddress *cDBusHelper::GetNetworkAddress(void)
 {
-  cString filename = cString::sprintf("%s/network-address.conf", cPlugin::ConfigDirectory("dbus2vdr"));
+  cString filename = cString::sprintf("%s/network-address.conf", *_pluginConfigDir);
   dsyslog("dbus2vdr: loading network address from file %s", *filename);
   FILE *f = fopen(*filename, "r");
   if (f == NULL)

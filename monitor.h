@@ -30,7 +30,7 @@ public:
 
   eBusType GetType(void) const { return _type; }
 
-  static void StartMonitor(cDBusTcpAddress *networkAddress);
+  static void StartMonitor(bool enableNetwork);
   static void StopMonitor(void);
 
   static bool SendSignal(DBusMessage *msg, eBusType bus);

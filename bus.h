@@ -64,7 +64,7 @@ public:
   }
 };
 
-class cDBusCustomBus : public cDBusBus
+class cDBusNetworkBus : public cDBusBus
 {
 private:
   cDBusTcpAddress  *_address;
@@ -73,8 +73,8 @@ protected:
   virtual DBusConnection *GetConnection(void);
 
 public:
-  cDBusCustomBus(const char *busname, cDBusTcpAddress *address);
-  virtual ~cDBusCustomBus(void);
+  cDBusNetworkBus(const char *busname);
+  virtual ~cDBusNetworkBus(void);
 };
 
 #endif

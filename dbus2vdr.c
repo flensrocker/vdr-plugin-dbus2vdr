@@ -115,8 +115,9 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
         switch (c) {
           case 'o':
            {
-            enable_osd = true;
-            break;
+             enable_osd = true;
+             isyslog("dbus2vdr: enable osd");
+             break;
            }
           case 's':
            {
@@ -151,6 +152,7 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
           case 'n':
            {
              enable_network = true;
+             isyslog("dbus2vdr: enable network support");
              break;
            }
           }
@@ -167,6 +169,7 @@ bool cPluginDbus2vdr::Initialize(void)
 
 bool cPluginDbus2vdr::Start(void)
 {
+  cDBusHelper::SetConfigDirectory(cPlugin::ConfigDirectory("dbus2vdr"));
   // Start any background activities the plugin shall perform.
   new cDBusDispatcherChannel;
   new cDBusDispatcherEpg;
@@ -178,15 +181,7 @@ bool cPluginDbus2vdr::Start(void)
   new cDBusDispatcherShutdown;
   new cDBusDispatcherSkin;
   new cDBusDispatcherTimer;
-  cDBusTcpAddress *network_address = NULL;
-  if (enable_network) {
-     network_address = cDBusHelper::GetNetworkAddress();
-     if (network_address == NULL)
-        esyslog("dbus2vdr: network support enabled, but no network address found");
-     else
-        isyslog("dbus2vdr: network support enabled, address is %s", network_address->Address());
-     }
-  cDBusMonitor::StartMonitor(network_address);
+  cDBusMonitor::StartMonitor(enable_network);
   if (enable_osd)
      new cDBusOsdProvider();
   return true;

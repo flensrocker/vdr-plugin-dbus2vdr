@@ -1,4 +1,5 @@
 #include "bus.h"
+#include "helper.h"
 
 
 cDBusBus::cDBusBus(const char *name, const char *busname)
@@ -69,23 +70,27 @@ DBusConnection*  cDBusSystemBus::GetConnection(void)
 }
 
 
-cDBusCustomBus::cDBusCustomBus(const char *busname, cDBusTcpAddress *address)
- :cDBusBus("custom", busname)
- ,_address(address)
+cDBusNetworkBus::cDBusNetworkBus(const char *busname)
+ :cDBusBus("network", busname)
+ ,_address(NULL)
 {
 }
 
-cDBusCustomBus::~cDBusCustomBus(void)
+cDBusNetworkBus::~cDBusNetworkBus(void)
 {
   if (_address != NULL)
      delete _address;
   _address = NULL;
 }
 
-DBusConnection*  cDBusCustomBus::GetConnection(void)
+DBusConnection*  cDBusNetworkBus::GetConnection(void)
 {
+  if (_address != NULL)
+     delete _address;
+  _address = cDBusHelper::GetNetworkAddress();
   if (_address == NULL)
      return NULL;
+  isyslog("dbus2vdr: try to connect to network bus on address %s", _address->Address());
   DBusConnection *conn = dbus_connection_open(_address->Address(), &_err);
   if (conn != NULL) {
      if (!dbus_bus_register(conn, &_err)) {
