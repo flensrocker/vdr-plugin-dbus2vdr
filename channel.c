@@ -110,7 +110,7 @@ public:
 
 
 cDBusDispatcherChannel::cDBusDispatcherChannel(void)
-:cDBusMessageDispatcher(DBUS_VDR_CHANNEL_INTERFACE)
+:cDBusMessageDispatcher(busSystem, DBUS_VDR_CHANNEL_INTERFACE)
 {
   AddPath("/Channels");
   AddAction("List", cDBusChannelActions::List);

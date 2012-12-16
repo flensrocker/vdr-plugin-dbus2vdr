@@ -1,5 +1,6 @@
 #include "message.h"
 #include "helper.h"
+#include "monitor.h"
 
 // ----- cDBusMessageHandler: Thead which handles one cDBusMessage ------------
 
@@ -102,7 +103,7 @@ void cDBusMessageDispatcher::AddAction(const char *name, cDBusMessageActionFunc 
      _actions.Add(new cDBusMessageAction(name, action));
 }
 
-bool cDBusMessageDispatcher::Dispatch(DBusConnection* conn, DBusMessage* msg)
+bool cDBusMessageDispatcher::Dispatch(cDBusMonitor *monitor, DBusConnection* conn, DBusMessage* msg)
 {
   const char *interface = dbus_message_get_interface(msg);
   if (interface == NULL)
@@ -112,7 +113,10 @@ bool cDBusMessageDispatcher::Dispatch(DBusConnection* conn, DBusMessage* msg)
      return false;
   cString errText;
   DBusMessage *errorMsg;
+  eBusType monitorType = monitor->GetType();
   for (cDBusMessageDispatcher *d = _dispatcher.First(); d; d = _dispatcher.Next(d)) {
+      if (d->_busType != monitorType)
+         continue;
       if (strcmp(d->_interface, interface) == 0) {
          cDBusMessage *m = NULL;
          if ((d->_paths.Size() > 0) && (d->_actions.Count() > 0)) {
@@ -168,8 +172,9 @@ void cDBusMessageDispatcher::Shutdown(void)
   _dispatcher.Clear();
 }
 
-cDBusMessageDispatcher::cDBusMessageDispatcher(const char *interface)
-:_interface(interface)
+cDBusMessageDispatcher::cDBusMessageDispatcher(eBusType busType, const char *interface)
+:_busType(busType)
+,_interface(interface)
 {
   isyslog("dbus2vdr: new message dispatcher for interface %s", _interface);
   _dispatcher.Add(this);

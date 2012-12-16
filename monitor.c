@@ -13,9 +13,10 @@ cDBusMonitor *cDBusMonitor::_monitor[] = { NULL, NULL };
 int cDBusMonitor::PollTimeoutMs = 10;
 
 
-cDBusMonitor::cDBusMonitor(cDBusBus *bus)
+cDBusMonitor::cDBusMonitor(cDBusBus *bus, eBusType type)
 {
   _bus = bus;
+  _type = type;
   _conn = NULL;
   _started = false;
   _nameAcquired = false;
@@ -34,7 +35,7 @@ cDBusMonitor::~cDBusMonitor(void)
   _bus = NULL;
 }
 
-void cDBusMonitor::StartMonitor(void)
+void cDBusMonitor::StartMonitor(cDBusTcpAddress *networkAddress)
 {
   cMutexLock lock(&_mutex);
   dsyslog("dbus2vdr: StartMonitor Lock");
@@ -50,7 +51,9 @@ void cDBusMonitor::StartMonitor(void)
 #endif
 
   if (_monitor[busSystem] == NULL)
-     _monitor[busSystem] = new cDBusMonitor(new cDBusSystemBus(*busname));
+     _monitor[busSystem] = new cDBusMonitor(new cDBusSystemBus(*busname), busSystem);
+  if ((networkAddress != NULL) && (_monitor[busNetwork] == NULL))
+     _monitor[busNetwork] = new cDBusMonitor(new cDBusCustomBus(*busname, networkAddress), busNetwork);
 
   dsyslog("dbus2vdr: StartMonitor Unlock 2");
 }
@@ -62,6 +65,9 @@ void cDBusMonitor::StopMonitor(void)
   if (_monitor[busSystem] != NULL)
      delete _monitor[busSystem];
   _monitor[busSystem] = NULL;
+  if (_monitor[busNetwork] != NULL)
+     delete _monitor[busNetwork];
+  _monitor[busNetwork] = NULL;
   dsyslog("dbus2vdr: StopMonitor Unlock 2");
 }
 
@@ -201,7 +207,7 @@ void cDBusMonitor::Action(void)
            continue;
            }
 
-        if (!cDBusMessageDispatcher::Dispatch(_conn, msg))
+        if (!cDBusMessageDispatcher::Dispatch(this, _conn, msg))
            dbus_message_unref(msg);
         }
   cDBusMessageDispatcher::Stop();
@@ -265,7 +271,7 @@ protected:
                          if (dbus_message_iter_close_container(&args, &array)) {
                             int nowait = 1;
                             if (dbus_message_iter_append_basic(&args, DBUS_TYPE_BOOLEAN, &nowait)) {
-                               if (cDBusMonitor::SendSignal(msg, cDBusMonitor::busSystem)) {
+                               if (cDBusMonitor::SendSignal(msg, busSystem)) {
                                   msg = NULL;
                                   msgError = false;
                                   isyslog("dbus2vdr: emit upstart-signal %s for %s", signal->_signal, signal->_name);

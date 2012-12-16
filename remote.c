@@ -31,7 +31,7 @@ private:
        esyslog("dbus2vdr: can't add title to signal");
     else if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &item))
        esyslog("dbus2vdr: can't add selected item to signal");
-    else if (!cDBusMonitor::SendSignal(msg, cDBusMonitor::busSystem))
+    else if (!cDBusMonitor::SendSignal(msg, busSystem))
        esyslog("dbus2vdr: can't send signal");
     else
        msg = NULL;
@@ -378,7 +378,7 @@ public:
 cOsdObject *cDBusDispatcherRemote::MainMenuAction = NULL;
 
 cDBusDispatcherRemote::cDBusDispatcherRemote(void)
-:cDBusMessageDispatcher(DBUS_VDR_REMOTE_INTERFACE)
+:cDBusMessageDispatcher(busSystem, DBUS_VDR_REMOTE_INTERFACE)
 {
   AddPath("/Remote");
   AddAction("CallPlugin", cDBusRemoteActions::CallPlugin);

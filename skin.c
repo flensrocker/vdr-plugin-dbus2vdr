@@ -99,7 +99,7 @@ public:
 
 
 cDBusDispatcherSkin::cDBusDispatcherSkin(void)
-:cDBusMessageDispatcher(DBUS_VDR_SKIN_INTERFACE)
+:cDBusMessageDispatcher(busSystem, DBUS_VDR_SKIN_INTERFACE)
 {
   AddPath("/Skin");
   AddAction("CurrentSkin", cDBusSkinActions::CurrentSkin);

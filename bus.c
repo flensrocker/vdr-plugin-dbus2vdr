@@ -69,7 +69,7 @@ DBusConnection*  cDBusSystemBus::GetConnection(void)
 }
 
 
-cDBusCustomBus::cDBusCustomBus(const char *busname, const char *address)
+cDBusCustomBus::cDBusCustomBus(const char *busname, cDBusTcpAddress *address)
  :cDBusBus("custom", busname)
  ,_address(address)
 {
@@ -77,9 +77,25 @@ cDBusCustomBus::cDBusCustomBus(const char *busname, const char *address)
 
 cDBusCustomBus::~cDBusCustomBus(void)
 {
+  if (_address != NULL)
+     delete _address;
+  _address = NULL;
 }
 
 DBusConnection*  cDBusCustomBus::GetConnection(void)
 {
-  return dbus_connection_open(*_address, &_err);
+  if (_address == NULL)
+     return NULL;
+  DBusConnection *conn = dbus_connection_open(_address->Address(), &_err);
+  if (conn != NULL) {
+     if (!dbus_bus_register(conn, &_err)) {
+        if (dbus_error_is_set(&_err)) {
+           esyslog("dbus2vdr: bus %s: register error: %s", Name(), _err.message);
+           dbus_error_free(&_err);
+           }
+        dbus_connection_unref(conn);
+        conn = NULL;
+        }
+     }
+  return conn;
 }

@@ -204,7 +204,7 @@ cRecordings cDBusRecordingActions::recordings;
 
 
 cDBusDispatcherRecording::cDBusDispatcherRecording(void)
-:cDBusMessageDispatcher(DBUS_VDR_RECORDING_INTERFACE)
+:cDBusMessageDispatcher(busSystem, DBUS_VDR_RECORDING_INTERFACE)
 {
   AddPath("/Recording"); // to be compatible with previous versions
   AddPath("/Recordings");

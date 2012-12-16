@@ -12,6 +12,7 @@
 #include "common.h"
 #include "channel.h"
 #include "epg.h"
+#include "helper.h"
 #include "plugin.h"
 #include "monitor.h"
 #include "osd.h"
@@ -34,6 +35,7 @@ private:
   // Add any member variables or functions you may need here.
   bool enable_osd;
   int send_upstart_signals;
+  bool enable_network;
 
 public:
   cPluginDbus2vdr(void);
@@ -65,6 +67,7 @@ cPluginDbus2vdr::cPluginDbus2vdr(void)
   // VDR OBJECTS TO EXIST OR PRODUCE ANY OUTPUT!
   enable_osd = false;
   send_upstart_signals = -1;
+  enable_network = false;
 }
 
 cPluginDbus2vdr::~cPluginDbus2vdr()
@@ -84,7 +87,11 @@ const char *cPluginDbus2vdr::CommandLineHelp(void)
          "  --upstart\n"
          "    enable Upstart started/stopped events\n"
          "  --poll-timeout\n"
-         "    timeout in milliseconds for dbus_connection_read_write_dispatch\n";
+         "    timeout in milliseconds for dbus_connection_read_write_dispatch\n"
+         "  --network\n"
+         "    enable network support for peer2peer communication\n"
+         "    a local dbus-daemon has to be started manual\n"
+         "    it has to store its address at $PLUGINDIR/network-address.conf\n";
 }
 
 bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
@@ -96,12 +103,13 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
     {"osd", no_argument, 0, 'o'},
     {"upstart", no_argument, 0, 'u'},
     {"poll-timeout", required_argument, 0, 'p'},
+    {"network", no_argument, 0, 'n'},
     {0, 0, 0, 0}
   };
 
   while (true) {
         int option_index = 0;
-        int c = getopt_long(argc, argv, "op:s:uw:", options, &option_index);
+        int c = getopt_long(argc, argv, "nop:s:uw:", options, &option_index);
         if (c == -1)
            break;
         switch (c) {
@@ -140,6 +148,11 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
                 }
              break;
            }
+          case 'n':
+           {
+             enable_network = true;
+             break;
+           }
           }
         }
   return true;
@@ -165,7 +178,15 @@ bool cPluginDbus2vdr::Start(void)
   new cDBusDispatcherShutdown;
   new cDBusDispatcherSkin;
   new cDBusDispatcherTimer;
-  cDBusMonitor::StartMonitor();
+  cDBusTcpAddress *network_address = NULL;
+  if (enable_network) {
+     network_address = cDBusHelper::GetNetworkAddress();
+     if (network_address == NULL)
+        esyslog("dbus2vdr: network support enabled, but no network address found");
+     else
+        isyslog("dbus2vdr: network support enabled, address is %s", network_address->Address());
+     }
+  cDBusMonitor::StartMonitor(network_address);
   if (enable_osd)
      new cDBusOsdProvider();
   return true;

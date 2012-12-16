@@ -664,7 +664,7 @@ cList<cDBusSetupActions::cSetupBinding> cDBusSetupActions::_bindings;
 
 
 cDBusDispatcherSetup::cDBusDispatcherSetup(void)
-:cDBusMessageDispatcher(DBUS_VDR_SETUP_INTERFACE)
+:cDBusMessageDispatcher(busSystem, DBUS_VDR_SETUP_INTERFACE)
 {
   cDBusSetupActions::InitBindings();
   AddPath("/Setup");

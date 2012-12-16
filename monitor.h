@@ -1,6 +1,7 @@
 #ifndef __DBUS2VDR_MONITOR_H
 #define __DBUS2VDR_MONITOR_H
 
+#include "common.h"
 #include "bus.h"
 
 #include <dbus/dbus.h>
@@ -10,9 +11,6 @@
 
 class cDBusMonitor : public cThread
 {
-public:
-  enum eBusType { busSystem = 0, busNetwork = 1};
-
 private:
   static cMutex _mutex;
   static cDBusMonitor *_monitor[2];
@@ -20,16 +18,19 @@ private:
   bool _started;
   bool _nameAcquired;
   cDBusBus *_bus;
+  eBusType  _type;
   DBusConnection *_conn;
 
-  cDBusMonitor(cDBusBus *bus);
+  cDBusMonitor(cDBusBus *bus, eBusType type);
 
 public:
   static int PollTimeoutMs;
 
   virtual ~cDBusMonitor(void);
 
-  static void StartMonitor(void);
+  eBusType GetType(void) const { return _type; }
+
+  static void StartMonitor(cDBusTcpAddress *networkAddress);
   static void StopMonitor(void);
 
   static bool SendSignal(DBusMessage *msg, eBusType bus);

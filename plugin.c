@@ -162,7 +162,7 @@ void cDBusMessagePlugin::Service(void)
 
 
 cDBusDispatcherPlugin::cDBusDispatcherPlugin(void)
-:cDBusMessageDispatcher(DBUS_VDR_PLUGIN_INTERFACE)
+:cDBusMessageDispatcher(busSystem, DBUS_VDR_PLUGIN_INTERFACE)
 {
 }
 

@@ -3,7 +3,10 @@
 
 #include <dbus/dbus.h>
 #include <vdr/thread.h>
+#include <vdr/tools.h>
 
+
+class cDBusTcpAddress;
 
 class cDBusHelper
 {
@@ -19,6 +22,8 @@ public:
   static void SendReply(DBusConnection *conn, DBusMessage *reply);
   static void SendReply(DBusConnection *conn, DBusMessage *msg, int  returncode, const char *message);
   static void SendReply(DBusConnection *conn, DBusMessage *msg, const char *message);
+
+  static cDBusTcpAddress *GetNetworkAddress(void);
 };
 
 // copy of vdr's cPipe but returns exit code of child on Close

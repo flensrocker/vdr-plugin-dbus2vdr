@@ -388,7 +388,7 @@ public:
 
 
 cDBusDispatcherEpg::cDBusDispatcherEpg(void)
-:cDBusMessageDispatcher(DBUS_VDR_EPG_INTERFACE)
+:cDBusMessageDispatcher(busSystem, DBUS_VDR_EPG_INTERFACE)
 {
   AddPath("/EPG");
   AddAction("DisableScanner", cDBusEpgActions::DisableScanner);

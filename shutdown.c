@@ -227,7 +227,7 @@ void cDBusShutdownActions::SetUserInactive(DBusConnection* conn, DBusMessage* ms
 time_t cDBusDispatcherShutdown::StartupTime;
 
 cDBusDispatcherShutdown::cDBusDispatcherShutdown(void)
-:cDBusMessageDispatcher(DBUS_VDR_SHUTDOWN_INTERFACE)
+:cDBusMessageDispatcher(busSystem, DBUS_VDR_SHUTDOWN_INTERFACE)
 {
   AddPath("/Shutdown");
   AddAction("ConfirmShutdown" , cDBusShutdownActions::ConfirmShutdown);

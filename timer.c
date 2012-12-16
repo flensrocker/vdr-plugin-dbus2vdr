@@ -57,7 +57,7 @@ public:
 
 
 cDBusDispatcherTimer::cDBusDispatcherTimer(void)
-:cDBusMessageDispatcher(DBUS_VDR_TIMER_INTERFACE)
+:cDBusMessageDispatcher(busSystem, DBUS_VDR_TIMER_INTERFACE)
 {
   AddPath("/Timers");
   AddAction("Next", cDBusTimerActions::Next);
