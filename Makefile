@@ -22,7 +22,7 @@ VERSION = $(shell grep 'static const char \*VERSION *=' $(PLUGIN).c | awk '{ pri
 CXX      ?= g++
 CXXFLAGS ?= -g -O3 -Wall -Woverloaded-virtual -Wno-parentheses
 CXXADD   += `pkg-config --cflags dbus-1` `libpng-config --cflags`
-LDADD    += `pkg-config --libs dbus-1` `libpng-config --ldflags`
+LDADD    += `pkg-config --libs dbus-1` `libpng-config --ldflags` -lavahi-common -lavahi-client
 
 ### The directory environment:
 
@@ -55,7 +55,7 @@ DEFINES += -D_GNU_SOURCE -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
 
 ### The object files (add further files here):
 
-OBJS = $(PLUGIN).o bus.o channel.o epg.o helper.o message.o monitor.o osd.o plugin.o recording.o remote.o setup.o shutdown.o skin.o timer.o
+OBJS = $(PLUGIN).o bus.o channel.o epg.o helper.o message.o monitor.o osd.o plugin.o publish.o recording.o remote.o setup.o shutdown.o skin.o timer.o
 SWOBJS = libvdr-exitpipe.o libvdr-i18n.o libvdr-thread.o libvdr-tools.o shutdown-wrapper.o
 
 ### The main target:
