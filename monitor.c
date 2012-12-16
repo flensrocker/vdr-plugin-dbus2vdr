@@ -223,11 +223,8 @@ void cDBusMonitor::Action(void)
            continue;
            }
 
-        if (!cDBusMessageDispatcher::Dispatch(_conn, msg)) {
-           isyslog("dbus2vdr: don't know what to do...");
-           cDBusHelper::SendReply(_conn, msg, -1, "unknown message");
+        if (!cDBusMessageDispatcher::Dispatch(_conn, msg))
            dbus_message_unref(msg);
-           }
         }
   cDBusMessageDispatcher::Stop();
   isyslog("dbus2vdr: monitor stopped on bus %s", busname);

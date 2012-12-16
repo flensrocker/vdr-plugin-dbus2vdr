@@ -62,10 +62,7 @@ void  cDBusHelper::SendReply(DBusConnection *conn, DBusMessage *msg, int  return
         esyslog("dbus2vdr: SendReply: out of memory while appending the reply-message");
      }
 
-  dbus_uint32_t serial = 0;
-  if (!dbus_connection_send(conn, reply, &serial))
-     esyslog("dbus2vdr: SendReply: out of memory while sending the reply");
-  dbus_message_unref(reply);
+  cDBusHelper::SendReply(conn, reply);
 }
 
 void  cDBusHelper::SendReply(DBusConnection *conn, DBusMessage *msg, const char *message)
@@ -79,10 +76,7 @@ void  cDBusHelper::SendReply(DBusConnection *conn, DBusMessage *msg, const char 
         esyslog("dbus2vdr: SendReply: out of memory while appending the reply-message");
      }
 
-  dbus_uint32_t serial = 0;
-  if (!dbus_connection_send(conn, reply, &serial))
-     esyslog("dbus2vdr: SendReply: out of memory while sending the reply");
-  dbus_message_unref(reply);
+  cDBusHelper::SendReply(conn, reply);
 }
 
 
