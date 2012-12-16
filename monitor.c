@@ -9,7 +9,7 @@
 
 
 cMutex cDBusMonitor::_mutex;
-cDBusMonitor *cDBusMonitor::_monitor = NULL;
+cDBusMonitor *cDBusMonitor::_monitor[] = { NULL, NULL };
 int cDBusMonitor::PollTimeoutMs = 10;
 
 
@@ -19,10 +19,15 @@ cDBusMonitor::cDBusMonitor(cDBusBus *bus)
   _conn = NULL;
   _started = false;
   _nameAcquired = false;
+  Start();
+  while (!_started)
+        cCondWait::SleepMs(10);
 }
 
 cDBusMonitor::~cDBusMonitor(void)
 {
+  Cancel(-1);
+  Cancel(5);
   _conn = NULL;
   if (_bus != NULL)
      delete _bus;
@@ -33,10 +38,6 @@ void cDBusMonitor::StartMonitor(void)
 {
   cMutexLock lock(&_mutex);
   dsyslog("dbus2vdr: StartMonitor Lock");
-  if (_monitor != NULL) {
-     dsyslog("dbus2vdr: StartMonitor Unlock 1");
-     return;
-     }
 
   cString busname;
 #if VDRVERSNUM < 10704
@@ -48,12 +49,9 @@ void cDBusMonitor::StartMonitor(void)
      busname = cString::sprintf("%s", DBUS_VDR_BUSNAME);
 #endif
 
-  _monitor = new cDBusMonitor(new cDBusSystemBus(*busname));
-  if (_monitor) {
-     _monitor->Start();
-     while (!_monitor->_started)
-           cCondWait::SleepMs(10);
-     }
+  if (_monitor[busSystem] == NULL)
+     _monitor[busSystem] = new cDBusMonitor(new cDBusSystemBus(*busname));
+
   dsyslog("dbus2vdr: StartMonitor Unlock 2");
 }
 
@@ -61,18 +59,13 @@ void cDBusMonitor::StopMonitor(void)
 {
   cMutexLock lock(&_mutex);
   dsyslog("dbus2vdr: StopMonitor Lock");
-  if (_monitor == NULL) {
-     dsyslog("dbus2vdr: StopMonitor Unlock 1");
-     return;
-     }
-  _monitor->Cancel(-1);
-  _monitor->Cancel(5);
-  delete _monitor;
-  _monitor = NULL;
+  if (_monitor[busSystem] != NULL)
+     delete _monitor[busSystem];
+  _monitor[busSystem] = NULL;
   dsyslog("dbus2vdr: StopMonitor Unlock 2");
 }
 
-bool cDBusMonitor::SendSignal(DBusMessage *msg)
+bool cDBusMonitor::SendSignal(DBusMessage *msg, eBusType bus)
 {
   DBusConnection *conn = NULL;
   int retry = 0;
@@ -80,9 +73,9 @@ bool cDBusMonitor::SendSignal(DBusMessage *msg)
         isyslog("dbus2vdr: retrieving connection for sending signal");
         _mutex.Lock();
         dsyslog("dbus2vdr: SendSignal Lock");
-        if (_monitor != NULL) {
-           conn = _monitor->_conn;
-           if ((conn != NULL) && _monitor->_nameAcquired) {
+        if (_monitor[bus] != NULL) {
+           conn = _monitor[bus]->_conn;
+           if ((conn != NULL) && _monitor[bus]->_nameAcquired) {
               dsyslog("dbus2vdr: SendSignal Unlock");
               _mutex.Unlock();
               break;
@@ -272,7 +265,7 @@ protected:
                          if (dbus_message_iter_close_container(&args, &array)) {
                             int nowait = 1;
                             if (dbus_message_iter_append_basic(&args, DBUS_TYPE_BOOLEAN, &nowait)) {
-                               if (cDBusMonitor::SendSignal(msg)) {
+                               if (cDBusMonitor::SendSignal(msg, cDBusMonitor::busSystem)) {
                                   msg = NULL;
                                   msgError = false;
                                   isyslog("dbus2vdr: emit upstart-signal %s for %s", signal->_signal, signal->_name);

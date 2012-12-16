@@ -157,7 +157,7 @@ void cDBusOsdProvider::Action(void)
                        msgOk = false;
                     }
                  }
-              if (msgOk && cDBusMonitor::SendSignal(msg))
+              if (msgOk && cDBusMonitor::SendSignal(msg, cDBusMonitor::busSystem))
                  msg = NULL;
               else
                  dbus_message_unref(msg);

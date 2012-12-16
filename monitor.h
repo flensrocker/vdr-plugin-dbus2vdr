@@ -10,9 +10,12 @@
 
 class cDBusMonitor : public cThread
 {
+public:
+  enum eBusType { busSystem = 0, busNetwork = 1};
+
 private:
   static cMutex _mutex;
-  static cDBusMonitor *_monitor;
+  static cDBusMonitor *_monitor[2];
 
   bool _started;
   bool _nameAcquired;
@@ -29,7 +32,7 @@ public:
   static void StartMonitor(void);
   static void StopMonitor(void);
 
-  static bool SendSignal(DBusMessage *msg);
+  static bool SendSignal(DBusMessage *msg, eBusType bus);
 
   static void SendUpstartSignal(const char *action);
   static void StopUpstartSender(void);
