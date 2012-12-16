@@ -131,14 +131,8 @@ bool cDBusMessageDispatcher::Dispatch(cDBusMonitor *monitor, DBusConnection* con
             }
          if (m == NULL)
             m = d->CreateMessage(conn, msg);
-         if (m == NULL) {
-            errText = cString::sprintf("unknown member %s or object %s on interface %s", dbus_message_get_member(msg), path, interface);
-            esyslog("dbus2vdr: %s", *errText);
-            errorMsg = dbus_message_new_error(msg, DBUS_ERROR_FAILED, *errText);
-            if (errorMsg != NULL)
-               cDBusHelper::SendReply(conn, errorMsg);
-            return false;
-            }
+         if (m == NULL)
+            continue; // try next dispatcher
          cDBusMessageHandler::NewHandler(m);
          return true;
          }

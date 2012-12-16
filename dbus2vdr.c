@@ -181,6 +181,9 @@ bool cPluginDbus2vdr::Start(void)
   new cDBusDispatcherShutdown;
   new cDBusDispatcherSkin;
   new cDBusDispatcherTimer;
+  if (enable_network) {
+     new cDBusDispatcherTimerConst(busNetwork);
+     }
   cDBusMonitor::StartMonitor(enable_network);
   if (enable_osd)
      new cDBusOsdProvider();

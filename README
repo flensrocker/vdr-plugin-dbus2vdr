@@ -69,6 +69,8 @@ Commandline Arguments
         timeout in milliseconds for dbus_connection_read_write_dispatch
         default: 10ms
         lower values may cause higher cpu load but will increase speed of reaction
+-n, --network
+        enable network support (see comments below at section "Network")
 
 Interface "channel"
 -------------------
@@ -285,6 +287,9 @@ Interface "skin"
 
 Interface "timer"
 -----------------
+- list all timers
+  vdr-dbus-send.sh /Timers timer.List
+
 - get infos about the next timer
   vdr-dbus-send.sh /Timers timer.Next
 
@@ -295,6 +300,22 @@ Interface "timer"
     uint64  starttime in seconds since epoch (time_t format)
     uint64  stoptime in seconds since epoch (time_t format)
     string  title of the event
+
+Network
+-------
+If started with the parameter "--network" dbus2vdr expects a file
+"network-address.conf" in its plugin config directory. Its contents
+should contain a string representing a dbus-address like printed
+of "dbus-daemon --print-address". There must be only one connection
+string with the method "tcp".
+A sample configuration for this special dbus-daemon can be found at
+etc/network.conf. There's also a sample Upstart job at etc/dbus2vdr.conf.
+This job should run as a user job, not as a system job, since it's
+reachable from the net.
+Interfaces must explicitly be enabled to listen on the network monitor.
+For now a subset of the timer interface is implemented. It is used to
+distribute timers around the vdr on the same subset.
+(work in progress, must be documented...)
 
 OSD
 ---

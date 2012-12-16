@@ -126,7 +126,7 @@ void cDBusMonitor::Action(void)
               }
            // don't get too verbose...
            if (reconnectLogCount < 5)
-              isyslog("dbus2vdr: try to connect to system bus");
+              isyslog("dbus2vdr: try to connect to %s bus", _bus->Name());
            else if (reconnectLogCount > 15) // ...and too quiet
               reconnectLogCount = 0;
            DBusConnection *conn = _bus->Connect();
