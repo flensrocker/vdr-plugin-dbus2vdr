@@ -170,10 +170,8 @@ void cAvahiPublish::CreateServices(AvahiClient *client)
               size_t sublen = avahi_string_list_get_size(l);
               if ((subtype != NULL) && (sublen > 0) && (subtype[0] != 0)) {
                  ret = avahi_entry_group_add_service_subtype(_group, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, (AvahiPublishFlags)0, _name, _type, NULL, subtype);
-                 if (ret < 0) {
+                 if (ret < 0)
                     esyslog("dbus2vdr/avahi: failed to add subtype %s on '%s' of type '%s': %s", subtype, _name, _type, avahi_strerror(ret));
-                    goto fail;
-                    }
                  }
               l = avahi_string_list_get_next(l);
               }
@@ -181,10 +179,8 @@ void cAvahiPublish::CreateServices(AvahiClient *client)
 
      if ((_txts != NULL) && (avahi_string_list_length(_txts) > 0)) {
         ret = avahi_entry_group_update_service_txt_strlst(_group, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, (AvahiPublishFlags)0, _name, _type, NULL, _txts);
-        if (ret < 0) {
+        if (ret < 0)
            esyslog("dbus2vdr/avahi: failed to add txt records on '%s' of type '%s': %s", _name, _type, avahi_strerror(ret));
-           goto fail;
-           }
         }
 
      ret = avahi_entry_group_commit(_group);
@@ -259,7 +255,7 @@ void cAvahiPublish::Action(void)
         if (_simple_poll == NULL) {
            // don't get too verbose...
            if (reconnectLogCount < 5)
-              isyslog("dbus2vdr/avahi: create client");
+              isyslog("dbus2vdr/avahi: create simple_poll");
            else if (reconnectLogCount > 15) // ...and too quiet
               reconnectLogCount = 0;
 
