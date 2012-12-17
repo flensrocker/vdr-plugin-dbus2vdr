@@ -115,11 +115,12 @@ DBusConnection*  cDBusNetworkBus::GetConnection(void)
 
 void cDBusNetworkBus::OnConnect(void)
 {
+  static const char *subtypes[] = { "_dbus2vdr._sub._dbus._tcp" };
   if (_address != NULL) {
      if (_publisher == NULL)
-        _publisher = new cAvahiPublish(*cString::sprintf("dbus2vdr on %s", *_address->Host), "_dbus._tcp", _address->Port);
+        _publisher = new cAvahiPublish(*cString::sprintf("dbus2vdr on %s", *_address->Host), "_dbus._tcp", _address->Port, 1, subtypes, 0, NULL);
      else
-        _publisher->Modify(*cString::sprintf("dbus2vdr on %s", *_address->Host), _address->Port);
+        _publisher->Modify(*cString::sprintf("dbus2vdr on %s", *_address->Host), _address->Port, 1, subtypes, 0, NULL);
      }
 }
 
