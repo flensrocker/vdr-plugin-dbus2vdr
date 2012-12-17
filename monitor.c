@@ -211,6 +211,7 @@ void cDBusMonitor::Action(void)
            dbus_message_unref(msg);
         }
   cDBusMessageDispatcher::Stop();
+  _bus->Disconnect();
   isyslog("dbus2vdr: monitor stopped on bus %s", _bus->Busname());
 }
 

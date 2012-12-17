@@ -1,5 +1,6 @@
 #include "bus.h"
 #include "helper.h"
+#include "publish.h"
 
 
 cDBusBus::cDBusBus(const char *name, const char *busname)
@@ -44,14 +45,17 @@ DBusConnection*  cDBusBus::Connect(void)
      }
 
   _conn = conn;
+  OnConnect();
   return _conn;
 }
 
-void  cDBusBus::Disconnect(void)
+bool  cDBusBus::Disconnect(void)
 {
-  if (_conn != NULL)
-     dbus_connection_unref(_conn);
+  if (_conn == NULL)
+     return false;
+  dbus_connection_unref(_conn);
   _conn = NULL;
+  return true;
 }
 
 
@@ -73,11 +77,15 @@ DBusConnection*  cDBusSystemBus::GetConnection(void)
 cDBusNetworkBus::cDBusNetworkBus(const char *busname)
  :cDBusBus("network", busname)
  ,_address(NULL)
+ ,_publisher(NULL)
 {
 }
 
 cDBusNetworkBus::~cDBusNetworkBus(void)
 {
+  if (_publisher != NULL)
+     delete _publisher;
+  _publisher = NULL;
   if (_address != NULL)
      delete _address;
   _address = NULL;
@@ -103,4 +111,22 @@ DBusConnection*  cDBusNetworkBus::GetConnection(void)
         }
      }
   return conn;
+}
+
+void cDBusNetworkBus::OnConnect(void)
+{
+  if (_address != NULL) {
+     if (_publisher == NULL)
+        _publisher = new cAvahiPublish(*cString::sprintf("dbus2vdr on %s", *_address->Host), "_dbus._tcp", _address->Port);
+     else
+        _publisher->Modify(*cString::sprintf("dbus2vdr on %s", *_address->Host), _address->Port);
+     }
+}
+
+bool cDBusNetworkBus::Disconnect(void)
+{
+  if (_publisher != NULL)
+     delete _publisher;
+  _publisher = NULL;
+  return cDBusBus::Disconnect();
 }

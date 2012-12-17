@@ -5,6 +5,8 @@
 
 #include <vdr/tools.h>
 
+class cAvahiPublish;
+
 // abstraction of a DBus message bus
 
 class cDBusBus
@@ -18,6 +20,7 @@ protected:
   DBusError  _err;
 
   virtual DBusConnection *GetConnection(void) = 0;
+  virtual void OnConnect(void) {}
 
 public:
   cDBusBus(const char *name, const char *busname);
@@ -28,7 +31,7 @@ public:
 
   DBusConnection*  Connect(void);
 
-  virtual void  Disconnect(void);
+  virtual bool  Disconnect(void);
 };
 
 class cDBusSystemBus : public cDBusBus
@@ -68,13 +71,17 @@ class cDBusNetworkBus : public cDBusBus
 {
 private:
   cDBusTcpAddress  *_address;
+  cAvahiPublish    *_publisher;
 
 protected:
   virtual DBusConnection *GetConnection(void);
+  virtual void OnConnect(void);
 
 public:
   cDBusNetworkBus(const char *busname);
   virtual ~cDBusNetworkBus(void);
+
+  virtual bool  Disconnect(void);
 };
 
 #endif

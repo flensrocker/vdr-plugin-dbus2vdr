@@ -35,11 +35,15 @@ cAvahiPublish::~cAvahiPublish(void)
 void cAvahiPublish::Modify(const char *name, int port)
 {
   Lock();
+  if ((_name != NULL) && (strcmp(_name, name) == 0) && (port == _port)) {
+     Unlock();
+     return;
+     }
   if (_name != NULL)
      avahi_free(_name);
   _name = avahi_strdup(name);
   _port = port;
-  if ((_simple_poll != NULL) && (_client != NULL)) {
+  if (_client != NULL) {
      struct timeval tv;
      avahi_simple_poll_get(_simple_poll)->timeout_new(
         avahi_simple_poll_get(_simple_poll),
@@ -47,6 +51,8 @@ void cAvahiPublish::Modify(const char *name, int port)
         ModifyCallback, this);
      }
   Unlock();
+  if (!Running())
+     Start();
 }
 
 void cAvahiPublish::ModifyCallback(AvahiTimeout *e, void *userdata)
@@ -115,12 +121,13 @@ void cAvahiPublish::CreateServices(AvahiClient *client)
   char *n;
   int ret;
 
-  if (_group == NULL)
+  if (_group == NULL) {
       _group = avahi_entry_group_new(client, GroupCallback, this);
-      if (_group = NULL) {
+      if (_group == NULL) {
          esyslog("dbus2vdr/avahi: avahi_entry_group_new() failed: %s", avahi_strerror(avahi_client_errno(client)));
          goto fail;
          }
+      }
   if (avahi_entry_group_is_empty(_group)) {
      ret = avahi_entry_group_add_service(_group, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, (AvahiPublishFlags)0, _name, _type, NULL, NULL, _port, NULL);
      if (ret  < 0) {
@@ -148,6 +155,9 @@ collision:
   return;
 
 fail:
+  if (_group != NULL)
+     avahi_entry_group_free(_group);
+  _group = NULL;
   avahi_simple_poll_quit(_simple_poll);
 }
 
@@ -199,11 +209,11 @@ void cAvahiPublish::Action(void)
         if (_simple_poll == NULL) {
            // don't get too verbose...
            if (reconnectLogCount < 5)
-              isyslog("dbus2vdr/avahi: create simple_poll");
+              isyslog("dbus2vdr/avahi: create client");
            else if (reconnectLogCount > 15) // ...and too quiet
               reconnectLogCount = 0;
 
-           Lock();              
+           Lock();
            _simple_poll = avahi_simple_poll_new();
            if (_simple_poll == NULL) {
               Unlock();
@@ -213,7 +223,9 @@ void cAvahiPublish::Action(void)
               continue;
               }
            Unlock();
+           reconnectLogCount = 0;
            }
+
         if (_client == NULL) {
            // don't get too verbose...
            if (reconnectLogCount < 5)
@@ -222,7 +234,7 @@ void cAvahiPublish::Action(void)
               reconnectLogCount = 0;
 
            Lock();
-           _client = avahi_client_new(avahi_simple_poll_get(_simple_poll), (AvahiClientFlags)0, ClientCallback, this, &avahiError);
+           _client = avahi_client_new(avahi_simple_poll_get(_simple_poll), AVAHI_CLIENT_NO_FAIL, ClientCallback, this, &avahiError);
            if (_client == NULL) {
               Unlock();
               esyslog("dbus2vdr/avahi: error on creating client: %s", avahi_strerror(avahiError));
@@ -231,11 +243,15 @@ void cAvahiPublish::Action(void)
               continue;
               }
            Unlock();
+           reconnectLogCount = 0;
            }
 
         avahi_simple_poll_loop(_simple_poll);
 
         Lock();
+        if (_group != NULL)
+           avahi_entry_group_free(_group);
+        _group = NULL;
         if (_client != NULL)
            avahi_client_free(_client);
         _client = NULL;
