@@ -90,13 +90,18 @@ void cAvahiPublish::ModifyCallback(AvahiTimeout *e, void *userdata)
 
 void cAvahiPublish::ModifyCallback(AvahiTimeout *e)
 {
-  if (_client == NULL)
+  if (_client == NULL) {
+     if (_simple_poll != NULL)
+        avahi_simple_poll_get(_simple_poll)->timeout_free(e);
      return;
+     }
   if (avahi_client_get_state(_client) == AVAHI_CLIENT_S_RUNNING) {
      if (_group != NULL)
         avahi_entry_group_reset(_group);
      CreateServices(_client);
      }
+  if (_simple_poll != NULL)
+     avahi_simple_poll_get(_simple_poll)->timeout_free(e);
 }
 
 void cAvahiPublish::Stop(void)
