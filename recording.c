@@ -140,19 +140,21 @@ public:
     cRecording *recording = NULL;
     DBusMessageIter args;
     if (dbus_message_iter_init(msg, &args)) {
+       DBusMessageIter sub;
+       DBusMessageIter *tmp = &args;
        if (dbus_message_iter_get_arg_type(&args) == DBUS_TYPE_VARIANT) {
-          DBusMessageIter sub;
           dbus_message_iter_recurse(&args, &sub);
-          if (dbus_message_iter_get_arg_type(&sub) == DBUS_TYPE_STRING) {
-             const char *path = NULL;
-             if ((cDBusHelper::GetNextArg(sub, DBUS_TYPE_STRING, &path) >= 0) && (path != NULL) && *path)
-                recording = recordings.GetByName(path);
-             }
-          else if (dbus_message_iter_get_arg_type(&sub) == DBUS_TYPE_INT32) {
-             int number = 0;
-             if ((cDBusHelper::GetNextArg(sub, DBUS_TYPE_INT32, &number) >= 0) && (number > 0) && (number <= recordings.Count()))
-                recording = recordings.Get(number - 1);
-             }
+          tmp = &sub;
+          }
+       if (dbus_message_iter_get_arg_type(tmp) == DBUS_TYPE_STRING) {
+          const char *path = NULL;
+          if ((cDBusHelper::GetNextArg(*tmp, DBUS_TYPE_STRING, &path) >= 0) && (path != NULL) && *path)
+             recording = recordings.GetByName(path);
+          }
+       else if (dbus_message_iter_get_arg_type(tmp) == DBUS_TYPE_INT32) {
+          int number = 0;
+          if ((cDBusHelper::GetNextArg(*tmp, DBUS_TYPE_INT32, &number) >= 0) && (number > 0) && (number <= recordings.Count()))
+             recording = recordings.Get(number - 1);
           }
        }
     DBusMessage *reply = dbus_message_new_method_return(msg);
