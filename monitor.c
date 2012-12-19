@@ -131,7 +131,13 @@ void cDBusMonitor::Action(void)
               reconnectLogCount = 0;
            DBusConnection *conn = _bus->Connect();
            if (conn == NULL) {
+              isLocked = false;
+              _mutex.Unlock();
               cCondWait::SleepMs(1000);
+              if (!Running())
+                 break;
+              _mutex.Lock();
+              isLocked = true;
               reconnectLogCount++;
               continue;
               }
