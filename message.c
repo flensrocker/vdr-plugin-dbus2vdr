@@ -154,10 +154,12 @@ bool cDBusMessageDispatcher::Introspect(DBusMessage *msg, cString &Data)
   return false;
 }
 
-void cDBusMessageDispatcher::Stop()
+void cDBusMessageDispatcher::Stop(eBusType type)
 {
-  for (cDBusMessageDispatcher *d = _dispatcher.First(); d; d = _dispatcher.Next(d))
-      d->OnStop();
+  for (cDBusMessageDispatcher *d = _dispatcher.First(); d; d = _dispatcher.Next(d)) {
+      if (d->_busType == type)
+         d->OnStop();
+      }
 }
 
 void cDBusMessageDispatcher::Shutdown(void)

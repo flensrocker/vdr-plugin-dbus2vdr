@@ -182,6 +182,8 @@ bool cPluginDbus2vdr::Start(void)
   new cDBusDispatcherSkin;
   new cDBusDispatcherTimer;
   if (enable_network) {
+     if (send_upstart_signals >= 0)
+        SystemExec("start dbus2vdr", true);
      new cDBusDispatcherTimerConst(busNetwork);
      }
   cDBusMonitor::StartMonitor(enable_network);
@@ -200,6 +202,8 @@ void cPluginDbus2vdr::Stop(void)
   cDBusMonitor::StopUpstartSender();
   cDBusMonitor::StopMonitor();
   cDBusMessageDispatcher::Shutdown();
+  if (send_upstart_signals >= 0)
+     SystemExec("stop dbus2vdr", true);
 }
 
 void cPluginDbus2vdr::Housekeeping(void)

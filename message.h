@@ -51,7 +51,7 @@ protected:
 public:
   static bool Dispatch(cDBusMonitor *monitor, DBusConnection* conn, DBusMessage* msg);
   static bool Introspect(DBusMessage *msg, cString &Data);
-  static void Stop(void);
+  static void Stop(eBusType type);
   static void Shutdown(void);
 
   cDBusMessageDispatcher(eBusType busType, const char *interface);
