@@ -137,7 +137,13 @@ void cDBusMonitor::Action(void)
               dbus_error_free(&err);
               }
            if (conn == NULL) {
+              isLocked = false;
+              _mutex.Unlock();
               cCondWait::SleepMs(1000);
+              if (!Running())
+                 break;
+              _mutex.Lock();
+              isLocked = true;
               reconnectLogCount++;
               continue;
               }
