@@ -28,8 +28,12 @@ private:
        if (!dbus_message_iter_open_container(&struc, DBUS_TYPE_ARRAY, "(sv)", &array))
           esyslog("dbus2vdr: %s.AddRecording: can't open array container", DBUS_VDR_RECORDING_INTERFACE);
 
+       cString s;
        const char *c;
        dbus_bool_t b;
+       dbus_uint64_t tu64;
+       int i;
+       double d;
 
        c = recording->FileName();
        if (c != NULL)
@@ -40,9 +44,79 @@ private:
        c = recording->Title();
        if (c != NULL)
           cDBusHelper::AddKeyValue(array, "Title", DBUS_TYPE_STRING, DBUS_TYPE_STRING_AS_STRING, &c);
-       // TODO: Priority, Lifetime, FramesPerSecond, NumFrames, LengthInSeconds, FileSizeMB
+       tu64 = recording->Start();
+       if (tu64 > 0)
+          cDBusHelper::AddKeyValue(array, "Start", DBUS_TYPE_UINT64, DBUS_TYPE_UINT64_AS_STRING, &tu64);
+       tu64 = recording->Deleted();
+       if (tu64 > 0)
+          cDBusHelper::AddKeyValue(array, "Deleted", DBUS_TYPE_UINT64, DBUS_TYPE_UINT64_AS_STRING, &tu64);
+       i = recording->Priority();
+       cDBusHelper::AddKeyValue(array, "Priority", DBUS_TYPE_INT32, DBUS_TYPE_INT32_AS_STRING, &i);
+       i = recording->Lifetime();
+       cDBusHelper::AddKeyValue(array, "Lifetime", DBUS_TYPE_INT32, DBUS_TYPE_INT32_AS_STRING, &i);
+       i = recording->HierarchyLevels();
+       cDBusHelper::AddKeyValue(array, "HierarchyLevels", DBUS_TYPE_INT32, DBUS_TYPE_INT32_AS_STRING, &i);
+       d = recording->FramesPerSecond();
+       cDBusHelper::AddKeyValue(array, "FramesPerSecond", DBUS_TYPE_DOUBLE, DBUS_TYPE_DOUBLE_AS_STRING, &d);
+       i = recording->NumFrames();
+       cDBusHelper::AddKeyValue(array, "NumFrames", DBUS_TYPE_INT32, DBUS_TYPE_INT32_AS_STRING, &i);
+       i = recording->LengthInSeconds();
+       cDBusHelper::AddKeyValue(array, "LengthInSeconds", DBUS_TYPE_INT32, DBUS_TYPE_INT32_AS_STRING, &i);
+       i = recording->FileSizeMB();
+       cDBusHelper::AddKeyValue(array, "FileSizeMB", DBUS_TYPE_INT32, DBUS_TYPE_INT32_AS_STRING, &i);
        b = recording->IsPesRecording();
        cDBusHelper::AddKeyValue(array, "IsPesRecording", DBUS_TYPE_BOOLEAN, DBUS_TYPE_BOOLEAN_AS_STRING, &b);
+       b = recording->IsNew();
+       cDBusHelper::AddKeyValue(array, "IsNew", DBUS_TYPE_BOOLEAN, DBUS_TYPE_BOOLEAN_AS_STRING, &b);
+       b = recording->IsEdited();
+       cDBusHelper::AddKeyValue(array, "IsEdited", DBUS_TYPE_BOOLEAN, DBUS_TYPE_BOOLEAN_AS_STRING, &b);
+       const cRecordingInfo *info = recording->Info();
+       if (info != NULL) {
+          s = info->ChannelID().ToString();
+          c = *s;
+          if (c != NULL)
+             cDBusHelper::AddKeyValue(array, "Info/ChannelID", DBUS_TYPE_STRING, DBUS_TYPE_STRING_AS_STRING, &c);
+          c = info->ChannelName();
+          if (c != NULL)
+             cDBusHelper::AddKeyValue(array, "Info/ChannelName", DBUS_TYPE_STRING, DBUS_TYPE_STRING_AS_STRING, &c);
+          c = info->Title();
+          if (c != NULL)
+             cDBusHelper::AddKeyValue(array, "Info/Title", DBUS_TYPE_STRING, DBUS_TYPE_STRING_AS_STRING, &c);
+          c = info->ShortText();
+          if (c != NULL)
+             cDBusHelper::AddKeyValue(array, "Info/ShortText", DBUS_TYPE_STRING, DBUS_TYPE_STRING_AS_STRING, &c);
+          c = info->Description();
+          if (c != NULL)
+             cDBusHelper::AddKeyValue(array, "Info/Description", DBUS_TYPE_STRING, DBUS_TYPE_STRING_AS_STRING, &c);
+          c = info->Aux();
+          if (c != NULL)
+             cDBusHelper::AddKeyValue(array, "Info/Aux", DBUS_TYPE_STRING, DBUS_TYPE_STRING_AS_STRING, &c);
+          d = info->FramesPerSecond();
+          cDBusHelper::AddKeyValue(array, "Info/FramesPerSecond", DBUS_TYPE_DOUBLE, DBUS_TYPE_DOUBLE_AS_STRING, &d);
+          const cComponents *components = info->Components();
+          if ((components != NULL) && (components->NumComponents() > 0)) {
+             for (int comp = 0; comp < components->NumComponents(); comp++) {
+                 tComponent *component = components->Component(comp);
+                 if (component != NULL) {
+                    s = cString::sprintf("Info/Component/%d/stream", comp);
+                    i = component->stream;
+                    cDBusHelper::AddKeyValue(array, *s, DBUS_TYPE_INT32, DBUS_TYPE_INT32_AS_STRING, &i);
+                    s = cString::sprintf("Info/Component/%d/type", comp);
+                    i = component->type;
+                    cDBusHelper::AddKeyValue(array, *s, DBUS_TYPE_INT32, DBUS_TYPE_INT32_AS_STRING, &i);
+                    if (component->language[0] != 0) {
+                       s = cString::sprintf("Info/Component/%d/language", comp);
+                       c = component->language;
+                       cDBusHelper::AddKeyValue(array, *s, DBUS_TYPE_STRING, DBUS_TYPE_STRING_AS_STRING, &c);
+                       }
+                    if (component->description != NULL) {
+                       s = cString::sprintf("Info/Component/%d/description", comp);
+                       cDBusHelper::AddKeyValue(array, *s, DBUS_TYPE_STRING, DBUS_TYPE_STRING_AS_STRING, &component->description);
+                       }
+                    }
+                 }
+             }
+          }
 
        if (!dbus_message_iter_close_container(&struc, &array))
           esyslog("dbus2vdr: %s.AddRecording: can't close array container", DBUS_VDR_RECORDING_INTERFACE);
