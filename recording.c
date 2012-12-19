@@ -252,7 +252,11 @@ public:
 
     if (recording != NULL) {
        replyCode = 250;
+#if VDRVERSNUM < 10728
+       cReplayControl::SetRecording(NULL, NULL);
+#else
        cReplayControl::SetRecording(NULL);
+#endif
        cControl::Shutdown();
        if (position >= 0) {
           cResumeFile resume(recording->FileName(), recording->IsPesRecording());
@@ -261,7 +265,11 @@ public:
           else
              resume.Save(position);
           }
+#if VDRVERSNUM < 10728
+       cReplayControl::SetRecording(recording->FileName(), recording->Title());
+#else
        cReplayControl::SetRecording(recording->FileName());
+#endif
        cControl::Launch(new cReplayControl);
        cControl::Attach();
 
