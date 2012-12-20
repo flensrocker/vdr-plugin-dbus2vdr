@@ -285,7 +285,7 @@ void cAvahiPublish::Action(void)
               reconnectLogCount = 0;
 
            Lock();
-           _client = avahi_client_new(avahi_simple_poll_get(_simple_poll), AVAHI_CLIENT_NO_FAIL, ClientCallback, this, &avahiError);
+           _client = avahi_client_new(avahi_simple_poll_get(_simple_poll), (AvahiClientFlags)0, ClientCallback, this, &avahiError);
            if (_client == NULL) {
               Unlock();
               esyslog("dbus2vdr/avahi: error on creating client: %s", avahi_strerror(avahiError));
