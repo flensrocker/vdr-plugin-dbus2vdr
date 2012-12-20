@@ -184,6 +184,7 @@ bool cPluginDbus2vdr::Start(void)
   if (enable_network) {
      if (send_upstart_signals >= 0)
         SystemExec("start dbus2vdr", true);
+     new cDBusDispatcherRecordingConst(busNetwork);
      new cDBusDispatcherTimerConst(busNetwork);
      }
   cDBusMonitor::StartMonitor(enable_network);

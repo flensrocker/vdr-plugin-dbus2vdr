@@ -279,14 +279,46 @@ public:
 cRecordings cDBusRecordingActions::recordings;
 
 
-cDBusDispatcherRecording::cDBusDispatcherRecording(void)
-:cDBusMessageDispatcher(busSystem, DBUS_VDR_RECORDING_INTERFACE)
+cDBusDispatcherRecordingConst::cDBusDispatcherRecordingConst(eBusType type)
+:cDBusMessageDispatcher(type, DBUS_VDR_RECORDING_INTERFACE)
 {
   AddPath("/Recording"); // to be compatible with previous versions
   AddPath("/Recordings");
-  AddAction("Update", cDBusRecordingActions::Update);
   AddAction("Get", cDBusRecordingActions::Get);
   AddAction("List", cDBusRecordingActions::List);
+}
+
+cDBusDispatcherRecordingConst::~cDBusDispatcherRecordingConst(void)
+{
+}
+
+bool          cDBusDispatcherRecordingConst::OnIntrospect(DBusMessage *msg, cString &Data)
+{
+  const char *path = dbus_message_get_path(msg);
+  if ((strcmp(path, "/Recording") != 0) && (strcmp(path, "/Recordings") != 0))
+     return false;
+  Data =
+  "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
+  "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
+  "<node>\n"
+  "  <interface name=\""DBUS_VDR_RECORDING_INTERFACE"\">\n"
+  "    <method name=\"Get\">\n"
+  "      <arg name=\"number_or_path\" type=\"v\" direction=\"in\"/>\n"
+  "      <arg name=\"recording\"      type=\"(ia(sv))\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"List\">\n"
+  "      <arg name=\"recordings\"   type=\"a(ia(sv))\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "  </interface>\n"
+  "</node>\n";
+  return true;
+}
+
+
+cDBusDispatcherRecording::cDBusDispatcherRecording(void)
+:cDBusDispatcherRecordingConst(busSystem)
+{
+  AddAction("Update", cDBusRecordingActions::Update);
   AddAction("Play", cDBusRecordingActions::Play);
 }
 
@@ -299,6 +331,7 @@ bool          cDBusDispatcherRecording::OnIntrospect(DBusMessage *msg, cString &
   const char *path = dbus_message_get_path(msg);
   if ((strcmp(path, "/Recording") != 0) && (strcmp(path, "/Recordings") != 0))
      return false;
+  //TODO insert introspection data
   Data =
   "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
   "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"

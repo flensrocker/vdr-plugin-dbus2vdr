@@ -4,7 +4,17 @@
 #include "message.h"
 
 
-class cDBusDispatcherRecording : public cDBusMessageDispatcher
+class cDBusDispatcherRecordingConst : public cDBusMessageDispatcher
+{
+public:
+  cDBusDispatcherRecordingConst(eBusType type);
+  virtual ~cDBusDispatcherRecordingConst(void);
+
+protected:
+  virtual bool          OnIntrospect(DBusMessage *msg, cString &Data);
+};
+
+class cDBusDispatcherRecording : public cDBusDispatcherRecordingConst
 {
 public:
   cDBusDispatcherRecording(void);
