@@ -5,7 +5,7 @@
 
 #include <vdr/tools.h>
 
-class cAvahiPublish;
+class cAvahiClient;
 
 // abstraction of a DBus message bus
 
@@ -71,7 +71,9 @@ class cDBusNetworkBus : public cDBusBus
 {
 private:
   cDBusTcpAddress  *_address;
-  cAvahiPublish    *_publisher;
+  cAvahiClient     *_publisher;
+  cString           _avahi_name;
+  cString           _avahi_id;
 
 protected:
   virtual DBusConnection *GetConnection(void);

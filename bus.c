@@ -1,6 +1,6 @@
 #include "bus.h"
 #include "helper.h"
-#include "publish.h"
+#include "avahi-client.h"
 
 
 cDBusBus::cDBusBus(const char *name, const char *busname)
@@ -99,6 +99,7 @@ DBusConnection*  cDBusNetworkBus::GetConnection(void)
   if (_address == NULL)
      return NULL;
   isyslog("dbus2vdr: try to connect to network bus on address %s", _address->Address());
+  _avahi_name = cString::sprintf("dbus2vdr on %s", *_address->Host);
   DBusConnection *conn = dbus_connection_open(_address->Address(), &_err);
   if (conn != NULL) {
      if (!dbus_bus_register(conn, &_err)) {
@@ -118,16 +119,14 @@ void cDBusNetworkBus::OnConnect(void)
   static const char *subtypes[] = { "_dbus2vdr._sub._dbus._tcp" };
   if (_address != NULL) {
      if (_publisher == NULL)
-        _publisher = new cAvahiPublish(*cString::sprintf("dbus2vdr on %s", *_address->Host), "_dbus._tcp", _address->Port, 1, subtypes, 0, NULL);
-     else
-        _publisher->Modify(*cString::sprintf("dbus2vdr on %s", *_address->Host), _address->Port, 1, subtypes, 0, NULL);
+        _publisher = new cAvahiClient();
+      _avahi_id = _publisher->PublishService("dbus2vdr", *_avahi_name, AVAHI_PROTO_UNSPEC, "_dbus._tcp", _address->Port, 1, subtypes, 0, NULL);
      }
 }
 
 bool cDBusNetworkBus::Disconnect(void)
 {
   if (_publisher != NULL)
-     delete _publisher;
-  _publisher = NULL;
+     _publisher->DeleteService(*_avahi_id);
   return cDBusBus::Disconnect();
 }
