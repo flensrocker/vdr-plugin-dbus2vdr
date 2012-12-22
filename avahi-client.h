@@ -22,15 +22,12 @@ private:
   cList<cAvahiService> _services;
   bool _started;
 
-  const AvahiPoll  *Poll(void) const;
+  cAvahiService *GetService(const char *id) const;
   void  ServiceError(cAvahiService *service);
-
-  static void ModifyCallback(AvahiTimeout *e, void *userdata);
 
   static void ClientCallback(AvahiClient *client, AvahiClientState state, void *userdata);
   void ClientCallback(AvahiClient *client, AvahiClientState state);
-
-  cAvahiService *GetService(const char *id) const;
+  static void ModifyCallback(AvahiTimeout *e, void *userdata);
 
 protected:
   virtual void Action(void);
@@ -41,7 +38,7 @@ public:
 
   bool  ServerIsRunning(void);
 
-  cString PublishService(const char *caller, const char *name, AvahiProtocol protocol, const char *type, int port, int subtypes_len, const char **subtypes, int txts_len, const char **txts);
+  cString CreateService(const char *caller, const char *name, AvahiProtocol protocol, const char *type, int port, int subtypes_len, const char **subtypes, int txts_len, const char **txts);
   void    DeleteService(const char *id);
 
   void Stop(void);

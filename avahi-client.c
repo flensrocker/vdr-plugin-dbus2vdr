@@ -23,11 +23,14 @@ cAvahiClient::~cAvahiClient(void)
   _services.Clear();
 }
 
-const AvahiPoll  *cAvahiClient::Poll(void) const
+cAvahiService *cAvahiClient::GetService(const char *id) const
 {
-  if (_simple_poll == NULL)
+  if (id == NULL)
      return NULL;
-  return avahi_simple_poll_get(_simple_poll);
+  cAvahiService *service = _services.First();
+  while ((service != NULL) && (strcmp(*service->Id(), id) != 0))
+        service = _services.Next(service);
+  return service;
 }
 
 void  cAvahiClient::ServiceError(cAvahiService *service)
@@ -41,19 +44,6 @@ bool cAvahiClient::ServerIsRunning(void)
   if (_client != NULL)
      runs = (avahi_client_get_state(_client) == AVAHI_CLIENT_S_RUNNING);
   return runs;
-}
-
-void cAvahiClient::ModifyCallback(AvahiTimeout *e, void *userdata)
-{
-  if (userdata == NULL)
-     return;
-  cAvahiService *service = ((cAvahiService*)userdata);
-  cAvahiClient  *client = service->_publisher;
-  if (client->ServerIsRunning()) {
-     service->ResetService();
-     service->CreateService(client->_client);
-     avahi_simple_poll_get(client->_simple_poll)->timeout_free(e);
-     }
 }
 
 void cAvahiClient::ClientCallback(AvahiClient *client, AvahiClientState state, void *userdata)
@@ -95,17 +85,20 @@ void cAvahiClient::ClientCallback(AvahiClient *client, AvahiClientState state)
     }
 }
 
-cAvahiService *cAvahiClient::GetService(const char *id) const
+void cAvahiClient::ModifyCallback(AvahiTimeout *e, void *userdata)
 {
-  if (id == NULL)
-     return NULL;
-  cAvahiService *service = _services.First();
-  while ((service != NULL) && (strcmp(*service->Id(), id) != 0))
-        service = _services.Next(service);
-  return service;
+  if (userdata == NULL)
+     return;
+  cAvahiService *service = ((cAvahiService*)userdata);
+  cAvahiClient  *client = service->_publisher;
+  if (client->ServerIsRunning()) {
+     service->ResetService();
+     service->CreateService(client->_client);
+     avahi_simple_poll_get(client->_simple_poll)->timeout_free(e);
+     }
 }
 
-cString cAvahiClient::PublishService(const char *caller, const char *name, AvahiProtocol protocol, const char *type, int port, int subtypes_len, const char **subtypes, int txts_len, const char **txts)
+cString cAvahiClient::CreateService(const char *caller, const char *name, AvahiProtocol protocol, const char *type, int port, int subtypes_len, const char **subtypes, int txts_len, const char **txts)
 {
   Lock();
   cAvahiService *service = new cAvahiService(this, caller);

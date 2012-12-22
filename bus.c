@@ -120,7 +120,7 @@ void cDBusNetworkBus::OnConnect(void)
   if (_address != NULL) {
      if (_publisher == NULL)
         _publisher = new cAvahiClient();
-      _avahi_id = _publisher->PublishService("dbus2vdr", *_avahi_name, AVAHI_PROTO_UNSPEC, "_dbus._tcp", _address->Port, 1, subtypes, 0, NULL);
+     _avahi_id = _publisher->CreateService("dbus2vdr", *_avahi_name, AVAHI_PROTO_UNSPEC, "_dbus._tcp", _address->Port, 1, subtypes, 0, NULL);
      }
 }
 
