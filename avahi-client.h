@@ -27,7 +27,6 @@ private:
 
   static void ClientCallback(AvahiClient *client, AvahiClientState state, void *userdata);
   void ClientCallback(AvahiClient *client, AvahiClientState state);
-  static void ModifyCallback(AvahiTimeout *e, void *userdata);
 
 protected:
   virtual void Action(void);

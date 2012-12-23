@@ -71,7 +71,7 @@ class cDBusNetworkBus : public cDBusBus
 {
 private:
   cDBusTcpAddress  *_address;
-  cAvahiClient     *_publisher;
+  cAvahiClient     *_avahi_client;
   cString           _avahi_name;
   cString           _avahi_id;
 

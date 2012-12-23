@@ -77,15 +77,15 @@ DBusConnection*  cDBusSystemBus::GetConnection(void)
 cDBusNetworkBus::cDBusNetworkBus(const char *busname)
  :cDBusBus("network", busname)
  ,_address(NULL)
- ,_publisher(NULL)
+ ,_avahi_client(NULL)
 {
 }
 
 cDBusNetworkBus::~cDBusNetworkBus(void)
 {
-  if (_publisher != NULL)
-     delete _publisher;
-  _publisher = NULL;
+  if (_avahi_client != NULL)
+     delete _avahi_client;
+  _avahi_client = NULL;
   if (_address != NULL)
      delete _address;
   _address = NULL;
@@ -118,15 +118,15 @@ void cDBusNetworkBus::OnConnect(void)
 {
   static const char *subtypes[] = { "_dbus2vdr._sub._dbus._tcp" };
   if (_address != NULL) {
-     if (_publisher == NULL)
-        _publisher = new cAvahiClient();
-     _avahi_id = _publisher->CreateService("dbus2vdr", *_avahi_name, AVAHI_PROTO_UNSPEC, "_dbus._tcp", _address->Port, 1, subtypes, 0, NULL);
+     if (_avahi_client == NULL)
+        _avahi_client = new cAvahiClient();
+     _avahi_id = _avahi_client->CreateService("dbus2vdr", *_avahi_name, AVAHI_PROTO_UNSPEC, "_dbus._tcp", _address->Port, 1, subtypes, 0, NULL);
      }
 }
 
 bool cDBusNetworkBus::Disconnect(void)
 {
-  if (_publisher != NULL)
-     _publisher->DeleteService(*_avahi_id);
+  if (_avahi_client != NULL)
+     _avahi_client->DeleteService(*_avahi_id);
   return cDBusBus::Disconnect();
 }

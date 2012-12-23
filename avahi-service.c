@@ -9,14 +9,14 @@
 #include <avahi-common/timeval.h>
 
 
-cAvahiService::cAvahiService(cAvahiClient *publisher, const char *caller)
- :_publisher(publisher)
+cAvahiService::cAvahiService(cAvahiClient *avahi_client, const char *caller, const char *name, AvahiProtocol protocol, const char *type, int port, int subtypes_len, const char **subtypes, int txts_len, const char **txts)
+ :_avahi_client(avahi_client)
  ,_caller(caller)
  ,_group(NULL)
  ,_name(NULL)
- ,_protocol(AVAHI_PROTO_UNSPEC)
+ ,_protocol(protocol)
  ,_type(NULL)
- ,_port(-1)
+ ,_port(port)
  ,_subtypes(NULL)
  ,_txts(NULL)
 {
@@ -25,6 +25,13 @@ cAvahiService::cAvahiService(cAvahiClient *publisher, const char *caller)
   uuid_generate(id);
   uuid_unparse_lower(id, sid);
   _id = sid;
+  _name = avahi_strdup(name);
+  _type = avahi_strdup(type);
+  if (subtypes_len > 0)
+     _subtypes = avahi_string_list_new_from_array(subtypes, subtypes_len);
+  if (txts_len > 0)
+     _txts = avahi_string_list_new_from_array(txts, txts_len);
+  dsyslog("dbus2vdr/avahi-service: instanciated service '%s' of type %s listening on port %d (id %s)", _name, _type, _port, *_id);
 }
 
 cAvahiService::~cAvahiService(void)
@@ -53,7 +60,7 @@ void cAvahiService::GroupCallback(AvahiEntryGroup *group, AvahiEntryGroupState s
 void cAvahiService::GroupCallback(AvahiEntryGroup *group, AvahiEntryGroupState state)
 {
   if (_group != group) {
-     esyslog("dbus2vdr/avahi-service: unexpected group callback");
+     isyslog("dbus2vdr/avahi-service: unexpected group callback");
      return;
      }
 
@@ -78,7 +85,7 @@ void cAvahiService::GroupCallback(AvahiEntryGroup *group, AvahiEntryGroupState s
     case AVAHI_ENTRY_GROUP_FAILURE:
      {
        esyslog("dbus2vdr/avahi-service: entry group failure: %s", avahi_strerror(avahi_client_errno(avahi_entry_group_get_client(group))));
-       _publisher->ServiceError(this);
+       _avahi_client->ServiceError(this);
        break;
      }
     case AVAHI_ENTRY_GROUP_UNCOMMITED:
@@ -133,6 +140,7 @@ void cAvahiService::CreateService(AvahiClient *client)
         esyslog("dbus2vdr/avahi-service: failed to commit entry group of '%s': %s", _name, avahi_strerror(ret));
         goto fail;
         }
+     dsyslog("dbus2vdr/avahi-service: created service '%s' (id %s)", _name, *_id);
      }
   return;
 
@@ -141,7 +149,7 @@ collision:
   avahi_free(_name);
   _name = n;
   isyslog("dbus2vdr/avahi-service: service name collision, renaming service to '%s'", _name);
-  avahi_entry_group_reset(_group);
+  ResetService();
   CreateService(client);
   return;
 
@@ -149,54 +157,22 @@ fail:
   if (_group != NULL)
      avahi_entry_group_free(_group);
   _group = NULL;
-  _publisher->ServiceError(this);
+  _avahi_client->ServiceError(this);
 }
 
 void cAvahiService::ResetService(void)
 {
-  if (_group != NULL)
+  if (_group != NULL) {
      avahi_entry_group_reset(_group);
+     dsyslog("dbus2vdr/avahi-service: reset service '%s' (id %s)", _name, *_id);
+     }
 }
 
 void cAvahiService::DeleteService(void)
 {
-  if (_group != NULL)
+  if (_group != NULL) {
      avahi_entry_group_free(_group);
-  _group = NULL;
-}
-
-bool cAvahiService::Modify(const char *name, AvahiProtocol protocol, const char *type, int port, int subtypes_len, const char **subtypes, int txts_len, const char **txts)
-{
-  AvahiStringList *tmp_subtypes = NULL;
-  AvahiStringList *tmp_txts = NULL;
-  if (subtypes_len > 0)
-     tmp_subtypes = avahi_string_list_new_from_array(subtypes, subtypes_len);
-  if (txts_len > 0)
-     tmp_txts = avahi_string_list_new_from_array(txts, txts_len);
-  if ((_name != NULL) && (strcmp(_name, name) == 0)
-   && (_type != NULL) && (strcmp(_type, type) == 0)
-   && (port == _port) && (protocol == _protocol)
-   && (avahi_string_list_equal(_subtypes, tmp_subtypes) == 0)
-   && (avahi_string_list_equal(_txts, tmp_txts) == 0)) {
-     if (tmp_subtypes != NULL)
-        avahi_string_list_free(tmp_subtypes);
-     if (tmp_txts != NULL)
-        avahi_string_list_free(tmp_txts);
-     return false;
+     dsyslog("dbus2vdr/avahi-service: deleted service '%s' (id %s)", _name, *_id);
      }
-  if (_name != NULL)
-     avahi_free(_name);
-  _name = avahi_strdup(name);
-  _protocol = protocol;
-  if (_type != NULL)
-     avahi_free(_type);
-  _type = avahi_strdup(type);
-  _port = port;
-  if (_subtypes != NULL)
-     avahi_string_list_free(_subtypes);
-  _subtypes = tmp_subtypes;
-  if (_txts != NULL)
-     avahi_string_list_free(_txts);
-  _txts = tmp_txts;
-  return true;
+  _group = NULL;
 }

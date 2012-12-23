@@ -15,7 +15,7 @@ class cAvahiService : public cListObject
 friend class cAvahiClient;
 
 private:
-  cAvahiClient    *_publisher;
+  cAvahiClient    *_avahi_client;
   cString          _caller;
   cString          _id;
   AvahiEntryGroup *_group;
@@ -33,10 +33,8 @@ private:
   static void GroupCallback(AvahiEntryGroup *group, AvahiEntryGroupState state, void *userdata);
   void GroupCallback(AvahiEntryGroup *group, AvahiEntryGroupState state);
 
-  bool Modify(const char *name, AvahiProtocol protocol, const char *type, int port, int subtypes_len, const char **subtypes, int txts_len, const char **txts);
-
 public:
-  cAvahiService(cAvahiClient *publisher, const char *caller);
+  cAvahiService(cAvahiClient *avahi_client, const char *caller, const char *name, AvahiProtocol protocol, const char *type, int port, int subtypes_len, const char **subtypes, int txts_len, const char **txts);
   virtual ~cAvahiService(void);
 
   cString  Id(void) const { return _id; }

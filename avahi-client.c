@@ -56,7 +56,7 @@ void cAvahiClient::ClientCallback(AvahiClient *client, AvahiClientState state, v
 void cAvahiClient::ClientCallback(AvahiClient *client, AvahiClientState state)
 {
   if (_client != client) {
-     esyslog("dbus2vdr/avahi-client: unexpected client callback");
+     isyslog("dbus2vdr/avahi-client: unexpected client callback");
      return;
      }
 
@@ -85,33 +85,18 @@ void cAvahiClient::ClientCallback(AvahiClient *client, AvahiClientState state)
     }
 }
 
-void cAvahiClient::ModifyCallback(AvahiTimeout *e, void *userdata)
-{
-  if (userdata == NULL)
-     return;
-  cAvahiService *service = ((cAvahiService*)userdata);
-  cAvahiClient  *client = service->_publisher;
-  if (client->ServerIsRunning()) {
-     service->ResetService();
-     service->CreateService(client->_client);
-     avahi_simple_poll_get(client->_simple_poll)->timeout_free(e);
-     }
-}
-
 cString cAvahiClient::CreateService(const char *caller, const char *name, AvahiProtocol protocol, const char *type, int port, int subtypes_len, const char **subtypes, int txts_len, const char **txts)
 {
   Lock();
-  cAvahiService *service = new cAvahiService(this, caller);
+  cAvahiService *service = new cAvahiService(this, caller, name, protocol, type, port, subtypes_len, subtypes, txts_len, txts);
   if (service == NULL) {
      Unlock();
      return "";
      }
-  _services.Add(service);
-  if (service->Modify(name, protocol, type, port, subtypes_len, subtypes, txts_len, txts) && ServerIsRunning()) {
-     struct timeval tv;
-     avahi_simple_poll_get(_simple_poll)->timeout_new(avahi_simple_poll_get(_simple_poll), avahi_elapse_time(&tv, 1, 0), ModifyCallback, service);
-     }
   cString id = service->Id();
+  _services.Add(service);
+  if (ServerIsRunning())
+     service->CreateService(_client);
   Unlock();
   return id;
 }
