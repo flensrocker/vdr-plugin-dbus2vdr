@@ -1,4 +1,5 @@
 #include "bus.h"
+#include "common.h"
 #include "helper.h"
 #include "avahi-client.h"
 
@@ -77,15 +78,11 @@ DBusConnection*  cDBusSystemBus::GetConnection(void)
 cDBusNetworkBus::cDBusNetworkBus(const char *busname)
  :cDBusBus("network", busname)
  ,_address(NULL)
- ,_avahi_client(NULL)
 {
 }
 
 cDBusNetworkBus::~cDBusNetworkBus(void)
 {
-  if (_avahi_client != NULL)
-     delete _avahi_client;
-  _avahi_client = NULL;
   if (_address != NULL)
      delete _address;
   _address = NULL;
@@ -117,21 +114,16 @@ DBusConnection*  cDBusNetworkBus::GetConnection(void)
 void cDBusNetworkBus::OnConnect(void)
 {
   static const char *subtypes[] = { "_dbus2vdr._sub._dbus._tcp" };
-  if (_address != NULL) {
-     if (_avahi_client == NULL) {
-        _avahi_client = new cAvahiClient();
-        _browser_id = _avahi_client->CreateBrowser("dbus2vdr", AVAHI_PROTO_UNSPEC, "_svdrp._tcp");
-        dsyslog("dbus2vdr: network bus created avahi browser (id %s)", *_browser_id);
-        }
-     _avahi_id = _avahi_client->CreateService("dbus2vdr", *_avahi_name, AVAHI_PROTO_UNSPEC, "_dbus._tcp", _address->Port, 1, subtypes, 0, NULL);
+  if ((_address != NULL) && (cDbus2vdrGlobals::_avahi_client != NULL)) {
+     _avahi_id = cDbus2vdrGlobals::_avahi_client->CreateService("dbus2vdr", *_avahi_name, AVAHI_PROTO_UNSPEC, "_dbus._tcp", _address->Port, 1, subtypes, 0, NULL);
      dsyslog("dbus2vdr: network bus created avahi service (id %s)", *_avahi_id);
      }
 }
 
 bool cDBusNetworkBus::Disconnect(void)
 {
-  if (_avahi_client != NULL) {
-     _avahi_client->DeleteService(*_avahi_id);
+  if ((cDbus2vdrGlobals::_avahi_client != NULL) && (*_avahi_id != NULL)) {
+     cDbus2vdrGlobals::_avahi_client->DeleteService(*_avahi_id);
      dsyslog("dbus2vdr: network bus deleted avahi service (id %s)", *_avahi_id);
      _avahi_id = NULL;
      }

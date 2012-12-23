@@ -9,6 +9,7 @@
 #include <getopt.h>
 #include <signal.h>
 
+#include "avahi-client.h"
 #include "common.h"
 #include "channel.h"
 #include "epg.h"
@@ -164,6 +165,7 @@ bool cPluginDbus2vdr::Initialize(void)
 {
   // Initialize any background activities the plugin shall perform.
   cDBusDispatcherShutdown::StartupTime = time(NULL);
+  cDbus2vdrGlobals::_avahi_client = new cAvahiClient();
   return true;
 }
 
@@ -190,6 +192,8 @@ bool cPluginDbus2vdr::Start(void)
   cDBusMonitor::StartMonitor(enable_network);
   if (enable_osd)
      new cDBusOsdProvider();
+  if (cDbus2vdrGlobals::_avahi_client != NULL)
+     cDbus2vdrGlobals::_avahi_client->CreateBrowser("dbus2vdr", AVAHI_PROTO_UNSPEC, "_svdrp._tcp");
   return true;
 }
 
@@ -205,6 +209,10 @@ void cPluginDbus2vdr::Stop(void)
   cDBusMessageDispatcher::Shutdown();
   if (send_upstart_signals >= 0)
      SystemExec("stop dbus2vdr", true);
+  if (cDbus2vdrGlobals::_avahi_client != NULL) {
+     delete cDbus2vdrGlobals::_avahi_client;
+     cDbus2vdrGlobals::_avahi_client = NULL;
+     }
 }
 
 void cPluginDbus2vdr::Housekeeping(void)
@@ -256,6 +264,8 @@ bool cPluginDbus2vdr::SetupParse(const char *Name, const char *Value)
 
 bool cPluginDbus2vdr::Service(const char *Id, void *Data)
 {
+  if (strcmp(Id, "avahi4vdr-event") == 0)
+     isyslog("dbus2vdr: avahi4vdr-event: %s", Data);
   // Handle custom service requests from other plugins
   return false;
 }

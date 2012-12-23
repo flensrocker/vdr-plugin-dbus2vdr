@@ -15,4 +15,12 @@
 
 enum eBusType { busSystem = 0, busNetwork = 1};
 
+class cAvahiClient;
+
+class cDbus2vdrGlobals
+{
+public:
+  static cAvahiClient *_avahi_client;
+};
+
 #endif

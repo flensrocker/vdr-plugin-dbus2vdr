@@ -71,10 +71,8 @@ class cDBusNetworkBus : public cDBusBus
 {
 private:
   cDBusTcpAddress  *_address;
-  cAvahiClient     *_avahi_client;
   cString           _avahi_name;
   cString           _avahi_id;
-  cString           _browser_id;
 
 protected:
   virtual DBusConnection *GetConnection(void);
