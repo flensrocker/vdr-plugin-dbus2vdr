@@ -113,7 +113,7 @@ DBusConnection*  cDBusNetworkBus::GetConnection(void)
 
 void cDBusNetworkBus::OnConnect(void)
 {
-  static const char *subtypes[] = { "_dbus2vdr._sub._dbus._tcp" };
+  static const char *subtypes[] = { "_vdr_dbus2vdr._sub._dbus._tcp" };
   if ((_address != NULL) && (cDbus2vdrGlobals::_avahi_client != NULL)) {
      _avahi_id = cDbus2vdrGlobals::_avahi_client->CreateService("dbus2vdr", *_avahi_name, AVAHI_PROTO_UNSPEC, "_dbus._tcp", _address->Port, 1, subtypes, 0, NULL);
      dsyslog("dbus2vdr: network bus created avahi service (id %s)", *_avahi_id);

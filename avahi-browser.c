@@ -139,6 +139,8 @@ void cAvahiBrowser::Create(AvahiClient *client)
      _browser = avahi_service_browser_new(client, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, _type, NULL, (AvahiLookupFlags)0, BrowserCallback, this);
      if (_browser == NULL)
         esyslog("dbus2vdr/avahi-browser: failure on creating service browser on type %s (id %s): %s", _type, *_id, avahi_strerror(avahi_client_errno(client)));
+     else
+        _avahi_client->NotifyCaller(*_caller, "browser-started", *_id, NULL);
      }
 }
 
