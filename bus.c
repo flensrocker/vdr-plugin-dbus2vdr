@@ -121,12 +121,16 @@ void cDBusNetworkBus::OnConnect(void)
      if (_avahi_client == NULL)
         _avahi_client = new cAvahiClient();
      _avahi_id = _avahi_client->CreateService("dbus2vdr", *_avahi_name, AVAHI_PROTO_UNSPEC, "_dbus._tcp", _address->Port, 1, subtypes, 0, NULL);
+     dsyslog("dbus2vdr: network bus created avahi service (id %s)", *_avahi_id);
      }
 }
 
 bool cDBusNetworkBus::Disconnect(void)
 {
-  if (_avahi_client != NULL)
+  if (_avahi_client != NULL) {
      _avahi_client->DeleteService(*_avahi_id);
+     dsyslog("dbus2vdr: network bus deleted avahi service (id %s)", *_avahi_id);
+     _avahi_id = NULL;
+     }
   return cDBusBus::Disconnect();
 }

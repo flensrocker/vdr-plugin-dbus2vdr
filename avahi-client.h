@@ -28,6 +28,8 @@ private:
   static void ClientCallback(AvahiClient *client, AvahiClientState state, void *userdata);
   void ClientCallback(AvahiClient *client, AvahiClientState state);
 
+  void  NotifyCaller(const char *caller, const char *event, const char *id) const;
+
 protected:
   virtual void Action(void);
 

@@ -32,10 +32,12 @@ cAvahiService::cAvahiService(cAvahiClient *avahi_client, const char *caller, con
   if (txts_len > 0)
      _txts = avahi_string_list_new_from_array(txts, txts_len);
   dsyslog("dbus2vdr/avahi-service: instanciated service '%s' of type %s listening on port %d (id %s)", _name, _type, _port, *_id);
+  _avahi_client->NotifyCaller(*_caller, "service-created", *_id);
 }
 
 cAvahiService::~cAvahiService(void)
 {
+  _avahi_client->NotifyCaller(*_caller, "service-deleted", *_id);
   if (_txts != NULL)
      avahi_string_list_free(_txts);
   _txts = NULL;
@@ -69,7 +71,8 @@ void cAvahiService::GroupCallback(AvahiEntryGroup *group, AvahiEntryGroupState s
   switch (state) {
     case AVAHI_ENTRY_GROUP_ESTABLISHED:
      {
-       isyslog("dbus2vdr/avahi-service: service '%s' successfully established", _name);
+       _avahi_client->NotifyCaller(*_caller, "service-started", *_id);
+       isyslog("dbus2vdr/avahi-service: service '%s' successfully established (id %s)", _name, *_id);
        break;
      }
     case AVAHI_ENTRY_GROUP_COLLISION:
@@ -172,6 +175,7 @@ void cAvahiService::DeleteService(void)
 {
   if (_group != NULL) {
      avahi_entry_group_free(_group);
+     _avahi_client->NotifyCaller(*_caller, "service-stopped", *_id);
      dsyslog("dbus2vdr/avahi-service: deleted service '%s' (id %s)", _name, *_id);
      }
   _group = NULL;

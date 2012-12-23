@@ -6,6 +6,8 @@
 #include <avahi-common/malloc.h>
 #include <avahi-common/timeval.h>
 
+#include <vdr/plugin.h>
+
 
 cAvahiClient::cAvahiClient(void)
  :_simple_poll(NULL)
@@ -83,6 +85,18 @@ void cAvahiClient::ClientCallback(AvahiClient *client, AvahiClientState state)
     case AVAHI_CLIENT_CONNECTING:
        break;
     }
+}
+
+void  cAvahiClient::NotifyCaller(const char *caller, const char *event, const char *id) const
+{
+  if ((caller == NULL) || (event == NULL) || (id == NULL))
+     return;
+  cPlugin *plugin = cPluginManager::GetPlugin(caller);
+  if (plugin == NULL)
+     return;
+  cString call = cString::sprintf("event=%s,id=%s", event, id);
+  plugin->Service("avahi4vdr-event", (void*)(*call));
+  isyslog("dbus2vdr/avahi-client: notify %s on event %s", caller, *call);
 }
 
 cString cAvahiClient::CreateService(const char *caller, const char *name, AvahiProtocol protocol, const char *type, int port, int subtypes_len, const char **subtypes, int txts_len, const char **txts)
