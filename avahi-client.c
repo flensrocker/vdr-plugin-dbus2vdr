@@ -120,10 +120,10 @@ void  cAvahiClient::NotifyCaller(const char *caller, const char *event, const ch
   isyslog("dbus2vdr/avahi-client: notify %s on event %s", caller, *call);
 }
 
-cString cAvahiClient::CreateBrowser(const char *caller, AvahiProtocol protocol, const char *type)
+cString cAvahiClient::CreateBrowser(const char *caller, AvahiProtocol protocol, const char *type, bool ignore_local)
 {
   Lock();
-  cAvahiBrowser *browser = new cAvahiBrowser(this, caller, protocol, type);
+  cAvahiBrowser *browser = new cAvahiBrowser(this, caller, protocol, type, ignore_local);
   if (browser == NULL) {
      Unlock();
      return "";

@@ -7,12 +7,13 @@
 #include <avahi-common/malloc.h>
 
 
-cAvahiBrowser::cAvahiBrowser(cAvahiClient *avahi_client, const char *caller, AvahiProtocol protocol, const char *type)
+cAvahiBrowser::cAvahiBrowser(cAvahiClient *avahi_client, const char *caller, AvahiProtocol protocol, const char *type, bool ignore_local)
  :_avahi_client(avahi_client)
  ,_browser(NULL)
  ,_caller(caller)
  ,_protocol(protocol)
  ,_type(NULL)
+ ,_ignore_local(ignore_local)
 {
   uuid_t id;
   char   sid[40];
@@ -57,15 +58,19 @@ void cAvahiBrowser::BrowserCallback(AvahiServiceBrowser *browser, AvahiIfIndex i
      }
     case AVAHI_BROWSER_NEW:
      {
-      isyslog("dbus2vdr/avahi-browser: new service '%s' of type %s (id %s)", name, type, *_id);
-      if (avahi_service_resolver_new(_avahi_client->_client, interface, protocol, name, type, domain, AVAHI_PROTO_UNSPEC, (AvahiLookupFlags)0, ResolverCallback, this) == NULL)
-         esyslog("dbus2vdr/avahi-browser: failed to resolve service '%s' (id %s): %s", name, *_id, avahi_strerror(avahi_client_errno(_avahi_client->_client)));
+      if (!_ignore_local || ((flags & AVAHI_LOOKUP_RESULT_LOCAL) == 0)) {
+         isyslog("dbus2vdr/avahi-browser: new service '%s' of type %s (id %s)", name, type, *_id);
+         if (avahi_service_resolver_new(_avahi_client->_client, interface, protocol, name, type, domain, AVAHI_PROTO_UNSPEC, (AvahiLookupFlags)0, ResolverCallback, this) == NULL)
+            esyslog("dbus2vdr/avahi-browser: failed to resolve service '%s' (id %s): %s", name, *_id, avahi_strerror(avahi_client_errno(_avahi_client->_client)));
+         }
       break;
      }
     case AVAHI_BROWSER_REMOVE:
      {
-      isyslog("dbus2vdr/avahi-browser: remove of service '%s' of type %s (id %s)", name, type, *_id);
-      _avahi_client->NotifyCaller(*_caller, "browser-service-removed", *_id, NULL);
+      if (!_ignore_local || ((flags & AVAHI_LOOKUP_RESULT_LOCAL) == 0)) {
+         isyslog("dbus2vdr/avahi-browser: remove of service '%s' of type %s (id %s)", name, type, *_id);
+         _avahi_client->NotifyCaller(*_caller, "browser-service-removed", *_id, NULL);
+         }
       break;
      }
     case AVAHI_BROWSER_ALL_FOR_NOW:
@@ -100,6 +105,9 @@ void cAvahiBrowser::ResolverCallback(AvahiServiceResolver *resolver, AvahiIfInde
     case AVAHI_RESOLVER_FOUND:
      {
       isyslog("dbus2vdr/avahi-resolver: resolved service '%s' of type %s (id %s)", name, type, *_id);
+      bool isLocal = false;
+      if (flags & AVAHI_LOOKUP_RESULT_LOCAL)
+         isLocal = true;
 
       /*char a[AVAHI_ADDRESS_STR_MAX], *t;
       avahi_address_snprint(a, sizeof(a), address);

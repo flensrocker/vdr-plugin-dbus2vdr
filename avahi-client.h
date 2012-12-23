@@ -46,7 +46,7 @@ public:
 
   bool  ServerIsRunning(void);
 
-  cString CreateBrowser(const char *caller, AvahiProtocol protocol, const char *type);
+  cString CreateBrowser(const char *caller, AvahiProtocol protocol, const char *type, bool ignore_local);
   void    DeleteBrowser(const char *id);
 
   cString CreateService(const char *caller, const char *name, AvahiProtocol protocol, const char *type, int port, int subtypes_len, const char **subtypes, int txts_len, const char **txts);

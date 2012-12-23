@@ -20,6 +20,7 @@ private:
   cString              _id;
   AvahiProtocol        _protocol;
   char                *_type;
+  bool                 _ignore_local;
 
   void Create(AvahiClient *client);
   void Delete(void);
@@ -36,7 +37,7 @@ private:
                         uint16_t port, AvahiStringList *txt, AvahiLookupResultFlags flags);
 
 public:
-  cAvahiBrowser(cAvahiClient *avahi_client, const char *caller, AvahiProtocol protocol, const char *type);
+  cAvahiBrowser(cAvahiClient *avahi_client, const char *caller, AvahiProtocol protocol, const char *type, bool ignore_local);
   virtual ~cAvahiBrowser(void);
 
   cString  Id(void) const { return _id; }

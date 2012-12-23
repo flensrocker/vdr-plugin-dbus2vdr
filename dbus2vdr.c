@@ -193,7 +193,7 @@ bool cPluginDbus2vdr::Start(void)
   if (enable_osd)
      new cDBusOsdProvider();
   if (cDbus2vdrGlobals::_avahi_client != NULL)
-     cDbus2vdrGlobals::_avahi_client->CreateBrowser("dbus2vdr", AVAHI_PROTO_UNSPEC, "_svdrp._tcp");
+     cDbus2vdrGlobals::_avahi_client->CreateBrowser("dbus2vdr", AVAHI_PROTO_UNSPEC, "_dbus2vdr._sub._dbus._tcp", false);
   return true;
 }
 
