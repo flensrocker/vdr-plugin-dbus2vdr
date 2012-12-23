@@ -1,10 +1,9 @@
 #include "avahi-client.h"
+#include "avahi-browser.h"
 #include "avahi-service.h"
 
-#include <avahi-common/alternative.h>
 #include <avahi-common/error.h>
 #include <avahi-common/malloc.h>
-#include <avahi-common/timeval.h>
 
 #include <vdr/plugin.h>
 
@@ -22,7 +21,18 @@ cAvahiClient::cAvahiClient(void)
 cAvahiClient::~cAvahiClient(void)
 {
   Stop();
+  _browsers.Clear();
   _services.Clear();
+}
+
+cAvahiBrowser *cAvahiClient::GetBrowser(const char *id) const
+{
+  if (id == NULL)
+     return NULL;
+  cAvahiBrowser *browser = _browsers.First();
+  while ((browser != NULL) && (strcmp(*browser->Id(), id) != 0))
+        browser = _browsers.Next(browser);
+  return browser;
 }
 
 cAvahiService *cAvahiClient::GetService(const char *id) const
@@ -33,6 +43,11 @@ cAvahiService *cAvahiClient::GetService(const char *id) const
   while ((service != NULL) && (strcmp(*service->Id(), id) != 0))
         service = _services.Next(service);
   return service;
+}
+
+void  cAvahiClient::BrowserError(cAvahiBrowser *browser)
+{
+  esyslog("dbus2vdr/avahi-client: browser error");
 }
 
 void  cAvahiClient::ServiceError(cAvahiService *service)
@@ -65,38 +80,71 @@ void cAvahiClient::ClientCallback(AvahiClient *client, AvahiClientState state)
   switch (state) {
     case AVAHI_CLIENT_S_RUNNING:
      {
+      Lock();
+      for (cAvahiBrowser *browser = _browsers.First(); browser ; browser = _browsers.Next(browser))
+          browser->Create(client);
       for (cAvahiService *service = _services.First(); service ; service = _services.Next(service))
-          service->CreateService(client);
-       break;
+          service->Create(client);
+      Unlock();
+      break;
      }
     case AVAHI_CLIENT_FAILURE:
      {
-       esyslog("dbus2vdr/avahi: client failure: %s", avahi_strerror(avahi_client_errno(client)));
-       avahi_simple_poll_quit(_simple_poll);
-       break;
+      esyslog("dbus2vdr/avahi: client failure: %s", avahi_strerror(avahi_client_errno(client)));
+      avahi_simple_poll_quit(_simple_poll);
+      break;
      }
     case AVAHI_CLIENT_S_COLLISION:
     case AVAHI_CLIENT_S_REGISTERING:
      {
+      Lock();
       for (cAvahiService *service = _services.First(); service ; service = _services.Next(service))
-          service->ResetService();
-       break;
+          service->Reset();
+      Unlock();
+      break;
      }
     case AVAHI_CLIENT_CONNECTING:
-       break;
+      break;
     }
 }
 
-void  cAvahiClient::NotifyCaller(const char *caller, const char *event, const char *id) const
+void  cAvahiClient::NotifyCaller(const char *caller, const char *event, const char *id, const char *data) const
 {
   if ((caller == NULL) || (event == NULL) || (id == NULL))
      return;
   cPlugin *plugin = cPluginManager::GetPlugin(caller);
   if (plugin == NULL)
      return;
-  cString call = cString::sprintf("event=%s,id=%s", event, id);
+  cString call = cString::sprintf("event=%s,id=%s%s%s", event, id, (data != NULL ? "," : ""), (data != NULL ? data : ""));
   plugin->Service("avahi4vdr-event", (void*)(*call));
   isyslog("dbus2vdr/avahi-client: notify %s on event %s", caller, *call);
+}
+
+cString cAvahiClient::CreateBrowser(const char *caller, AvahiProtocol protocol, const char *type)
+{
+  Lock();
+  cAvahiBrowser *browser = new cAvahiBrowser(this, caller, protocol, type);
+  if (browser == NULL) {
+     Unlock();
+     return "";
+     }
+  cString id = browser->Id();
+  _browsers.Add(browser);
+  if (ServerIsRunning())
+     browser->Create(_client);
+  Unlock();
+  return id;
+}
+
+void    cAvahiClient::DeleteBrowser(const char *id)
+{
+  Lock();
+  cAvahiBrowser *browser = GetBrowser(id);
+  if (browser != NULL) {
+     browser->Delete();
+     _browsers.Del(browser);
+     }
+  Unlock();
 }
 
 cString cAvahiClient::CreateService(const char *caller, const char *name, AvahiProtocol protocol, const char *type, int port, int subtypes_len, const char **subtypes, int txts_len, const char **txts)
@@ -110,7 +158,7 @@ cString cAvahiClient::CreateService(const char *caller, const char *name, AvahiP
   cString id = service->Id();
   _services.Add(service);
   if (ServerIsRunning())
-     service->CreateService(_client);
+     service->Create(_client);
   Unlock();
   return id;
 }
@@ -120,7 +168,7 @@ void cAvahiClient::DeleteService(const char *id)
   Lock();
   cAvahiService *service = GetService(id);
   if (service != NULL) {
-     service->DeleteService();
+     service->Delete();
      _services.Del(service);
      }
   Unlock();
@@ -187,8 +235,10 @@ void cAvahiClient::Action(void)
         avahi_simple_poll_loop(_simple_poll);
 
         Lock();
+        for (cAvahiBrowser *browser = _browsers.First(); browser ; browser = _browsers.Next(browser))
+            browser->Delete();
         for (cAvahiService *service = _services.First(); service ; service = _services.Next(service))
-            service->DeleteService();
+            service->Delete();
         if (_client != NULL)
            avahi_client_free(_client);
         _client = NULL;

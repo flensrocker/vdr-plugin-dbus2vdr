@@ -26,9 +26,9 @@ private:
   AvahiStringList *_subtypes;
   AvahiStringList *_txts;
 
-  void CreateService(AvahiClient *client);
-  void ResetService(void);
-  void DeleteService(void);
+  void Create(AvahiClient *client);
+  void Reset(void);
+  void Delete(void);
 
   static void GroupCallback(AvahiEntryGroup *group, AvahiEntryGroupState state, void *userdata);
   void GroupCallback(AvahiEntryGroup *group, AvahiEntryGroupState state);

@@ -118,8 +118,11 @@ void cDBusNetworkBus::OnConnect(void)
 {
   static const char *subtypes[] = { "_dbus2vdr._sub._dbus._tcp" };
   if (_address != NULL) {
-     if (_avahi_client == NULL)
+     if (_avahi_client == NULL) {
         _avahi_client = new cAvahiClient();
+        _browser_id = _avahi_client->CreateBrowser("dbus2vdr", AVAHI_PROTO_UNSPEC, "_svdrp._tcp");
+        dsyslog("dbus2vdr: network bus created avahi browser (id %s)", *_browser_id);
+        }
      _avahi_id = _avahi_client->CreateService("dbus2vdr", *_avahi_name, AVAHI_PROTO_UNSPEC, "_dbus._tcp", _address->Port, 1, subtypes, 0, NULL);
      dsyslog("dbus2vdr: network bus created avahi service (id %s)", *_avahi_id);
      }

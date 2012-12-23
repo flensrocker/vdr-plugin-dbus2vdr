@@ -32,12 +32,12 @@ cAvahiService::cAvahiService(cAvahiClient *avahi_client, const char *caller, con
   if (txts_len > 0)
      _txts = avahi_string_list_new_from_array(txts, txts_len);
   dsyslog("dbus2vdr/avahi-service: instanciated service '%s' of type %s listening on port %d (id %s)", _name, _type, _port, *_id);
-  _avahi_client->NotifyCaller(*_caller, "service-created", *_id);
+  _avahi_client->NotifyCaller(*_caller, "service-created", *_id, NULL);
 }
 
 cAvahiService::~cAvahiService(void)
 {
-  _avahi_client->NotifyCaller(*_caller, "service-deleted", *_id);
+  _avahi_client->NotifyCaller(*_caller, "service-deleted", *_id, NULL);
   if (_txts != NULL)
      avahi_string_list_free(_txts);
   _txts = NULL;
@@ -71,7 +71,7 @@ void cAvahiService::GroupCallback(AvahiEntryGroup *group, AvahiEntryGroupState s
   switch (state) {
     case AVAHI_ENTRY_GROUP_ESTABLISHED:
      {
-       _avahi_client->NotifyCaller(*_caller, "service-started", *_id);
+       _avahi_client->NotifyCaller(*_caller, "service-started", *_id, NULL);
        isyslog("dbus2vdr/avahi-service: service '%s' successfully established (id %s)", _name, *_id);
        break;
      }
@@ -82,7 +82,7 @@ void cAvahiService::GroupCallback(AvahiEntryGroup *group, AvahiEntryGroupState s
        avahi_free(_name);
        _name = n;
        isyslog("dbus2vdr/avahi-service: service name collision, renaming service to '%s'", _name);
-       CreateService(client);
+       Create(client);
        break;
      }
     case AVAHI_ENTRY_GROUP_FAILURE:
@@ -97,7 +97,7 @@ void cAvahiService::GroupCallback(AvahiEntryGroup *group, AvahiEntryGroupState s
     }
 }
 
-void cAvahiService::CreateService(AvahiClient *client)
+void cAvahiService::Create(AvahiClient *client)
 {
   char *n;
   int ret;
@@ -152,8 +152,8 @@ collision:
   avahi_free(_name);
   _name = n;
   isyslog("dbus2vdr/avahi-service: service name collision, renaming service to '%s'", _name);
-  ResetService();
-  CreateService(client);
+  Reset();
+  Create(client);
   return;
 
 fail:
@@ -163,7 +163,7 @@ fail:
   _avahi_client->ServiceError(this);
 }
 
-void cAvahiService::ResetService(void)
+void cAvahiService::Reset(void)
 {
   if (_group != NULL) {
      avahi_entry_group_reset(_group);
@@ -171,12 +171,12 @@ void cAvahiService::ResetService(void)
      }
 }
 
-void cAvahiService::DeleteService(void)
+void cAvahiService::Delete(void)
 {
   if (_group != NULL) {
      avahi_entry_group_free(_group);
-     _avahi_client->NotifyCaller(*_caller, "service-stopped", *_id);
+     _avahi_client->NotifyCaller(*_caller, "service-stopped", *_id, NULL);
      dsyslog("dbus2vdr/avahi-service: deleted service '%s' (id %s)", _name, *_id);
+     _group = NULL;
      }
-  _group = NULL;
 }
