@@ -109,29 +109,23 @@ void cAvahiBrowser::ResolverCallback(AvahiServiceResolver *resolver, AvahiIfInde
       if (flags & AVAHI_LOOKUP_RESULT_LOCAL)
          isLocal = true;
 
-      /*char a[AVAHI_ADDRESS_STR_MAX], *t;
+      cString esc_name = strescape(name, "\\,");
+      char a[AVAHI_ADDRESS_STR_MAX];
       avahi_address_snprint(a, sizeof(a), address);
-      t = avahi_string_list_to_string(txt);
-      fprintf(stderr,
-              "\t%s:%u (%s)\n"
-              "\tTXT=%s\n"
-              "\tcookie is %u\n"
-              "\tis_local: %i\n"
-              "\tour_own: %i\n"
-              "\twide_area: %i\n"
-              "\tmulticast: %i\n"
-              "\tcached: %i\n",
-              host_name, port, a,
-              t,
-              avahi_string_list_get_service_cookie(txt),
-              !!(flags & AVAHI_LOOKUP_RESULT_LOCAL),
-              !!(flags & AVAHI_LOOKUP_RESULT_OUR_OWN),
-              !!(flags & AVAHI_LOOKUP_RESULT_WIDE_AREA),
-              !!(flags & AVAHI_LOOKUP_RESULT_MULTICAST),
-              !!(flags & AVAHI_LOOKUP_RESULT_CACHED));
-
-      avahi_free(t);*/
-      _avahi_client->NotifyCaller(*_caller, "browser-service-resolved", *_id, NULL);
+      cString esc_txt = "";
+      if ((txt != NULL) && (avahi_string_list_length(txt) > 0)) {
+         AvahiStringList *l = txt;
+         while (l != NULL) {
+               const char *entry = (const char*)avahi_string_list_get_text(l);
+               size_t len = avahi_string_list_get_size(l);
+               if ((entry != NULL) && (len > 0) && (entry[0] != 0)) {
+                  esc_txt = cString::sprintf("%s,txt=%s", *esc_txt, *strescape(entry, "\\,"));
+                  l = avahi_string_list_get_next(l);
+                  }
+               }
+         }
+      cString data = cString::sprintf("name=%s,type=%s,protocol=%s,address=%s,host=%s,port=%d,local=%s%s", *esc_name, type, avahi_proto_to_string(protocol), a, host_name, port, (isLocal ? "true" : "false"), *esc_txt);
+      _avahi_client->NotifyCaller(*_caller, "browser-service-resolved", *_id, *data);
       break;
       }
     }
