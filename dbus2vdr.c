@@ -265,7 +265,7 @@ bool cPluginDbus2vdr::SetupParse(const char *Name, const char *Value)
 bool cPluginDbus2vdr::Service(const char *Id, void *Data)
 {
   if (strcmp(Id, "avahi4vdr-event") == 0)
-     isyslog("dbus2vdr: avahi4vdr-event: %s", Data);
+     isyslog("dbus2vdr: avahi4vdr-event: %s", (const char*)Data);
   // Handle custom service requests from other plugins
   return false;
 }
