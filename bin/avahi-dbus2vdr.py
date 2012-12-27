@@ -28,6 +28,9 @@ def myhandler(interface, protocol, name, stype, domain, flags):
         domain, avahi.PROTO_UNSPEC, dbus.UInt32(0), 
         reply_handler=service_resolved, error_handler=print_error)
 
+def removehandler(interface, protocol, name, stype, domain, flags):
+    print "Removed service '%s' type '%s' domain '%s' " % (name, stype, domain)
+
 loop = DBusGMainLoop()
 
 bus = dbus.SystemBus(mainloop=loop)
@@ -41,6 +44,7 @@ sbrowser = dbus.Interface(bus.get_object(avahi.DBUS_NAME,
         avahi.DBUS_INTERFACE_SERVICE_BROWSER)
 
 sbrowser.connect_to_signal("ItemNew", myhandler)
+sbrowser.connect_to_signal("ItemRemove", removehandler)
 
 gobject.MainLoop().run()
 
