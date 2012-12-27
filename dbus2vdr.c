@@ -188,6 +188,8 @@ bool cPluginDbus2vdr::Start(void)
   cDBusMonitor::StartMonitor(enable_network);
   if (enable_osd)
      new cDBusOsdProvider();
+  if (enable_network && (send_upstart_signals >= 0))
+     SystemExec("start dbus2vdr", true);
   return true;
 }
 
@@ -195,6 +197,8 @@ void cPluginDbus2vdr::Stop(void)
 {
   // Stop any background activities the plugin is performing.
   if (send_upstart_signals == 1) {
+    if (enable_network)
+       SystemExec("stop dbus2vdr", true);
      send_upstart_signals++;
      cDBusMonitor::SendUpstartSignal("stopped");
      }
