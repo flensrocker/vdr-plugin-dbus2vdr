@@ -6,7 +6,9 @@
 # The official name of this plugin.
 # This name will be used in the '-P...' option of VDR to load the plugin.
 # By default the main source file also carries this name.
-
+# IMPORTANT: the presence of this macro is important for the Make.config
+# file. So it must be defined, even if it is not used here!
+#
 PLUGIN = dbus2vdr
 
 WANT_I18N ?= yes
@@ -15,54 +17,54 @@ WANT_I18N ?= yes
 
 VERSION = $(shell grep 'static const char \*VERSION *=' $(PLUGIN).c | awk '{ print $$6 }' | sed -e 's/[";]//g')
 
-### The directory environment:
+### The C++ compiler and options:
 
-# Use package data if installed...otherwise assume we're under the VDR source directory:
-PKGCFG = $(if $(VDRDIR),$(shell pkg-config --variable=$(1) $(VDRDIR)/vdr.pc),$(shell pkg-config --variable=$(1) vdr || pkg-config --variable=$(1) ../../../vdr.pc))
-LIBDIR = $(DESTDIR)$(call PKGCFG,libdir)
-LOCDIR = $(DESTDIR)$(call PKGCFG,locdir)
-#
-TMPDIR ?= /tmp
-
-### The compiler options:
-
-export CFLAGS   = $(call PKGCFG,cflags) -fPIC
-export CXXFLAGS = $(call PKGCFG,cxxflags) -fPIC
+CXX      ?= g++
+CXXFLAGS ?= -g -O3 -Wall -Werror=overloaded-virtual -Wno-parentheses
 CXXADD   += `pkg-config --cflags dbus-1` `libpng-config --cflags`
 LDADD    += `pkg-config --libs dbus-1` `libpng-config --ldflags`
 
-### The version number of VDR's plugin API:
+### The directory environment:
 
-APIVERSION = $(call PKGCFG,apiversion)
+VDRDIR ?= ../../..
+LIBDIR ?= ../../lib
+TMPDIR ?= /tmp
+
+### Make sure that necessary options are included:
+
+-include $(VDRDIR)/Make.global
+
+### Allow user defined options to overwrite defaults:
+
+-include $(VDRDIR)/Make.config
+
+### The version number of VDR's plugin API (taken from VDR's "config.h"):
+
+APIVERSION = $(shell sed -ne '/define APIVERSION/s/^.*"\(.*\)".*$$/\1/p' $(VDRDIR)/config.h)
 
 ### The name of the distribution archive:
 
 ARCHIVE = $(PLUGIN)-$(VERSION)
 PACKAGE = vdr-$(ARCHIVE)
 
-### The name of the shared object file:
-
-SOFILE = libvdr-$(PLUGIN).so
-
 ### Includes and Defines (add further entries here):
 
-INCLUDES += 
+INCLUDES += -I$(VDRDIR)/include
 
-DEFINES += -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
+DEFINES += -D_GNU_SOURCE -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
 
 ### The object files (add further files here):
 
-OBJS = $(PLUGIN).o bus.o channel.o epg.o helper.o message.o monitor.o osd.o plugin.o recording.o remote.o setup.o shutdown.o skin.o timer.o
-SWOBJS = libvdr-exitpipe.o libvdr-i18n.o libvdr-thread.o libvdr-tools.o shutdown-wrapper.o
+OBJS = $(PLUGIN).o avahi-browser.o avahi-client.o avahi-service.o
 
 ### The main target:
 
-all: $(SOFILE) i18n
+all: libvdr-$(PLUGIN).so i18n
 
 ### Implicit rules:
 
 %.o: %.c
-	$(CXX) $(CXXFLAGS) -c $(DEFINES) $(INCLUDES) $(CXXADD) $<
+	$(CXX) $(CXXFLAGS) -c $(DEFINES) $(INCLUDES) $<
 
 ### Dependencies:
 
@@ -77,44 +79,34 @@ ifdef WANT_I18N
 ### Internationalization (I18N):
 
 PODIR     = po
+LOCALEDIR = $(VDRDIR)/locale
 I18Npo    = $(wildcard $(PODIR)/*.po)
-I18Nmo    = $(addsuffix .mo, $(foreach file, $(I18Npo), $(basename $(file))))
-I18Nmsgs  = $(addprefix $(LOCDIR)/, $(addsuffix /LC_MESSAGES/vdr-$(PLUGIN).mo, $(notdir $(foreach file, $(I18Npo), $(basename $(file))))))
+I18Nmsgs  = $(addprefix $(LOCALEDIR)/, $(addsuffix /LC_MESSAGES/vdr-$(PLUGIN).mo, $(notdir $(foreach file, $(I18Npo), $(basename $(file))))))
 I18Npot   = $(PODIR)/$(PLUGIN).pot
 
 %.mo: %.po
 	msgfmt -c -o $@ $<
 
-$(I18Npot): $(patsubst %.o,%.c,$(OBJS))
-	xgettext -C -cTRANSLATORS --no-wrap --no-location -k -ktr -ktrNOOP --package-name=vdr-$(PLUGIN) --package-version=$(VERSION) --msgid-bugs-address='<see README>' -o $@ `ls $^`
-
+$(I18Npot): $(wildcard *.c)
+	xgettext -C -cTRANSLATORS --no-wrap --no-location -k -ktr -ktrNOOP --package-name=vdr-$(PLUGIN) --package-version=$(VERSION) --msgid-bugs-address='<see README>' -o $@ $^
 
 %.po: $(I18Npot)
-	msgmerge -U --no-wrap --no-location --backup=none -q -N $@ $<
+	msgmerge -U --no-wrap --no-location --backup=none -q $@ $<
 	@touch $@
 
-$(I18Nmsgs): $(LOCDIR)/%/LC_MESSAGES/vdr-$(PLUGIN).mo: $(PODIR)/%.mo
-	install -D -m644 $< $@
+$(I18Nmsgs): $(LOCALEDIR)/%/LC_MESSAGES/vdr-$(PLUGIN).mo: $(PODIR)/%.mo
+	@mkdir -p $(dir $@)
+	cp $< $@
 endif
 
 .PHONY: i18n
-i18n: $(I18Nmo) $(I18Npot)
-
-install-i18n: $(I18Nmsgs)
-
+i18n: $(I18Nmsgs) $(I18Npot)
 
 ### Targets:
 
-shutdown-wrapper: $(SWOBJS)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(SWOBJS) -ljpeg -lrt -pthread -o $@
-
-$(SOFILE): $(OBJS) shutdown-wrapper
+libvdr-$(PLUGIN).so: $(OBJS)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared $(OBJS) $(LDADD) -o $@
-
-install-lib: $(SOFILE)
-	install -D $^ $(LIBDIR)/$^.$(APIVERSION)
-
-install: install-lib install-i18n
+	@cp --remove-destination $@ $(LIBDIR)/$@.$(APIVERSION)
 
 dist: $(I18Npo) clean
 	@-rm -rf $(TMPDIR)/$(ARCHIVE)
@@ -125,7 +117,4 @@ dist: $(I18Npo) clean
 	@echo Distribution package created as $(PACKAGE).tgz
 
 clean:
-	@-rm -f $(PODIR)/*.mo $(PODIR)/*.pot
-	@-rm -f $(OBJS) $(DEPFILE) *.so *.tgz core* *~
-	@-rm -f $(SWOBJS) shutdown-wrapper
-
+	@-rm -f $(OBJS) $(DEPFILE) *.so *.tgz core* *~ $(PODIR)/*.mo $(PODIR)/*.pot
