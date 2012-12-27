@@ -6,9 +6,9 @@ vdr-plugin-dbus2vdr (1-0yavdr0~precise) precise; urgency=medium
 
 vdr-plugin-dbus2vdr (0.0.8d-0yavdr0~precise) precise; urgency=medium
 
-  * new upstream snapshot
+  * new upstream release
 
- -- Lars Hanisch <dvb@flensrocker.de>  Sun, 25 Nov 2012 10:56:10 +0100
+ -- Lars Hanisch <dvb@flensrocker.de>  Sun, 16 Dec 2012 11:41:37 +0100
 
 vdr-plugin-dbus2vdr (0.0.8c-0yavdr0~precise) precise; urgency=medium
 

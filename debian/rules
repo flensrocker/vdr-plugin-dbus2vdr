@@ -17,4 +17,6 @@ cleanbuilddir::
 common-binary-predeb-arch::
 	sh /usr/share/vdr-dev/dependencies.sh
 
+override_dh_strip:
+	dh_strip --dbg-package=vdr-plugin-dbus2vdr-dbg
 
