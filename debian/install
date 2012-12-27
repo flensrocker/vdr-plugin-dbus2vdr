@@ -7,3 +7,6 @@ shutdown-wrapper   usr/share/vdr-plugin-dbus2vdr/
 etc/de.tvdr.vdr.conf etc/dbus-1/system.d/
 etc/de.tvdr.vdr-upstart.service usr/share/dbus-1/system-services/
 
+etc/network.conf  var/lib/vdr/plugins/dbus2vdr/
+etc/dbus2vdr.conf var/lib/vdr/.init/
+
