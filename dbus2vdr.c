@@ -9,7 +9,6 @@
 #include <getopt.h>
 #include <signal.h>
 
-#include "avahi-client.h"
 #include "common.h"
 #include "channel.h"
 #include "epg.h"
@@ -35,7 +34,7 @@ class cPluginDbus2vdr : public cPlugin {
 private:
   // Add any member variables or functions you may need here.
   bool enable_osd;
-  int send_upstart_signals;
+  int  send_upstart_signals;
   bool enable_network;
 
 public:
@@ -91,7 +90,7 @@ const char *cPluginDbus2vdr::CommandLineHelp(void)
          "    timeout in milliseconds for dbus_connection_read_write_dispatch\n"
          "  --network\n"
          "    enable network support for peer2peer communication\n"
-         "    a local dbus-daemon has to be started manual\n"
+         "    a local dbus-daemon has to be started manually\n"
          "    it has to store its address at $PLUGINDIR/network-address.conf\n";
 }
 
@@ -165,7 +164,6 @@ bool cPluginDbus2vdr::Initialize(void)
 {
   // Initialize any background activities the plugin shall perform.
   cDBusDispatcherShutdown::StartupTime = time(NULL);
-  cDbus2vdrGlobals::_avahi_client = new cAvahiClient();
   return true;
 }
 
@@ -184,16 +182,12 @@ bool cPluginDbus2vdr::Start(void)
   new cDBusDispatcherSkin;
   new cDBusDispatcherTimer;
   if (enable_network) {
-     if (send_upstart_signals >= 0)
-        SystemExec("start dbus2vdr", true);
      new cDBusDispatcherRecordingConst(busNetwork);
      new cDBusDispatcherTimerConst(busNetwork);
      }
   cDBusMonitor::StartMonitor(enable_network);
   if (enable_osd)
      new cDBusOsdProvider();
-  if (cDbus2vdrGlobals::_avahi_client != NULL)
-     cDbus2vdrGlobals::_avahi_client->CreateBrowser("dbus2vdr", AVAHI_PROTO_UNSPEC, "_vdr_dbus2vdr._sub._dbus._tcp", false);
   return true;
 }
 
@@ -207,12 +201,6 @@ void cPluginDbus2vdr::Stop(void)
   cDBusMonitor::StopUpstartSender();
   cDBusMonitor::StopMonitor();
   cDBusMessageDispatcher::Shutdown();
-  if (send_upstart_signals >= 0)
-     SystemExec("stop dbus2vdr", true);
-  if (cDbus2vdrGlobals::_avahi_client != NULL) {
-     delete cDbus2vdrGlobals::_avahi_client;
-     cDbus2vdrGlobals::_avahi_client = NULL;
-     }
 }
 
 void cPluginDbus2vdr::Housekeeping(void)
@@ -264,8 +252,10 @@ bool cPluginDbus2vdr::SetupParse(const char *Name, const char *Value)
 
 bool cPluginDbus2vdr::Service(const char *Id, void *Data)
 {
-  if (strcmp(Id, "avahi4vdr-event") == 0)
+  if (strcmp(Id, "avahi4vdr-event") == 0) {
      isyslog("dbus2vdr: avahi4vdr-event: %s", (const char*)Data);
+     return true;
+     }
   // Handle custom service requests from other plugins
   return false;
 }

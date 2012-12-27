@@ -3,9 +3,8 @@
 
 #include <dbus/dbus.h>
 
+#include <vdr/plugin.h>
 #include <vdr/tools.h>
-
-class cAvahiClient;
 
 // abstraction of a DBus message bus
 
@@ -71,6 +70,7 @@ class cDBusNetworkBus : public cDBusBus
 {
 private:
   cDBusTcpAddress  *_address;
+  cPlugin          *_avahi4vdr;
   cString           _avahi_name;
   cString           _avahi_id;
 

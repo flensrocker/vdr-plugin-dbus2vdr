@@ -1,7 +1,6 @@
 #include "bus.h"
 #include "common.h"
 #include "helper.h"
-#include "avahi-client.h"
 
 
 cDBusBus::cDBusBus(const char *name, const char *busname)
@@ -78,7 +77,9 @@ DBusConnection*  cDBusSystemBus::GetConnection(void)
 cDBusNetworkBus::cDBusNetworkBus(const char *busname)
  :cDBusBus("network", busname)
  ,_address(NULL)
+ ,_avahi4vdr(NULL)
 {
+  _avahi4vdr = cPluginManager::GetPlugin("avahi4vdr");
 }
 
 cDBusNetworkBus::~cDBusNetworkBus(void)
@@ -96,7 +97,7 @@ DBusConnection*  cDBusNetworkBus::GetConnection(void)
   if (_address == NULL)
      return NULL;
   isyslog("dbus2vdr: try to connect to network bus on address %s", _address->Address());
-  _avahi_name = cString::sprintf("dbus2vdr on %s", *_address->Host);
+  _avahi_name = strescape(*cString::sprintf("dbus2vdr on %s", *_address->Host), "\\,");
   DBusConnection *conn = dbus_connection_open(_address->Address(), &_err);
   if (conn != NULL) {
      if (!dbus_bus_register(conn, &_err)) {
@@ -113,17 +114,19 @@ DBusConnection*  cDBusNetworkBus::GetConnection(void)
 
 void cDBusNetworkBus::OnConnect(void)
 {
-  static const char *subtypes[] = { "_vdr_dbus2vdr._sub._dbus._tcp" };
-  if ((_address != NULL) && (cDbus2vdrGlobals::_avahi_client != NULL)) {
-     _avahi_id = cDbus2vdrGlobals::_avahi_client->CreateService("dbus2vdr", *_avahi_name, AVAHI_PROTO_UNSPEC, "_dbus._tcp", _address->Port, 1, subtypes, 0, NULL);
+  if ((_address != NULL) && (_avahi4vdr != NULL)) {
+     int replyCode = 0;
+     cString parameter = cString::sprintf("caller=dbus2vdr,name=%s,type=_dbus._tcp,port=%d,subtype=_vdr_dbus2vdr._sub._dbus._tcp", *_avahi_name, _address->Port);
+     _avahi_id = _avahi4vdr->SVDRPCommand("CreateService", *parameter, replyCode);
      dsyslog("dbus2vdr: network bus created avahi service (id %s)", *_avahi_id);
      }
 }
 
 bool cDBusNetworkBus::Disconnect(void)
 {
-  if ((cDbus2vdrGlobals::_avahi_client != NULL) && (*_avahi_id != NULL)) {
-     cDbus2vdrGlobals::_avahi_client->DeleteService(*_avahi_id);
+  if ((_avahi4vdr != NULL) && (*_avahi_id != NULL)) {
+     int replyCode = 0;
+     _avahi4vdr->SVDRPCommand("DeleteService", *_avahi_id, replyCode);
      dsyslog("dbus2vdr: network bus deleted avahi service (id %s)", *_avahi_id);
      _avahi_id = NULL;
      }

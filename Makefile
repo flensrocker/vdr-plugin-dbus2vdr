@@ -26,10 +26,10 @@ TMPDIR ?= /tmp
 
 ### The compiler options:
 
-export CFLAGS   = $(call PKGCFG,cflags)
-export CXXFLAGS = $(call PKGCFG,cxxflags)
+export CFLAGS   = $(call PKGCFG,cflags) -fPIC
+export CXXFLAGS = $(call PKGCFG,cxxflags) -fPIC
 CXXADD   += `pkg-config --cflags dbus-1` `libpng-config --cflags`
-LDADD    += `pkg-config --libs dbus-1` `libpng-config --ldflags` -lavahi-common -lavahi-client -luuid
+LDADD    += `pkg-config --libs dbus-1` `libpng-config --ldflags`
 
 ### The version number of VDR's plugin API:
 
@@ -52,7 +52,7 @@ DEFINES += -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
 
 ### The object files (add further files here):
 
-OBJS = $(PLUGIN).o avahi-browser.o avahi-client.o avahi-service.o bus.o channel.o common.o epg.o helper.o message.o monitor.o osd.o plugin.o recording.o remote.o setup.o shutdown.o skin.o timer.o
+OBJS = $(PLUGIN).o bus.o channel.o epg.o helper.o message.o monitor.o osd.o plugin.o recording.o remote.o setup.o shutdown.o skin.o timer.o
 SWOBJS = libvdr-exitpipe.o libvdr-i18n.o libvdr-thread.o libvdr-tools.o shutdown-wrapper.o
 
 ### The main target:
