@@ -157,7 +157,7 @@ void cDBusOsdProvider::Action(void)
                        msgOk = false;
                     }
                  }
-              if (msgOk && cDBusMonitor::SendSignal(msg))
+              if (msgOk && cDBusMonitor::SendSignal(msg, busSystem))
                  msg = NULL;
               else
                  dbus_message_unref(msg);
@@ -236,7 +236,7 @@ void cDBusMessageOsd::DeleteProvider(void)
 
 
 cDBusDispatcherOsd::cDBusDispatcherOsd(void)
-:cDBusMessageDispatcher(DBUS_VDR_OSD_INTERFACE)
+:cDBusMessageDispatcher(busSystem, DBUS_VDR_OSD_INTERFACE)
 {
 }
 

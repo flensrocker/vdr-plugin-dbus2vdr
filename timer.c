@@ -8,6 +8,30 @@
 class cDBusTimerActions
 {
 public:
+  static void List(DBusConnection* conn, DBusMessage* msg)
+  {
+    DBusMessage *reply = dbus_message_new_method_return(msg);
+    DBusMessageIter args;
+    DBusMessageIter array;
+    cString text;
+    const char *tmp;
+    dbus_message_iter_init_append(reply, &args);
+    if (!dbus_message_iter_open_container(&args, DBUS_TYPE_ARRAY, "s", &array))
+       esyslog("dbus2vdr: %s.List: can't open array container", DBUS_VDR_TIMER_INTERFACE);
+    for (int i = 0; i < Timers.Count(); i++) {
+        cTimer *timer = Timers.Get(i);
+        if (timer) {
+           text = timer->ToText(true);
+           tmp = stripspace((char*)*text);
+           if (!dbus_message_iter_append_basic(&array, DBUS_TYPE_STRING, &tmp))
+              esyslog("dbus2vdr: %s.List: out of memory while appending the timer", DBUS_VDR_TIMER_INTERFACE);
+           }
+        }
+    if (!dbus_message_iter_close_container(&args, &array))
+       esyslog("dbus2vdr: %s.List: can't close array container", DBUS_VDR_TIMER_INTERFACE);
+    cDBusHelper::SendReply(conn, reply);
+  }
+
   static void Next(DBusConnection* conn, DBusMessage* msg)
   {
     int returncode = 250;
@@ -56,18 +80,19 @@ public:
 };
 
 
-cDBusDispatcherTimer::cDBusDispatcherTimer(void)
-:cDBusMessageDispatcher(DBUS_VDR_TIMER_INTERFACE)
+cDBusDispatcherTimerConst::cDBusDispatcherTimerConst(eBusType type)
+:cDBusMessageDispatcher(type, DBUS_VDR_TIMER_INTERFACE)
 {
   AddPath("/Timers");
+  AddAction("List", cDBusTimerActions::List);
   AddAction("Next", cDBusTimerActions::Next);
 }
 
-cDBusDispatcherTimer::~cDBusDispatcherTimer(void)
+cDBusDispatcherTimerConst::~cDBusDispatcherTimerConst(void)
 {
 }
 
-bool          cDBusDispatcherTimer::OnIntrospect(DBusMessage *msg, cString &Data)
+bool          cDBusDispatcherTimerConst::OnIntrospect(DBusMessage *msg, cString &Data)
 {
   if (strcmp(dbus_message_get_path(msg), "/Timers") != 0)
      return false;
@@ -76,6 +101,9 @@ bool          cDBusDispatcherTimer::OnIntrospect(DBusMessage *msg, cString &Data
   "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
   "<node>\n"
   "  <interface name=\""DBUS_VDR_TIMER_INTERFACE"\">\n"
+  "    <method name=\"List\">\n"
+  "      <arg name=\"timer\"     type=\"as\" direction=\"out\"/>\n"
+  "    </method>\n"
   "    <method name=\"Next\">\n"
   "      <arg name=\"replycode\" type=\"i\" direction=\"out\"/>\n"
   "      <arg name=\"number\"    type=\"i\" direction=\"out\"/>\n"
@@ -86,5 +114,23 @@ bool          cDBusDispatcherTimer::OnIntrospect(DBusMessage *msg, cString &Data
   "    </method>\n"
   "  </interface>\n"
   "</node>\n";
+  return true;
+}
+
+
+cDBusDispatcherTimer::cDBusDispatcherTimer(void)
+:cDBusDispatcherTimerConst(busSystem)
+{
+}
+
+cDBusDispatcherTimer::~cDBusDispatcherTimer(void)
+{
+}
+
+bool          cDBusDispatcherTimer::OnIntrospect(DBusMessage *msg, cString &Data)
+{
+  if (!cDBusDispatcherTimerConst::OnIntrospect(msg, Data))
+     return false;
+  //TODO insert introspection data
   return true;
 }

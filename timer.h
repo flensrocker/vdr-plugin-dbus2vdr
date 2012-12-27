@@ -4,7 +4,17 @@
 #include "message.h"
 
 
-class cDBusDispatcherTimer : public cDBusMessageDispatcher
+class cDBusDispatcherTimerConst : public cDBusMessageDispatcher
+{
+public:
+  cDBusDispatcherTimerConst(eBusType type);
+  virtual ~cDBusDispatcherTimerConst(void);
+
+protected:
+  virtual bool          OnIntrospect(DBusMessage *msg, cString &Data);
+};
+
+class cDBusDispatcherTimer : public cDBusDispatcherTimerConst
 {
 public:
   cDBusDispatcherTimer(void);

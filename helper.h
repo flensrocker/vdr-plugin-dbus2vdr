@@ -3,11 +3,18 @@
 
 #include <dbus/dbus.h>
 #include <vdr/thread.h>
+#include <vdr/tools.h>
 
+
+class cDBusTcpAddress;
 
 class cDBusHelper
 {
+private:
+  static cString  _pluginConfigDir;
+
 public:
+  static void SetConfigDirectory(const char *configDir) { _pluginConfigDir = configDir; };
   static void AddArg(DBusMessageIter &args, int type, const void *value);
   static void AddKeyValue(DBusMessageIter &array, const char *key, int type, const char *vtype, void *value);
 
@@ -19,6 +26,8 @@ public:
   static void SendReply(DBusConnection *conn, DBusMessage *reply);
   static void SendReply(DBusConnection *conn, DBusMessage *msg, int  returncode, const char *message);
   static void SendReply(DBusConnection *conn, DBusMessage *msg, const char *message);
+
+  static cDBusTcpAddress *GetNetworkAddress(void);
 };
 
 // copy of vdr's cPipe but returns exit code of child on Close

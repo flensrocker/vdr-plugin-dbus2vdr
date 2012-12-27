@@ -12,6 +12,7 @@
 #include "common.h"
 #include "channel.h"
 #include "epg.h"
+#include "helper.h"
 #include "plugin.h"
 #include "monitor.h"
 #include "osd.h"
@@ -25,7 +26,7 @@
 #include <vdr/osdbase.h>
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "0.0.8d";
+static const char *VERSION        = "1";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -33,7 +34,8 @@ class cPluginDbus2vdr : public cPlugin {
 private:
   // Add any member variables or functions you may need here.
   bool enable_osd;
-  int send_upstart_signals;
+  int  send_upstart_signals;
+  bool enable_network;
 
 public:
   cPluginDbus2vdr(void);
@@ -65,6 +67,7 @@ cPluginDbus2vdr::cPluginDbus2vdr(void)
   // VDR OBJECTS TO EXIST OR PRODUCE ANY OUTPUT!
   enable_osd = false;
   send_upstart_signals = -1;
+  enable_network = false;
 }
 
 cPluginDbus2vdr::~cPluginDbus2vdr()
@@ -84,7 +87,11 @@ const char *cPluginDbus2vdr::CommandLineHelp(void)
          "  --upstart\n"
          "    enable Upstart started/stopped events\n"
          "  --poll-timeout\n"
-         "    timeout in milliseconds for dbus_connection_read_write_dispatch\n";
+         "    timeout in milliseconds for dbus_connection_read_write_dispatch\n"
+         "  --network\n"
+         "    enable network support for peer2peer communication\n"
+         "    a local dbus-daemon has to be started manually\n"
+         "    it has to store its address at $PLUGINDIR/network-address.conf\n";
 }
 
 bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
@@ -96,19 +103,21 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
     {"osd", no_argument, 0, 'o'},
     {"upstart", no_argument, 0, 'u'},
     {"poll-timeout", required_argument, 0, 'p'},
+    {"network", no_argument, 0, 'n'},
     {0, 0, 0, 0}
   };
 
   while (true) {
         int option_index = 0;
-        int c = getopt_long(argc, argv, "op:s:uw:", options, &option_index);
+        int c = getopt_long(argc, argv, "nop:s:uw:", options, &option_index);
         if (c == -1)
            break;
         switch (c) {
           case 'o':
            {
-            enable_osd = true;
-            break;
+             enable_osd = true;
+             isyslog("dbus2vdr: enable osd");
+             break;
            }
           case 's':
            {
@@ -140,6 +149,12 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
                 }
              break;
            }
+          case 'n':
+           {
+             enable_network = true;
+             isyslog("dbus2vdr: enable network support");
+             break;
+           }
           }
         }
   return true;
@@ -154,6 +169,7 @@ bool cPluginDbus2vdr::Initialize(void)
 
 bool cPluginDbus2vdr::Start(void)
 {
+  cDBusHelper::SetConfigDirectory(cPlugin::ConfigDirectory("dbus2vdr"));
   // Start any background activities the plugin shall perform.
   new cDBusDispatcherChannel;
   new cDBusDispatcherEpg;
@@ -165,7 +181,11 @@ bool cPluginDbus2vdr::Start(void)
   new cDBusDispatcherShutdown;
   new cDBusDispatcherSkin;
   new cDBusDispatcherTimer;
-  cDBusMonitor::StartMonitor();
+  if (enable_network) {
+     new cDBusDispatcherRecordingConst(busNetwork);
+     new cDBusDispatcherTimerConst(busNetwork);
+     }
+  cDBusMonitor::StartMonitor(enable_network);
   if (enable_osd)
      new cDBusOsdProvider();
   return true;
@@ -232,6 +252,10 @@ bool cPluginDbus2vdr::SetupParse(const char *Name, const char *Value)
 
 bool cPluginDbus2vdr::Service(const char *Id, void *Data)
 {
+  if (strcmp(Id, "avahi4vdr-event") == 0) {
+     isyslog("dbus2vdr: avahi4vdr-event: %s", (const char*)Data);
+     return true;
+     }
   // Handle custom service requests from other plugins
   return false;
 }

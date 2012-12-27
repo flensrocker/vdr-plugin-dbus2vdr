@@ -1,5 +1,6 @@
 #include "message.h"
-
+#include "helper.h"
+#include "monitor.h"
 
 // ----- cDBusMessageHandler: Thead which handles one cDBusMessage ------------
 
@@ -102,7 +103,7 @@ void cDBusMessageDispatcher::AddAction(const char *name, cDBusMessageActionFunc 
      _actions.Add(new cDBusMessageAction(name, action));
 }
 
-bool cDBusMessageDispatcher::Dispatch(DBusConnection* conn, DBusMessage* msg)
+bool cDBusMessageDispatcher::Dispatch(cDBusMonitor *monitor, DBusConnection* conn, DBusMessage* msg)
 {
   const char *interface = dbus_message_get_interface(msg);
   if (interface == NULL)
@@ -110,7 +111,12 @@ bool cDBusMessageDispatcher::Dispatch(DBusConnection* conn, DBusMessage* msg)
   const char *path = dbus_message_get_path(msg);
   if (path == NULL)
      return false;
+  cString errText;
+  DBusMessage *errorMsg;
+  eBusType monitorType = monitor->GetType();
   for (cDBusMessageDispatcher *d = _dispatcher.First(); d; d = _dispatcher.Next(d)) {
+      if (d->_busType != monitorType)
+         continue;
       if (strcmp(d->_interface, interface) == 0) {
          cDBusMessage *m = NULL;
          if ((d->_paths.Size() > 0) && (d->_actions.Count() > 0)) {
@@ -126,11 +132,16 @@ bool cDBusMessageDispatcher::Dispatch(DBusConnection* conn, DBusMessage* msg)
          if (m == NULL)
             m = d->CreateMessage(conn, msg);
          if (m == NULL)
-            return false;
+            continue; // try next dispatcher
          cDBusMessageHandler::NewHandler(m);
          return true;
          }
       }
+  errText = cString::sprintf("unknown interface %s on object %s", interface, path);
+  esyslog("dbus2vdr: %s", *errText);
+  errorMsg = dbus_message_new_error(msg, DBUS_ERROR_UNKNOWN_INTERFACE, *errText);
+  if (errorMsg != NULL)
+     cDBusHelper::SendReply(conn, errorMsg);
   return false;
 }
 
@@ -143,10 +154,12 @@ bool cDBusMessageDispatcher::Introspect(DBusMessage *msg, cString &Data)
   return false;
 }
 
-void cDBusMessageDispatcher::Stop()
+void cDBusMessageDispatcher::Stop(eBusType type)
 {
-  for (cDBusMessageDispatcher *d = _dispatcher.First(); d; d = _dispatcher.Next(d))
-      d->OnStop();
+  for (cDBusMessageDispatcher *d = _dispatcher.First(); d; d = _dispatcher.Next(d)) {
+      if (d->_busType == type)
+         d->OnStop();
+      }
 }
 
 void cDBusMessageDispatcher::Shutdown(void)
@@ -155,8 +168,9 @@ void cDBusMessageDispatcher::Shutdown(void)
   _dispatcher.Clear();
 }
 
-cDBusMessageDispatcher::cDBusMessageDispatcher(const char *interface)
-:_interface(interface)
+cDBusMessageDispatcher::cDBusMessageDispatcher(eBusType busType, const char *interface)
+:_busType(busType)
+,_interface(interface)
 {
   isyslog("dbus2vdr: new message dispatcher for interface %s", _interface);
   _dispatcher.Add(this);

@@ -1,6 +1,8 @@
 #ifndef __DBUS2VDR_MESSAGE_H
 #define __DBUS2VDR_MESSAGE_H
 
+#include "common.h"
+
 #include <dbus/dbus.h>
 
 #include <vdr/thread.h>
@@ -10,6 +12,7 @@
 class cDBusMessage;
 class cDBusMessageDispatcher;
 class cDBusMessageHandler;
+class cDBusMonitor;
 
 typedef void (*cDBusMessageActionFunc)(DBusConnection* conn, DBusMessage* msg);
 
@@ -32,6 +35,7 @@ class cDBusMessageDispatcher : public cListObject
 private:
   static cList<cDBusMessageDispatcher> _dispatcher;
 
+  eBusType    _busType;
   const char *_interface;
   cStringList _paths;
   cList<cDBusMessageAction> _actions;
@@ -45,12 +49,12 @@ protected:
   virtual void          OnStop(void) {}
 
 public:
-  static bool Dispatch(DBusConnection* conn, DBusMessage* msg);
+  static bool Dispatch(cDBusMonitor *monitor, DBusConnection* conn, DBusMessage* msg);
   static bool Introspect(DBusMessage *msg, cString &Data);
-  static void Stop(void);
+  static void Stop(eBusType type);
   static void Shutdown(void);
 
-  cDBusMessageDispatcher(const char *interface);
+  cDBusMessageDispatcher(eBusType busType, const char *interface);
   virtual ~cDBusMessageDispatcher(void);
 };
 

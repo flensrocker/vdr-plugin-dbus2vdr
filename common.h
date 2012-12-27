@@ -13,4 +13,6 @@
 #define DBUS_VDR_SKIN_INTERFACE       DBUS_VDR_BUSNAME".skin"
 #define DBUS_VDR_TIMER_INTERFACE      DBUS_VDR_BUSNAME".timer"
 
+enum eBusType { busSystem = 0, busNetwork = 1};
+
 #endif

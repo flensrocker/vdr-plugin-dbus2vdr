@@ -20,7 +20,7 @@ VERSION = $(shell grep 'static const char \*VERSION *=' $(PLUGIN).c | awk '{ pri
 ### The C++ compiler and options:
 
 CXX      ?= g++
-CXXFLAGS ?= -g -O3 -Wall -Woverloaded-virtual -Wno-parentheses
+CXXFLAGS ?= -g -O3 -Wall -Werror=overloaded-virtual -Wno-parentheses
 CXXADD   += `pkg-config --cflags dbus-1` `libpng-config --cflags`
 LDADD    += `pkg-config --libs dbus-1` `libpng-config --ldflags`
 
@@ -32,7 +32,7 @@ TMPDIR ?= /tmp
 
 ### Make sure that necessary options are included:
 
-include $(VDRDIR)/Make.global
+-include $(VDRDIR)/Make.global
 
 ### Allow user defined options to overwrite defaults:
 
@@ -122,4 +122,3 @@ dist: $(I18Npo) clean
 
 clean:
 	@-rm -f $(OBJS) $(SWOBJS) shutdown-wrapper $(DEPFILE) *.so *.tgz core* *~ $(PODIR)/*.mo $(PODIR)/*.pot
-
