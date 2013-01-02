@@ -1,4 +1,9 @@
 #!/bin/sh
 
 chmod +s /usr/share/vdr-plugin-dbus2vdr/shutdown-wrapper
+mkdir -p /var/lib/vdr/plugins/dbus2vdr
+chown vdr.vdr /var/lib/vdr/plugins/dbus2vdr
+chown vdr.vdr /var/lib/vdr/plugins/dbus2vdr/*
+chmod 755 /var/lib/vdr/plugins/dbus2vdr
+chmod 644 /var/lib/vdr/plugins/dbus2vdr/*
 
