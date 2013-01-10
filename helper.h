@@ -15,6 +15,8 @@ private:
 
 public:
   static void SetConfigDirectory(const char *configDir) { _pluginConfigDir = configDir; };
+  static bool IsValidUtf8(const char *text);
+  static void ToUtf8(cString &text);
   static void AddArg(DBusMessageIter &args, int type, const void *value);
   static void AddKeyValue(DBusMessageIter &array, const char *key, int type, const char *vtype, void *value);
 

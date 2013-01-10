@@ -8,6 +8,61 @@
 
 cString  cDBusHelper::_pluginConfigDir;
 
+bool cDBusHelper::IsValidUtf8(const char *text)
+{
+  int na = 0;
+  int nb = 0;
+  const char *c;
+  
+  for (c = text; *c; c += (nb + 1)) {
+      if ((*c & 0x80) == 0x00)
+         nb = 0;
+      else if ((*c & 0xc0) == 0x80)
+         return false;
+      else if ((*c & 0xe0) == 0xc0)
+         nb = 1;
+      else if ((*c & 0xf0) == 0xe0)
+         nb = 2;
+      else if ((*c & 0xf8) == 0xf0)
+         nb = 3;
+      else if ((*c & 0xfc) == 0xf8)
+         nb = 4;
+      else if ((*c & 0xfe) == 0xfc)
+         nb = 5;
+      for (na = 1; *(c + na) && (na <= nb); na++) {
+          if ((*(c + na) & 0xc0) != 0x80)
+             return false;
+          }
+      }
+  return true;
+}
+
+void cDBusHelper::ToUtf8(cString &text)
+{
+  if ((cCharSetConv::SystemCharacterTable() == NULL) || (strcmp(cCharSetConv::SystemCharacterTable(), "UTF-8") == 0)) {
+     if (!cDBusHelper::IsValidUtf8(*text)) {
+        static const char *fromCharSet = "ISO6937";
+        static const char *charSetOverride = getenv("VDR_CHARSET_OVERRIDE");
+        if (charSetOverride)
+           fromCharSet = charSetOverride;
+        dsyslog("dbus2vdr: ToUtf8: create charset converter from %s to UTF-8", fromCharSet);
+        static cCharSetConv converter(fromCharSet);
+        static cMutex mutex;
+        mutex.Lock();
+        text = converter.Convert(*text);
+        mutex.Unlock();
+        }
+     }
+  else {
+     dsyslog("dbus2vdr: ToUtf8: create charset converter to UTF-8");
+     static cCharSetConv converter(NULL, "UTF-8");
+     static cMutex mutex;
+     mutex.Lock();
+     text = converter.Convert(*text);
+     mutex.Unlock();
+     }
+}
+
 void cDBusHelper::AddArg(DBusMessageIter &args, int type, const void *value)
 {
   if (value == NULL)
