@@ -23,6 +23,7 @@ private:
        int len = strlen(*text);
        if ((len > 0) && ((*text)[len - 1] == '\n'))
           text.Truncate(-1);
+       cDBusHelper::ToUtf8(text);
        const char *line = *text;
        cDBusHelper::AddArg(struc, DBUS_TYPE_STRING, &line);
        if (!dbus_message_iter_close_container(&args, &struc))
@@ -30,6 +31,55 @@ private:
        }
   }
 public:
+  static void Count(DBusConnection* conn, DBusMessage* msg)
+  {
+    DBusMessage *reply = dbus_message_new_method_return(msg);
+    DBusMessageIter replyArgs;
+    dbus_message_iter_init_append(reply, &replyArgs);
+
+    dbus_int32_t count = Channels.Count();
+    cDBusHelper::AddArg(replyArgs, DBUS_TYPE_INT32, &count);
+
+    dbus_uint32_t serial = 0;
+    if (!dbus_connection_send(conn, reply, &serial))
+       esyslog("dbus2vdr: %s.List: out of memory while sending the reply", DBUS_VDR_CHANNEL_INTERFACE);
+    dbus_message_unref(reply);
+  }
+
+  static void GetFromTo(DBusConnection* conn, DBusMessage* msg)
+  {
+    dbus_int32_t from_index = -1;
+    dbus_int32_t to_index = -1;
+    DBusMessageIter args;
+    if (dbus_message_iter_init(msg, &args)) {
+       if (cDBusHelper::GetNextArg(args, DBUS_TYPE_INT32, &from_index) >= 0)
+          cDBusHelper::GetNextArg(args, DBUS_TYPE_INT32, &to_index);
+       }
+    if (to_index < from_index)
+       to_index = from_index;
+
+    DBusMessage *reply = dbus_message_new_method_return(msg);
+    DBusMessageIter replyArgs;
+    dbus_message_iter_init_append(reply, &replyArgs);
+    DBusMessageIter array;
+    if (!dbus_message_iter_open_container(&replyArgs, DBUS_TYPE_ARRAY, "(is)", &array))
+       esyslog("dbus2vdr: %s.List: can't open array container", DBUS_VDR_CHANNEL_INTERFACE);
+
+    cChannel *c = Channels.Get(from_index);
+    while ((c != NULL) && (to_index >= from_index)) {
+       AddChannel(array, c);
+       c = Channels.Next(c);
+       to_index--;
+       }
+    if (!dbus_message_iter_close_container(&replyArgs, &array))
+       esyslog("dbus2vdr: %s.List: can't close array container", DBUS_VDR_CHANNEL_INTERFACE);
+
+    dbus_uint32_t serial = 0;
+    if (!dbus_connection_send(conn, reply, &serial))
+       esyslog("dbus2vdr: %s.List: out of memory while sending the reply", DBUS_VDR_CHANNEL_INTERFACE);
+    dbus_message_unref(reply);
+  }
+
   static void List(DBusConnection* conn, DBusMessage* msg)
   {
     const char *option = NULL;
@@ -113,6 +163,8 @@ cDBusDispatcherChannel::cDBusDispatcherChannel(void)
 :cDBusMessageDispatcher(busSystem, DBUS_VDR_CHANNEL_INTERFACE)
 {
   AddPath("/Channels");
+  AddAction("Count", cDBusChannelActions::Count);
+  AddAction("GetFromTo", cDBusChannelActions::GetFromTo);
   AddAction("List", cDBusChannelActions::List);
 }
 
@@ -129,6 +181,14 @@ bool          cDBusDispatcherChannel::OnIntrospect(DBusMessage *msg, cString &Da
   "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
   "<node>\n"
   "  <interface name=\""DBUS_VDR_CHANNEL_INTERFACE"\">\n"
+  "    <method name=\"Count\">\n"
+  "      <arg name=\"count\"        type=\"i\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"GetFromTo\">\n"
+  "      <arg name=\"from_index\"   type=\"i\" direction=\"in\"/>\n"
+  "      <arg name=\"to_index\"     type=\"i\" direction=\"in\"/>\n"
+  "      <arg name=\"channel\"      type=\"a(is)\" direction=\"out\"/>\n"
+  "    </method>\n"
   "    <method name=\"List\">\n"
   "      <arg name=\"option\"       type=\"s\" direction=\"in\"/>\n"
   "      <arg name=\"channel\"      type=\"a(is)\" direction=\"out\"/>\n"
