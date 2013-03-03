@@ -5,10 +5,10 @@ msgid ""
 msgstr ""
 "Project-Id-Version: vdr-dbus2vdr 0.0.3e\n"
 "Report-Msgid-Bugs-To: <see README>\n"
-"POT-Creation-Date: 2012-01-25 22:06+0100\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
+"POT-Creation-Date: 2013-01-23 22:18+0100\n"
+"PO-Revision-Date: 2013-01-23 22:18+0100\n"
+"Last-Translator: Lars Hanisch <dvb@flensrocker.de>\n"
+"Language-Team: German <vdr@linuxtv.org>\n"
 "Language: German\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -16,3 +16,36 @@ msgstr ""
 
 msgid "control vdr via D-Bus"
 msgstr "Steuerung des VDR über D-Bus"
+
+#. TRANSLATORS: The name of the language, as written natively
+msgid "LanguageName$English"
+msgstr "Deutsch"
+
+#. TRANSLATORS: The 3-letter code of the language
+msgid "LanguageCode$eng"
+msgstr "deu"
+
+#. TRANSLATORS: abbreviated weekdays, beginning with monday (must all be 3 letters!)
+msgid "MonTueWedThuFriSatSun"
+msgstr "MonDieMitDonFreSamSon"
+
+msgid "Monday"
+msgstr "Montag"
+
+msgid "Tuesday"
+msgstr "Dienstag"
+
+msgid "Wednesday"
+msgstr "Mittwoch"
+
+msgid "Thursday"
+msgstr "Donnerstag"
+
+msgid "Friday"
+msgstr "Freitag"
+
+msgid "Saturday"
+msgstr "Samstag"
+
+msgid "Sunday"
+msgstr "Sonntag"
