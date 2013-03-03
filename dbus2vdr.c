@@ -26,7 +26,7 @@
 #include <vdr/osdbase.h>
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "3";
+static const char *VERSION        = "4";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -163,6 +163,8 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
 bool cPluginDbus2vdr::Initialize(void)
 {
   // Initialize any background activities the plugin shall perform.
+  if (!dbus_threads_init_default())
+     esyslog("dbus2vdr: dbus_threads_init_default returns an error - not good!");
   cDBusDispatcherShutdown::StartupTime = time(NULL);
   return true;
 }

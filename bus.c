@@ -9,8 +9,6 @@ cDBusBus::cDBusBus(const char *name, const char *busname)
  ,_conn(NULL)
 {
   dbus_error_init(&_err);
-  if (!dbus_threads_init_default())
-     esyslog("dbus2vdr: bus %s: dbus_threads_init_default returns an error - not good!", name);
 }
 
 cDBusBus::~cDBusBus(void)
