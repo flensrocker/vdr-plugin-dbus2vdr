@@ -1,22 +1,13 @@
 #!/usr/bin/make -f
 
-include /usr/share/cdbs/1/rules/debhelper.mk
-
-DEB_INSTALL_CHANGELOGS_ALL = HISTORY
-
-MAKE_OPTIONS = DVBDIR=/usr VDRDIR=/usr/include/vdr LIBDIR=. \
-               LOCALEDIR=debian/tmp/usr/share/locale
-
-common-build-arch::
-	$(MAKE) all $(MAKE_OPTIONS)
-
-cleanbuilddir::
-	$(MAKE) -o .dependencies clean $(MAKE_OPTIONS)
-	rm -f libvdr-*.so.*
-
-common-binary-predeb-arch::
-	sh /usr/share/vdr-dev/dependencies.sh
+.PHONY: override_dh_strip override_dh_auto_install
 
 override_dh_strip:
 	dh_strip --dbg-package=vdr-plugin-dbus2vdr-dbg
+
+override_dh_auto_install:
+	dh_auto_install --destdir=debian/vdr-plugin-dbus2vdr
+
+%:
+	dh $@
 
