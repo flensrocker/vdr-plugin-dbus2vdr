@@ -19,6 +19,8 @@ VERSION = $(shell grep 'static const char \*VERSION *=' $(PLUGIN).c | awk '{ pri
 PKGCFG = $(if $(VDRDIR),$(shell pkg-config --variable=$(1) $(VDRDIR)/vdr.pc),$(shell pkg-config --variable=$(1) vdr || pkg-config --variable=$(1) ../../../vdr.pc))
 LIBDIR = $(call PKGCFG,libdir)
 LOCDIR = $(call PKGCFG,locdir)
+CONFDIR = $(call PKGCFG,configdir)
+PLGCONFDIR = $(CONFDIR)/plugins/$(PLUGIN)
 PLGCFG = $(call PKGCFG,plgcfg)
 #
 TMPDIR ?= /tmp
@@ -112,7 +114,14 @@ $(SOFILE): $(OBJS) shutdown-wrapper
 install-lib: $(SOFILE)
 	install -D $^ $(DESTDIR)$(LIBDIR)/$^.$(APIVERSION)
 
-install: install-lib install-i18n
+install-cfg: shutdown-wrapper
+	install -D etc/dbus2vdr.conf $(DESTDIR)/etc/init/dbus2vdr.conf
+	install -D etc/de.tvdr.vdr.conf $(DESTDIR)/etc/dbus-1/system.d/de.tvdr.vdr.conf
+	install -D etc/network.conf $(DESTDIR)$(PLGCONFDIR)/network.conf
+	install -D bin/vdr-dbus-send.sh $(DESTDIR)/usr/share/vdr-plugin-dbus2vdr/vdr-dbus-send.sh
+	install -D shutdown-wrapper $(DESTDIR)/usr/share/vdr-plugin-dbus2vdr/shutdown-wrapper
+
+install: install-lib install-i18n install-cfg
 
 dist: $(I18Npo) clean
 	@-rm -rf $(TMPDIR)/$(ARCHIVE)
