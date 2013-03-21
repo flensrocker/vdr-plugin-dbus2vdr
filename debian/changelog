@@ -1,3 +1,9 @@
+vdr-plugin-dbus2vdr (6-2yavdr0~precise) precise; urgency=medium
+
+  * remove dbus-activation
+
+ -- Lars Hanisch <dvb@flensrocker.de>  Thu, 21 Mar 2013 12:59:16 +0100
+
 vdr-plugin-dbus2vdr (6-1yavdr0~precise) precise; urgency=medium
 
   * rebuild for vdr 1.7.40
