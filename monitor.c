@@ -21,8 +21,18 @@ cDBusMonitor::cDBusMonitor(cDBusBus *bus, eBusType type)
   _started = false;
   _nameAcquired = false;
   Start();
-  while (!_started)
+  time_t start = time(NULL);
+  while (!_started && !_nameAcquired) {
+        if ((time(NULL) - start) > 5) { // 5 seconds timeout
+           esyslog("dbus2vdr: monitor %d has not been started or connected fast enough...", type);
+           break;
+           }
+        if (!_started)
+           isyslog("dbus2vdr: wait for monitor %d to start", type);
+        else if (!_nameAcquired)
+           isyslog("dbus2vdr: wait for monitor %d to connect", type);
         cCondWait::SleepMs(10);
+        }
 }
 
 cDBusMonitor::~cDBusMonitor(void)
