@@ -4,6 +4,7 @@
 
 #include <vdr/menu.h>
 #include <vdr/recording.h>
+#include <vdr/videodir.h>
 
 
 class cDBusRecordingActions
@@ -282,6 +283,136 @@ public:
        }
     cDBusHelper::SendReply(conn, msg, replyCode, *replyMessage);
   };
+
+  static void AddExtraVideoDirectory(DBusConnection* conn, DBusMessage* msg)
+  {
+    int replyCode = 500;
+    cString replyMessage = "Missing extra-video-directories patch";
+#ifdef EXTRA_VIDEO_DIRECTORIES_PATCH
+    const char *Option = NULL;
+    DBusMessageIter args;
+    if (dbus_message_iter_init(msg, &args))
+       cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &Option);
+
+    if (*Option) {
+       if (!LockExtraVideoDirectories(false)) {
+          replyCode = 550;
+          replyMessage = "Unable to lock extra video directory list";
+          cDBusHelper::SendReply(conn, msg, replyCode, *replyMessage);
+          return;
+          }
+       ::AddExtraVideoDirectory(Option);
+       UnlockExtraVideoDirectories();
+       replyCode = 250;
+       replyMessage = cString::sprintf("added '%s' to extra video directory list", Option);
+       cDBusHelper::SendReply(conn, msg, replyCode, *replyMessage);
+       return;
+       }
+    replyCode = 501;
+    replyMessage = "Missing directory name";
+#endif
+    cDBusHelper::SendReply(conn, msg, replyCode, *replyMessage);
+  };
+
+  static void ClearExtraVideoDirectories(DBusConnection* conn, DBusMessage* msg)
+  {
+    int replyCode = 500;
+    cString replyMessage = "Missing extra-video-directories patch";
+#ifdef EXTRA_VIDEO_DIRECTORIES_PATCH
+    if (!LockExtraVideoDirectories(false)) {
+       replyCode = 550;
+       replyMessage = "Unable to lock extra video directory list";
+       cDBusHelper::SendReply(conn, msg, replyCode, *replyMessage);
+       return;
+       }
+    ExtraVideoDirectories.Clear();
+    UnlockExtraVideoDirectories();
+    replyCode = 250;
+    replyMessage = "cleared extra video directory list";
+#endif
+    cDBusHelper::SendReply(conn, msg, replyCode, *replyMessage);
+  };
+
+  static void DeleteExtraVideoDirectory(DBusConnection* conn, DBusMessage* msg)
+  {
+    int replyCode = 500;
+    cString replyMessage = "Missing extra-video-directories patch";
+#ifdef EXTRA_VIDEO_DIRECTORIES_PATCH
+    const char *Option = NULL;
+    DBusMessageIter args;
+    if (dbus_message_iter_init(msg, &args))
+       cDBusHelper::GetNextArg(args, DBUS_TYPE_STRING, &Option);
+
+    if (*Option) {
+       if (!LockExtraVideoDirectories(false)) {
+          replyCode = 550;
+          replyMessage = "Unable to lock extra video directory list";
+          cDBusHelper::SendReply(conn, msg, replyCode, *replyMessage);
+          return;
+          }
+       DelExtraVideoDirectory(Option);
+       UnlockExtraVideoDirectories();
+       replyCode = 250;
+       replyMessage = cString::sprintf("removed '%s' from extra video directory list", Option);
+       cDBusHelper::SendReply(conn, msg, replyCode, *replyMessage);
+       return;
+       }
+    replyCode= 501;
+    replyMessage = "Missing directory name";
+#endif
+    cDBusHelper::SendReply(conn, msg, replyCode, *replyMessage);
+  };
+
+  static void ListExtraVideoDirectories(DBusConnection* conn, DBusMessage* msg)
+  {
+    int replyCode = 500;
+    cString replyMessage = "Missing extra-video-directories patch";
+    cStringList dirs;
+#ifdef EXTRA_VIDEO_DIRECTORIES_PATCH
+    if (!LockExtraVideoDirectories(false)) {
+       replyCode = 550;
+       replyMessage = "Unable to lock extra video directory list";
+       }
+    else {
+       if (ExtraVideoDirectories.Size() == 0) {
+          replyCode = 550;
+          replyMessage = "no extra video directories in list";
+          }
+       else {
+          replyCode = 250;
+          replyMessage = "";
+          for (int i = 0; i < ExtraVideoDirectories.Size(); i++)
+              dirs.Append(strdup(ExtraVideoDirectories.At(i)));
+          }
+       UnlockExtraVideoDirectories();
+       }
+#endif
+    DBusMessage *reply = dbus_message_new_method_return(msg);
+    DBusMessageIter args;
+    dbus_message_iter_init_append(reply, &args);
+
+    if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &replyCode))
+       esyslog("dbus2vdr: %s.ListExtraVideoDirectories: out of memory while appending the return-code", DBUS_VDR_RECORDING_INTERFACE);
+
+    const char *rMsg = *replyMessage;
+    if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &rMsg))
+       esyslog("dbus2vdr: %s.ListExtraVideoDirectories: out of memory while appending the reply-message", DBUS_VDR_RECORDING_INTERFACE);
+
+    DBusMessageIter array;
+    if (!dbus_message_iter_open_container(&args, DBUS_TYPE_ARRAY, "s", &array))
+       esyslog("dbus2vdr: %s.ListExtraVideoDirectories: can't open array container", DBUS_VDR_RECORDING_INTERFACE);
+    else {
+       for (int i = 0; i < dirs.Size(); i++) {
+           const char *dir = dirs.At(i);
+           if (!dbus_message_iter_append_basic(&array, DBUS_TYPE_STRING, &dir))
+              esyslog("dbus2vdr: %s.ListExtraVideoDirectories: out of memory while appending the directory %s", DBUS_VDR_RECORDING_INTERFACE, dir);
+           }
+       if (!dbus_message_iter_close_container(&args, &array))
+          esyslog("dbus2vdr: %s.ListExtraVideoDirectories: can't close array container", DBUS_VDR_RECORDING_INTERFACE);
+       }
+
+    cDBusHelper::SendReply(conn, reply);
+  };
 };
 
 cRecordings cDBusRecordingActions::recordings;
@@ -294,6 +425,7 @@ cDBusDispatcherRecordingConst::cDBusDispatcherRecordingConst(eBusType type)
   AddPath("/Recordings");
   AddAction("Get", cDBusRecordingActions::Get);
   AddAction("List", cDBusRecordingActions::List);
+  AddAction("ListExtraVideoDirectories", cDBusRecordingActions::ListExtraVideoDirectories);
 }
 
 cDBusDispatcherRecordingConst::~cDBusDispatcherRecordingConst(void)
@@ -317,6 +449,11 @@ bool          cDBusDispatcherRecordingConst::OnIntrospect(DBusMessage *msg, cStr
   "    <method name=\"List\">\n"
   "      <arg name=\"recordings\"   type=\"a(ia(sv))\" direction=\"out\"/>\n"
   "    </method>\n"
+  "    <method name=\"ListExtraVideoDirectories\">\n"
+  "      <arg name=\"replycode\"      type=\"i\"  direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\"   type=\"s\"  direction=\"out\"/>\n"
+  "      <arg name=\"extravideodirs\" type=\"as\" direction=\"out\"/>\n"
+  "    </method>\n"
   "  </interface>\n"
   "</node>\n";
   return true;
@@ -328,6 +465,9 @@ cDBusDispatcherRecording::cDBusDispatcherRecording(void)
 {
   AddAction("Update", cDBusRecordingActions::Update);
   AddAction("Play", cDBusRecordingActions::Play);
+  AddAction("AddExtraVideoDirectory", cDBusRecordingActions::AddExtraVideoDirectory);
+  AddAction("ClearExtraVideoDirectories", cDBusRecordingActions::ClearExtraVideoDirectories);
+  AddAction("DeleteExtraVideoDirectory", cDBusRecordingActions::DeleteExtraVideoDirectory);
 }
 
 cDBusDispatcherRecording::~cDBusDispatcherRecording(void)
@@ -361,6 +501,25 @@ bool          cDBusDispatcherRecording::OnIntrospect(DBusMessage *msg, cString &
   "      <arg name=\"begin\"          type=\"v\" direction=\"in\"/>\n"
   "      <arg name=\"replycode\"      type=\"i\" direction=\"out\"/>\n"
   "      <arg name=\"replymessage\"   type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"AddExtraVideoDirectory\">\n"
+  "      <arg name=\"option\"       type=\"s\" direction=\"in\"/>\n"
+  "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"ClearExtraVideoDirectories\">\n"
+  "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"DeleteExtraVideoDirectory\">\n"
+  "      <arg name=\"option\"       type=\"s\" direction=\"in\"/>\n"
+  "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"ListExtraVideoDirectories\">\n"
+  "      <arg name=\"replycode\"      type=\"i\"  direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\"   type=\"s\"  direction=\"out\"/>\n"
+  "      <arg name=\"extravideodirs\" type=\"as\" direction=\"out\"/>\n"
   "    </method>\n"
   "  </interface>\n"
   "</node>\n";
