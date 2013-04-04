@@ -1,3 +1,9 @@
+vdr-plugin-dbus2vdr (8-0yavdr0~precise) precise; urgency=medium
+
+  * add support for extra-video-directories patch
+
+ -- Lars Hanisch <dvb@flensrocker.de>  Thu, 04 Apr 2013 02:14:06 +0200
+
 vdr-plugin-dbus2vdr (7-0yavdr0~precise) precise; urgency=medium
 
   * new upstream release
