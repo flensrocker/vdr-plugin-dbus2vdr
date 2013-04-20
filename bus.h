@@ -20,6 +20,7 @@ protected:
 
   virtual DBusConnection *GetConnection(void) = 0;
   virtual void OnConnect(void) {}
+  virtual void OnDisconnect(DBusConnection *conn) {}
 
 public:
   cDBusBus(const char *name, const char *busname);
@@ -29,14 +30,14 @@ public:
   const char *Busname(void) const { return *_busname; }
 
   DBusConnection*  Connect(void);
-
-  virtual bool  Disconnect(void);
+  bool  Disconnect(void);
 };
 
 class cDBusSystemBus : public cDBusBus
 {
 protected:
   virtual DBusConnection *GetConnection(void);
+  virtual void OnDisconnect(DBusConnection *conn);
 
 public:
   cDBusSystemBus(const char *busname);
@@ -77,12 +78,11 @@ private:
 protected:
   virtual DBusConnection *GetConnection(void);
   virtual void OnConnect(void);
+  virtual void OnDisconnect(DBusConnection *conn);
 
 public:
   cDBusNetworkBus(const char *busname);
   virtual ~cDBusNetworkBus(void);
-
-  virtual bool  Disconnect(void);
 };
 
 #endif

@@ -51,6 +51,7 @@ bool  cDBusBus::Disconnect(void)
 {
   if (_conn == NULL)
      return false;
+  OnDisconnect(_conn);
   dbus_connection_unref(_conn);
   _conn = NULL;
   return true;
@@ -68,7 +69,12 @@ cDBusSystemBus::~cDBusSystemBus(void)
 
 DBusConnection*  cDBusSystemBus::GetConnection(void)
 {
-  return dbus_bus_get(DBUS_BUS_SYSTEM, &_err);
+  return dbus_bus_get_private(DBUS_BUS_SYSTEM, &_err);
+}
+
+void cDBusSystemBus::OnDisconnect(DBusConnection *conn)
+{
+  dbus_connection_close(conn);
 }
 
 
@@ -120,7 +126,7 @@ void cDBusNetworkBus::OnConnect(void)
      }
 }
 
-bool cDBusNetworkBus::Disconnect(void)
+void cDBusNetworkBus::OnDisconnect(DBusConnection *conn)
 {
   if ((_avahi4vdr != NULL) && (*_avahi_id != NULL)) {
      int replyCode = 0;
@@ -128,5 +134,4 @@ bool cDBusNetworkBus::Disconnect(void)
      dsyslog("dbus2vdr: network bus deleted avahi service (id %s)", *_avahi_id);
      _avahi_id = NULL;
      }
-  return cDBusBus::Disconnect();
 }
