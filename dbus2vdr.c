@@ -9,6 +9,8 @@
 #include <getopt.h>
 #include <signal.h>
 
+#include <glib-object.h>
+
 #include "common.h"
 #include "channel.h"
 #include "epg.h"
@@ -68,6 +70,7 @@ cPluginDbus2vdr::cPluginDbus2vdr(void)
   enable_osd = false;
   send_upstart_signals = -1;
   enable_network = false;
+  g_type_init();
 }
 
 cPluginDbus2vdr::~cPluginDbus2vdr()

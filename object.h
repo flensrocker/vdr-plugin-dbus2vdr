@@ -4,12 +4,14 @@
 #include <gio/gio.h>
 
 #include <vdr/thread.h>
+#include <vdr/tools.h>
 
 
-class cDBusObject : public cThread
+class cDBusConnection;
+
+class cDBusObject : public cListObject
 {
 private:
-  // wrapper fundtions for GMainLoop calls
   static void      handle_method_call(GDBusConnection       *connection,
                                       const gchar           *sender,
                                       const gchar           *object_path,
@@ -18,6 +20,41 @@ private:
                                       GVariant              *parameters,
                                       GDBusMethodInvocation *invocation,
                                       gpointer               user_data);
+
+  gchar           *_path;
+  GDBusNodeInfo   *_introspection_data;
+  guint            _registration_id;
+  cDBusConnection *_connection;
+
+  static const GDBusInterfaceVTable _interface_vtable;
+  
+protected:
+
+public:
+  cDBusObject(const char *Path);
+  virtual ~cDBusObject(void);
+
+  const gchar  *Path(void) const { return _path; };
+
+  void  SetConnection(cDBusConnection *Connection) { _connection = Connection; };
+  void  Register(void);
+  void  Unregister(void);
+
+  virtual const gchar  *XmlNodeInfo(void) const;
+  virtual void  HandleMethodCall(GDBusConnection       *connection,
+                                 const gchar           *sender,
+                                 const gchar           *object_path,
+                                 const gchar           *interface_name,
+                                 const gchar           *method_name,
+                                 GVariant              *parameters,
+                                 GDBusMethodInvocation *invocation);
+};
+
+
+class cDBusConnection : public cThread
+{
+private:
+  // wrapper functions for GMainLoop calls
   static void      on_name_acquired(GDBusConnection *connection,
                                     const gchar     *name,
                                     gpointer         user_data);
@@ -35,43 +72,36 @@ private:
                             gpointer user_data);
   static gboolean  do_flush(gpointer user_data);
 
-  static const GDBusInterfaceVTable _interface_vtable;
-  
   gchar           *_busname;
-  gchar           *_path;
+  GBusType         _bus_type;
+  gchar           *_bus_address;
   GMainContext    *_context;
   GMainLoop       *_loop;
-  GDBusNodeInfo   *_introspection_data;
   GDBusConnection *_connection;
   guint            _owner_id;
-  guint            _registration_id;
   gboolean         _reconnect;
   guint            _connect_status;
   guint            _disconnect_status;
 
+  cList<cDBusObject> _objects;
+
+  void  Init(const char *Busname);
   void  Connect(void);
   void  Disconnect(void);
-  void  RegisterObject(void);
-  void  UnregisterObject(void);
+  void  RegisterObjects(void);
+  void  UnregisterObjects(void);
 
 protected:
-  virtual const gchar  *NodeInfo(void) = 0;
-  const gchar  *Busname(void) const { return _busname; };
-  const gchar  *Path(void) const { return _path; };
-
   virtual void  Action(void);
-  virtual void  HandleMethodCall(GDBusConnection       *connection,
-                                 const gchar           *sender,
-                                 const gchar           *object_path,
-                                 const gchar           *interface_name,
-                                 const gchar           *method_name,
-                                 GVariant              *parameters,
-                                 GDBusMethodInvocation *invocation);
 
 public:
-  cDBusObject(const char *Busname, const char *Path);
-  virtual ~cDBusObject(void);
+  cDBusConnection(const char *Busname, GBusType  Type);
+  cDBusConnection(const char *Busname, const char *Address);
+  virtual ~cDBusConnection(void);
 
+  GDBusConnection *GetConnection(void) const { return _connection; };
+
+  void  AddObject(cDBusObject *Object);
   bool  StartMessageHandler(void);
   void  StopMessageHandler(void);
 };
