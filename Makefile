@@ -28,8 +28,8 @@ TMPDIR ?= /tmp
 ### The compiler options:
 
 export CFLAGS   = $(call PKGCFG,cflags)
-export CXXFLAGS = $(call PKGCFG,cxxflags) `pkg-config --cflags dbus-1` `libpng-config --cflags`
-export LDADD    += `pkg-config --libs dbus-1` `libpng-config --ldflags`
+export CXXFLAGS = $(call PKGCFG,cxxflags) $(shell pkg-config --cflags dbus-1 glib-2.0 gio-2.0) $(shell libpng-config --cflags)
+export LDADD    += $(shell pkg-config --libs dbus-1 glib-2.0 gio-2.0) $(shell libpng-config --ldflags)
 
 ### The version number of VDR's plugin API:
 
@@ -56,7 +56,7 @@ DEFINES += -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
 
 ### The object files (add further files here):
 
-OBJS = $(PLUGIN).o bus.o channel.o epg.o helper.o message.o monitor.o osd.o plugin.o recording.o remote.o setup.o shutdown.o skin.o timer.o
+OBJS = $(PLUGIN).o bus.o channel.o epg.o helper.o message.o monitor.o object.o osd.o plugin.o recording.o remote.o setup.o shutdown.o skin.o timer.o
 SWOBJS = libvdr-exitpipe.o libvdr-i18n.o libvdr-thread.o libvdr-tools.o shutdown-wrapper.o
 
 ### The main target:

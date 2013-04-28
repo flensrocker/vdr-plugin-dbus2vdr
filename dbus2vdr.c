@@ -26,7 +26,7 @@
 #include <vdr/osdbase.h>
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "9";
+static const char *VERSION        = "9-gdbus";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
