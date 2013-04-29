@@ -224,3 +224,6 @@ VDR Plugin 'dbus2vdr' Revision History
 2013-01-10: Version 2
 - add Count and GetFromTo to channel interface
 - add some Utf8 handling on channel interface
+
+2013-04-29: Version 10
+- add vdr interface for status signals

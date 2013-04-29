@@ -22,11 +22,12 @@
 #include "shutdown.h"
 #include "skin.h"
 #include "timer.h"
+#include "vdr.h"
 
 #include <vdr/osdbase.h>
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "9";
+static const char *VERSION        = "10";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -36,6 +37,7 @@ private:
   bool enable_osd;
   int  send_upstart_signals;
   bool enable_network;
+  bool first_main_thread;
 
 public:
   cPluginDbus2vdr(void);
@@ -68,6 +70,7 @@ cPluginDbus2vdr::cPluginDbus2vdr(void)
   enable_osd = false;
   send_upstart_signals = -1;
   enable_network = false;
+  first_main_thread = true;
 }
 
 cPluginDbus2vdr::~cPluginDbus2vdr()
@@ -183,6 +186,7 @@ bool cPluginDbus2vdr::Start(void)
   new cDBusDispatcherShutdown;
   new cDBusDispatcherSkin;
   new cDBusDispatcherTimer;
+  new cDBusDispatcherVdr;
   if (enable_network) {
      new cDBusDispatcherRecordingConst(busNetwork);
      new cDBusDispatcherTimerConst(busNetwork);
@@ -190,6 +194,9 @@ bool cPluginDbus2vdr::Start(void)
   cDBusMonitor::StartMonitor(enable_network);
   if (enable_osd)
      new cDBusOsdProvider();
+
+  cDBusDispatcherVdr::SetStatus(cDBusDispatcherVdr::statusStart);
+
   return true;
 }
 
@@ -200,6 +207,9 @@ void cPluginDbus2vdr::Stop(void)
      send_upstart_signals++;
      cDBusMonitor::SendUpstartSignal("stopped");
      }
+
+  cDBusDispatcherVdr::SetStatus(cDBusDispatcherVdr::statusStop);
+
   cDBusMonitor::StopUpstartSender();
   cDBusMonitor::StopMonitor();
   cDBusMessageDispatcher::Shutdown();
@@ -214,11 +224,17 @@ void cPluginDbus2vdr::MainThreadHook(void)
 {
   // Perform actions in the context of the main program thread.
   // WARNING: Use with great care - see PLUGINS.html!
-  if (send_upstart_signals == 0) {
-     send_upstart_signals++;
-     isyslog("dbus2vdr: raise SIGSTOP for Upstart");
-     raise(SIGSTOP);
-     cDBusMonitor::SendUpstartSignal("started");
+  if (first_main_thread) {
+     first_main_thread = false;
+
+     cDBusDispatcherVdr::SetStatus(cDBusDispatcherVdr::statusReady);
+
+     if (send_upstart_signals == 0) {
+        send_upstart_signals++;
+        isyslog("dbus2vdr: raise SIGSTOP for Upstart");
+        raise(SIGSTOP);
+        cDBusMonitor::SendUpstartSignal("started");
+        }
      }
 }
 
