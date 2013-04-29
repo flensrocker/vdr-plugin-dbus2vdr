@@ -35,12 +35,11 @@ private:
   void  Unregister(void);
 
 public:
-  cDBusObject(const char *Path);
+  cDBusObject(const char *Path, const char *XmlNodeInfo);
   virtual ~cDBusObject(void);
 
   const gchar  *Path(void) const { return _path; };
 
-  virtual const gchar  *XmlNodeInfo(void) const;
   virtual void  HandleMethodCall(GDBusConnection       *connection,
                                  const gchar           *sender,
                                  const gchar           *object_path,

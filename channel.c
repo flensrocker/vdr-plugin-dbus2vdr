@@ -199,3 +199,54 @@ bool          cDBusDispatcherChannel::OnIntrospect(DBusMessage *msg, cString &Da
   "</node>\n";
   return true;
 }
+
+
+const char *cDBusChannels::XmlNodeInfo = 
+  "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
+  "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
+  "<node>\n"
+  "  <interface name=\""DBUS_VDR_CHANNEL_INTERFACE"\">\n"
+  "    <method name=\"Count\">\n"
+  "      <arg name=\"count\"        type=\"i\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"GetFromTo\">\n"
+  "      <arg name=\"from_index\"   type=\"i\" direction=\"in\"/>\n"
+  "      <arg name=\"to_index\"     type=\"i\" direction=\"in\"/>\n"
+  "      <arg name=\"channel\"      type=\"a(is)\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "    <method name=\"List\">\n"
+  "      <arg name=\"option\"       type=\"s\" direction=\"in\"/>\n"
+  "      <arg name=\"channel\"      type=\"a(is)\" direction=\"out\"/>\n"
+  "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
+  "  </interface>\n"
+  "</node>\n";
+
+cDBusChannels::cDBusChannels(void)
+:cDBusObject("/Channels", XmlNodeInfo)
+{
+}
+
+cDBusChannels::~cDBusChannels(void)
+{
+}
+
+void  cDBusChannels::HandleMethodCall(GDBusConnection       *connection,
+                                      const gchar           *sender,
+                                      const gchar           *object_path,
+                                      const gchar           *interface_name,
+                                      const gchar           *method_name,
+                                      GVariant              *parameters,
+                                      GDBusMethodInvocation *invocation)
+{
+  if (g_strcmp0(method_name, "Count") == 0) {
+     g_dbus_method_invocation_return_value(invocation, g_variant_new_int32(Channels.Count()));
+     }
+  else if (g_strcmp0(method_name, "GetFromTo") == 0) {
+     cDBusObject::HandleMethodCall(connection, sender, object_path, interface_name, method_name, parameters, invocation);
+     }
+  else if (g_strcmp0(method_name, "List") == 0) {
+     cDBusObject::HandleMethodCall(connection, sender, object_path, interface_name, method_name, parameters, invocation);
+     }
+}

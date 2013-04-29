@@ -12,6 +12,7 @@
 #include <glib-object.h>
 
 #include "common.h"
+#include "connection.h"
 #include "channel.h"
 #include "epg.h"
 #include "helper.h"
@@ -40,6 +41,10 @@ private:
   int  send_upstart_signals;
   bool enable_network;
   bool first_main_thread;
+
+  cDBusConnection *system_bus;
+  cDBusConnection *session_bus;
+  cDBusConnection *network_bus;
 
 public:
   cPluginDbus2vdr(void);
@@ -74,6 +79,9 @@ cPluginDbus2vdr::cPluginDbus2vdr(void)
   enable_network = false;
   first_main_thread = true;
   g_type_init();
+  system_bus = NULL;
+  session_bus = NULL;
+  network_bus = NULL;
 }
 
 cPluginDbus2vdr::~cPluginDbus2vdr()
@@ -179,6 +187,19 @@ bool cPluginDbus2vdr::Start(void)
 {
   cDBusHelper::SetConfigDirectory(cPlugin::ConfigDirectory("dbus2vdr"));
   // Start any background activities the plugin shall perform.
+
+  cString busname;
+#if VDRVERSNUM < 10704
+  busname = cString::sprintf("%s", DBUS_VDR_BUSNAME);
+#else
+  if (InstanceId > 0)
+     busname = cString::sprintf("%s%d", DBUS_VDR_BUSNAME, InstanceId);
+  else
+     busname = cString::sprintf("%s", DBUS_VDR_BUSNAME);
+#endif
+  session_bus = new cDBusConnection(*busname, G_BUS_TYPE_SESSION);
+  session_bus->AddObject(new cDBusChannels);
+  
   new cDBusDispatcherChannel;
   new cDBusDispatcherEpg;
   new cDBusDispatcherOsd;
@@ -195,6 +216,7 @@ bool cPluginDbus2vdr::Start(void)
      new cDBusDispatcherTimerConst(busNetwork);
      }
   cDBusMonitor::StartMonitor(enable_network);
+  
   if (enable_osd)
      new cDBusOsdProvider();
 
@@ -216,6 +238,19 @@ void cPluginDbus2vdr::Stop(void)
   cDBusMonitor::StopUpstartSender();
   cDBusMonitor::StopMonitor();
   cDBusMessageDispatcher::Shutdown();
+
+  if (network_bus != NULL) {
+     delete network_bus;
+     network_bus = NULL;
+     }
+  if (session_bus != NULL) {
+     delete session_bus;
+     session_bus = NULL;
+     }
+  if (system_bus != NULL) {
+     delete system_bus;
+     system_bus = NULL;
+     }
 }
 
 void cPluginDbus2vdr::Housekeeping(void)

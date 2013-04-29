@@ -18,14 +18,14 @@ void  cDBusObject::handle_method_call(GDBusConnection *connection, const gchar *
   obj->HandleMethodCall(connection, sender, object_path, interface_name, method_name, parameters, invocation);
 }
 
-cDBusObject::cDBusObject(const char *Path)
+cDBusObject::cDBusObject(const char *Path, const char *XmlNodeInfo)
 {
   _path = g_strdup(Path);
   _registration_id = 0;
   _connection = NULL;
 
   GError *err = NULL;
-  _introspection_data = g_dbus_node_info_new_for_xml(XmlNodeInfo(), &err);
+  _introspection_data = g_dbus_node_info_new_for_xml(XmlNodeInfo, &err);
   if (err != NULL) {
      esyslog("dbus2vdr: g_dbus_node_info_new_for_xml reports: %s", err->message);
      g_error_free(err);
@@ -62,11 +62,6 @@ void  cDBusObject::Unregister(void)
         g_dbus_connection_unregister_object(_connection->GetConnection(), _registration_id);
      _registration_id = 0;
      }
-}
-
-const gchar  *cDBusObject::XmlNodeInfo(void) const
-{
-  return NULL;
 }
 
 void  cDBusObject::HandleMethodCall(GDBusConnection       *connection,
