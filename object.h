@@ -101,9 +101,8 @@ public:
 
   GDBusConnection *GetConnection(void) const { return _connection; };
 
+  // must be called before "Start"
   void  AddObject(cDBusObject *Object);
-  bool  StartMessageHandler(void);
-  void  StopMessageHandler(void);
 };
 
 #endif

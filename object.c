@@ -96,7 +96,9 @@ cDBusConnection::cDBusConnection(const char *Busname, const char *Address)
 
 cDBusConnection::~cDBusConnection(void)
 {
-  StopMessageHandler();
+  Cancel(-1);
+  Disconnect();
+  Cancel(5);
 
   if (_busname != NULL) {
      g_free(_busname);
@@ -129,18 +131,6 @@ void  cDBusConnection::AddObject(cDBusObject *Object)
      Object->SetConnection(this);
      _objects.Add(Object);
      }
-}
-
-bool  cDBusConnection::StartMessageHandler(void)
-{
-  return Start();
-}
-
-void  cDBusConnection::StopMessageHandler(void)
-{
-  Cancel(-1);
-  Disconnect();
-  Cancel(5);
 }
 
 void  cDBusConnection::Action(void)
@@ -235,7 +225,7 @@ void  cDBusConnection::on_bus_get(GObject *source_object, GAsyncResult *res, gpo
      conn->RegisterObjects();
      conn->_owner_id = g_bus_own_name_on_connection(conn->_connection,
                                                     conn->_busname,
-                                                    G_BUS_NAME_OWNER_FLAGS_NONE,
+                                                    G_BUS_NAME_OWNER_FLAGS_REPLACE,
                                                     on_name_acquired,
                                                     on_name_lost,
                                                     user_data,
