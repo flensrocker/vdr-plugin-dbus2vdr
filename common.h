@@ -12,6 +12,7 @@
 #define DBUS_VDR_SHUTDOWN_INTERFACE   DBUS_VDR_BUSNAME".shutdown"
 #define DBUS_VDR_SKIN_INTERFACE       DBUS_VDR_BUSNAME".skin"
 #define DBUS_VDR_TIMER_INTERFACE      DBUS_VDR_BUSNAME".timer"
+#define DBUS_VDR_VDR_INTERFACE        DBUS_VDR_BUSNAME".vdr"
 
 enum eBusType { busSystem = 0, busNetwork = 1};
 

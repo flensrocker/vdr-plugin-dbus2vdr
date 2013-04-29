@@ -314,6 +314,22 @@ Interface "timer"
     uint64  stoptime in seconds since epoch (time_t format)
     string  title of the event
 
+Interface "vdr"
+-----------------
+- get status of vdr
+  vdr-dbus-send.sh /vdr vdr.Status
+
+  The following is returned:
+    string  "Start", "Ready", "Stop" or "Unknown"
+
+  Through the lifetime of dbus2vdr there are three signals which are sent
+  via this interface. The instance-id of the vdr is sent as the first
+  argument, type is int32.
+
+  "Start": is sent when cPlugin::Start is called
+  "Ready": is sent when cPlugin::MainThreadHook is called the first time
+  "Stop" : is sent when cPlugin::Stop is called
+
 Network
 -------
 If started with the parameter "--network" dbus2vdr expects a file
