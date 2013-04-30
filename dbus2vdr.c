@@ -199,8 +199,8 @@ bool cPluginDbus2vdr::Start(void)
 #endif
   session_bus = new cDBusConnection(*busname, G_BUS_TYPE_SESSION);
   session_bus->AddObject(new cDBusChannels);
+  session_bus->Start();
   
-  new cDBusDispatcherChannel;
   new cDBusDispatcherEpg;
   new cDBusDispatcherOsd;
   new cDBusDispatcherPlugin;

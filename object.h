@@ -8,6 +8,23 @@
 
 
 class cDBusConnection;
+class cDBusObject;
+
+typedef void (*cDBusMethodFunc)(GVariant *Parameters, GDBusMethodInvocation *Invocation);
+
+class cDBusMethod : public cListObject
+{
+private:
+  friend class cDBusObject;
+
+  const char *_name;
+  cDBusMethodFunc _method;
+
+  cDBusMethod(const char *Name, cDBusMethodFunc Method)
+   :_name(Name),_method(Method)
+  {
+  };
+};
 
 class cDBusObject : public cListObject
 {
@@ -23,16 +40,20 @@ private:
                                   GDBusMethodInvocation *invocation,
                                   gpointer               user_data);
 
-  gchar           *_path;
-  GDBusNodeInfo   *_introspection_data;
-  guint            _registration_id;
-  cDBusConnection *_connection;
+  gchar             *_path;
+  GDBusNodeInfo     *_introspection_data;
+  guint              _registration_id;
+  cDBusConnection   *_connection;
+  cList<cDBusMethod> _methods;
 
   static const GDBusInterfaceVTable _interface_vtable;
   
   void  SetConnection(cDBusConnection *Connection) { _connection = Connection; };
   void  Register(void);
   void  Unregister(void);
+
+protected:
+  void  AddMethod(const char *Name, cDBusMethodFunc Method);
 
 public:
   cDBusObject(const char *Path, const char *XmlNodeInfo);

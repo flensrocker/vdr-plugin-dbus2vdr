@@ -14,7 +14,15 @@ void  cDBusObject::handle_method_call(GDBusConnection *connection, const gchar *
   if (user_data == NULL)
      return;
 
+  dsyslog("dbus2vdr: handle_method_call: sender '%s', object '%s', interface '%s', method '%s'", sender, object_path, interface_name, method_name);
   cDBusObject *obj = (cDBusObject*)user_data;
+  for (cDBusMethod *m = obj->_methods.First(); m; m = obj->_methods.Next(m)) {
+      if (g_strcmp0(m->_name, method_name) == 0) {
+         m->_method(parameters, invocation);
+         return;
+         }
+      }
+
   obj->HandleMethodCall(connection, sender, object_path, interface_name, method_name, parameters, invocation);
 }
 
@@ -62,6 +70,12 @@ void  cDBusObject::Unregister(void)
         g_dbus_connection_unregister_object(_connection->GetConnection(), _registration_id);
      _registration_id = 0;
      }
+}
+
+void  cDBusObject::AddMethod(const char *Name, cDBusMethodFunc Method)
+{
+  if ((Name != NULL) && (Method != NULL))
+     _methods.Add(new cDBusMethod(Name, Method));
 }
 
 void  cDBusObject::HandleMethodCall(GDBusConnection       *connection,
