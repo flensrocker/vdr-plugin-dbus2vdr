@@ -64,6 +64,10 @@ void  cDBusConnection::Action(void)
   g_main_loop_run(_loop);
 
   g_main_context_pop_thread_default(_context);
+
+  g_main_loop_unref(_loop);
+  _loop = NULL;
+
   g_main_context_unref(_context);
   _context = NULL;
 }
