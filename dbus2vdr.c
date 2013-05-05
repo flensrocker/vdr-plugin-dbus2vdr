@@ -24,6 +24,7 @@
 #include "setup.h"
 #include "shutdown.h"
 #include "skin.h"
+#include "status.h"
 #include "timer.h"
 #include "vdr.h"
 
@@ -199,6 +200,7 @@ bool cPluginDbus2vdr::Start(void)
 #endif
   session_bus = new cDBusConnection(*busname, G_BUS_TYPE_SESSION);
   session_bus->AddObject(new cDBusChannels);
+  session_bus->AddObject(new cDBusStatus);
   session_bus->Start();
   
   new cDBusDispatcherEpg;

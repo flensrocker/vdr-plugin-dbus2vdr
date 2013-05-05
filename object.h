@@ -59,6 +59,7 @@ public:
   cDBusObject(const char *Path, const char *XmlNodeInfo);
   virtual ~cDBusObject(void);
 
+  cDBusConnection *Connection(void) const { return _connection; };
   const gchar  *Path(void) const { return _path; };
 
   virtual void  HandleMethodCall(GDBusConnection       *connection,

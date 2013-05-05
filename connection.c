@@ -2,6 +2,29 @@
 #include "object.h"
 
 
+cDBusConnection::cDBusSignal::cDBusSignal(const char *DestinationBusname, const char *ObjectPath, const char *Interface, const char *Signal, GVariant *Parameters)
+{
+  _destination_busname = g_strdup(DestinationBusname);
+  _object_path = g_strdup(ObjectPath);
+  _interface = g_strdup(Interface);
+  _signal = g_strdup(Signal);
+  if (Parameters != NULL)
+     _parameters = g_variant_ref(Parameters);
+  else
+     _parameters = NULL;
+}
+
+cDBusConnection::cDBusSignal::~cDBusSignal(void)
+{
+  g_free(_destination_busname);
+  g_free(_object_path);
+  g_free(_interface);
+  g_free(_signal);
+  if (_parameters != NULL)
+     g_variant_unref(_parameters);
+}
+
+
 cDBusConnection::cDBusConnection(const char *Busname, GBusType  Type)
 {
   Init(Busname);
@@ -53,6 +76,20 @@ void  cDBusConnection::AddObject(cDBusObject *Object)
      }
 }
 
+void  cDBusConnection::EmitSignal(cDBusSignal *Signal)
+{
+  Lock();
+  bool addHandler = (_signals.Count() == 0);
+  _signals.Add(Signal);
+  if (addHandler) {
+     GSource *source = g_idle_source_new();
+     g_source_set_priority(source, G_PRIORITY_DEFAULT);
+     g_source_set_callback(source, do_emit_signal, this, NULL);
+     g_source_attach(source, _context);
+     }
+  Unlock();
+}
+
 void  cDBusConnection::Action(void)
 {
   _context = g_main_context_new();
@@ -81,10 +118,7 @@ void  cDBusConnection::Connect(void)
 
   GSource *source = g_idle_source_new();
   g_source_set_priority(source, G_PRIORITY_DEFAULT);
-  g_source_set_callback(source,
-                        do_connect,
-                        this,
-                        NULL);
+  g_source_set_callback(source, do_connect, this, NULL);
   g_source_attach(source, _context);
 }
 
@@ -280,10 +314,7 @@ void  cDBusConnection::on_flush(GObject *source_object, GAsyncResult *res, gpoin
 
   GSource *source = g_idle_source_new();
   g_source_set_priority(source, G_PRIORITY_DEFAULT);
-  g_source_set_callback(source,
-                        do_disconnect,
-                        user_data,
-                        NULL);
+  g_source_set_callback(source, do_disconnect, user_data, NULL);
   g_source_attach(source, conn->_context);
 }
 
@@ -294,8 +325,41 @@ gboolean  cDBusConnection::do_flush(gpointer user_data)
 
   dsyslog("dbus2vdr: do_flush");
   cDBusConnection *conn = (cDBusConnection*)user_data;
-  if (conn->_connection != NULL)
-     g_dbus_connection_flush(conn->_connection, NULL, on_flush, user_data);
+  g_dbus_connection_flush(conn->_connection, NULL, on_flush, user_data);
 
+  return FALSE;
+}
+
+gboolean  cDBusConnection::do_emit_signal(gpointer user_data)
+{
+  if (user_data == NULL)
+     return FALSE;
+
+  dsyslog("dbus2vdr: do_emit_signal");
+  cDBusConnection *conn = (cDBusConnection*)user_data;
+
+  // we're about to disconnect, so forget the pending signals
+  if (conn->_disconnect_status > 0)
+     return FALSE;
+
+  // we're not successfully connected, so try again later
+  if (conn->_connect_status < 3)
+     return TRUE;
+
+  conn->Lock();
+  GError *err = NULL;
+  for (cDBusSignal *s = conn->_signals.First(); s; s = conn->_signals.Next(s)) {
+      gchar *p = g_variant_print(s->_parameters, TRUE);
+      dsyslog("dbus2vdr: emit signal %s %s %s %s", s->_object_path, s->_interface, s->_signal, p);
+      g_free(p);
+      g_dbus_connection_emit_signal(conn->_connection, s->_destination_busname, s->_object_path, s->_interface, s->_signal, s->_parameters, &err);
+      if (err != NULL) {
+         esyslog("dbus2vdr: g_dbus_connection_emit_signal reports: %s", err->message);
+         g_error_free(err);
+         err = NULL;
+         }
+      }
+  conn->_signals.Clear();
+  conn->Unlock();
   return FALSE;
 }

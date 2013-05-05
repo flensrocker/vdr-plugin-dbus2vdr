@@ -56,7 +56,7 @@ DEFINES += -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
 
 ### The object files (add further files here):
 
-OBJS = $(PLUGIN).o bus.o channel.o connection.o epg.o helper.o message.o monitor.o object.o osd.o plugin.o recording.o remote.o setup.o shutdown.o skin.o timer.o vdr.o
+OBJS = $(PLUGIN).o bus.o channel.o connection.o epg.o helper.o message.o monitor.o object.o osd.o plugin.o recording.o remote.o setup.o shutdown.o skin.o status.o timer.o vdr.o
 SWOBJS = libvdr-exitpipe.o libvdr-i18n.o libvdr-thread.o libvdr-tools.o shutdown-wrapper.o
 
 ### The main target:

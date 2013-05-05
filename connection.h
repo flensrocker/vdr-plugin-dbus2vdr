@@ -11,6 +11,23 @@ class cDBusObject;
 
 class cDBusConnection : public cThread
 {
+public:
+  class cDBusSignal : public cListObject
+  {
+  friend class cDBusConnection;
+
+  private:
+    gchar    *_destination_busname;
+    gchar    *_object_path;
+    gchar    *_interface;
+    gchar    *_signal;
+    GVariant *_parameters;
+
+  public:
+    cDBusSignal(const char *DestinationBusname, const char *ObjectPath, const char *Interface, const char *Signal, GVariant *Parameters);
+    virtual ~cDBusSignal(void);
+  };
+
 private:
   // wrapper functions for GMainLoop calls
   static void      on_name_acquired(GDBusConnection *connection,
@@ -29,6 +46,7 @@ private:
                             GAsyncResult *res,
                             gpointer user_data);
   static gboolean  do_flush(gpointer user_data);
+  static gboolean  do_emit_signal(gpointer user_data);
 
   gchar           *_busname;
   GBusType         _bus_type;
@@ -42,6 +60,7 @@ private:
   guint            _disconnect_status;
 
   cList<cDBusObject> _objects;
+  cList<cDBusSignal> _signals;
 
   void  Init(const char *Busname);
   void  Connect(void);
@@ -61,6 +80,9 @@ public:
 
   // must be called before "Start"
   void  AddObject(cDBusObject *Object);
+
+  // "Signal" will be deleted by cDBusConnection
+  void  EmitSignal(cDBusSignal *Signal);
 };
 
 #endif
