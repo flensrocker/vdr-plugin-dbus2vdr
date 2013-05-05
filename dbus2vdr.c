@@ -40,6 +40,7 @@ private:
   // Add any member variables or functions you may need here.
   bool enable_osd;
   int  send_upstart_signals;
+  bool enable_session;
   bool enable_network;
   bool first_main_thread;
 
@@ -77,6 +78,7 @@ cPluginDbus2vdr::cPluginDbus2vdr(void)
   // VDR OBJECTS TO EXIST OR PRODUCE ANY OUTPUT!
   enable_osd = false;
   send_upstart_signals = -1;
+  enable_session = false;
   enable_network = false;
   first_main_thread = true;
   g_type_init();
@@ -103,6 +105,8 @@ const char *cPluginDbus2vdr::CommandLineHelp(void)
          "    enable Upstart started/stopped events\n"
          "  --poll-timeout\n"
          "    timeout in milliseconds for dbus_connection_read_write_dispatch\n"
+         "  --session\n"
+         "    connect to session D-Bus daemon\n"
          "  --network\n"
          "    enable network support for peer2peer communication\n"
          "    a local dbus-daemon has to be started manually\n"
@@ -118,6 +122,7 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
     {"osd", no_argument, 0, 'o'},
     {"upstart", no_argument, 0, 'u'},
     {"poll-timeout", required_argument, 0, 'p'},
+    {"session", no_argument, 0, 's' | 0x100},
     {"network", no_argument, 0, 'n'},
     {0, 0, 0, 0}
   };
@@ -140,6 +145,12 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
                 isyslog("dbus2vdr: use shutdown-hooks in %s", optarg);
                 cDBusShutdownActions::SetShutdownHooksDir(optarg);
                 }
+             break;
+           }
+          case 's' | 0x100:
+           {
+             enable_session = true;
+             isyslog("dbus2vdr: enable session support");
              break;
            }
           case 'u':
@@ -198,10 +209,12 @@ bool cPluginDbus2vdr::Start(void)
   else
      busname = cString::sprintf("%s", DBUS_VDR_BUSNAME);
 #endif
-  session_bus = new cDBusConnection(*busname, G_BUS_TYPE_SESSION);
-  session_bus->AddObject(new cDBusChannels);
-  session_bus->AddObject(new cDBusStatus);
-  session_bus->Start();
+  if (enable_session) {
+     session_bus = new cDBusConnection(*busname, G_BUS_TYPE_SESSION);
+     session_bus->AddObject(new cDBusChannels);
+     session_bus->AddObject(new cDBusStatus);
+     session_bus->Start();
+     }
   
   new cDBusDispatcherEpg;
   new cDBusDispatcherOsd;
