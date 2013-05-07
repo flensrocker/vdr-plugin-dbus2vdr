@@ -245,6 +245,8 @@ bool cPluginDbus2vdr::Start(void)
 
 void cPluginDbus2vdr::Stop(void)
 {
+  cDBusRemote::MainMenuAction = NULL;
+
   // Stop any background activities the plugin is performing.
   if (send_upstart_signals == 1) {
      send_upstart_signals++;
