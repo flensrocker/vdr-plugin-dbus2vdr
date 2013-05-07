@@ -214,6 +214,7 @@ bool cPluginDbus2vdr::Start(void)
      session_bus->AddObject(new cDBusChannels);
      cDBusPlugin::AddAllPlugins(session_bus);
      session_bus->AddObject(new cDBusPluginManager);
+     session_bus->AddObject(new cDBusSetup);
      session_bus->AddObject(new cDBusStatus);
      session_bus->AddObject(new cDBusRemote);
      session_bus->Start();

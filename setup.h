@@ -2,6 +2,7 @@
 #define __DBUS2VDR_SETUP_H
 
 #include "message.h"
+#include "object.h"
 
 
 class cDBusDispatcherSetup : public cDBusMessageDispatcher
@@ -12,6 +13,14 @@ public:
 
 protected:
   virtual bool          OnIntrospect(DBusMessage *msg, cString &Data);
+};
+
+
+class cDBusSetup : public cDBusObject
+{
+public:
+  cDBusSetup(void);
+  virtual ~cDBusSetup(void);
 };
 
 #endif
