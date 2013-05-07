@@ -44,12 +44,12 @@ namespace cDBusChannelsHelper
     g_variant_builder_add(Array, "(is)", index, *text);
   }
 
-  static void Count(const gchar *ObjectPath, GVariant *Parameters, GDBusMethodInvocation *Invocation)
+  static void Count(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
     g_dbus_method_invocation_return_value(Invocation, g_variant_new("(i)", Channels.Count()));
   }
 
-  static void GetFromTo(const gchar *ObjectPath, GVariant *Parameters, GDBusMethodInvocation *Invocation)
+  static void GetFromTo(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
     gint32 from_index = -1;
     gint32 to_index = -1;
@@ -74,7 +74,7 @@ namespace cDBusChannelsHelper
     g_variant_builder_unref(builder);
   }
 
-  static void List(const gchar *ObjectPath, GVariant *Parameters, GDBusMethodInvocation *Invocation)
+  static void List(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
     const gchar *option = NULL;
     g_variant_get(Parameters, "(&s)", &option);

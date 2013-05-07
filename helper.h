@@ -2,6 +2,7 @@
 #define __DBUS2VDR_HELPER_H
 
 #include <dbus/dbus.h>
+#include <gio/gio.h>
 #include <vdr/thread.h>
 #include <vdr/tools.h>
 
@@ -28,6 +29,8 @@ public:
   static void SendReply(DBusConnection *conn, DBusMessage *reply);
   static void SendReply(DBusConnection *conn, DBusMessage *msg, int  returncode, const char *message);
   static void SendReply(DBusConnection *conn, DBusMessage *msg, const char *message);
+
+  static void SendReply(GDBusMethodInvocation *Invocation, int  ReplyCode, const char *ReplyMessage);
 
   static cDBusTcpAddress *GetNetworkAddress(void);
 };

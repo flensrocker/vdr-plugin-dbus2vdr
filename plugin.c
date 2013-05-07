@@ -255,7 +255,7 @@ namespace cDBusPluginsHelper
     "  </interface>\n"
     "</node>\n";
 
-  static void List(const gchar *ObjectPath, GVariant *Parameters, GDBusMethodInvocation *Invocation)
+  static void List(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
 #define EMPTY(s) (s == NULL ? "" : s)
     GVariantBuilder *array = g_variant_builder_new(G_VARIANT_TYPE("a(ss)"));
@@ -279,9 +279,9 @@ namespace cDBusPluginsHelper
     g_variant_builder_unref(builder);
   }
 
-  static void SVDRPCommand(const gchar *ObjectPath, GVariant *Parameters, GDBusMethodInvocation *Invocation)
+  static void SVDRPCommand(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
-    const char *pluginName = ObjectPath;
+    const char *pluginName = Object->Path();
     const char *command = NULL;
     const char *option = NULL;
     g_variant_get(Parameters, "(&s&s)", &command, &option);
@@ -308,10 +308,10 @@ namespace cDBusPluginsHelper
     g_dbus_method_invocation_return_value(Invocation, g_variant_new("(is)", replyCode, *replyMessage));
   }
 
-  static void Service(const gchar *ObjectPath, GVariant *Parameters, GDBusMethodInvocation *Invocation)
+  static void Service(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
     gboolean reply = FALSE;
-    const char *pluginName = ObjectPath;
+    const char *pluginName = Object->Path();
     const char *id = NULL;
     const char *data = NULL;
     g_variant_get(Parameters, "(&s&s)", &id, &data);

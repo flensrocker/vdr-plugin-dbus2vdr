@@ -137,6 +137,15 @@ void  cDBusHelper::SendReply(DBusConnection *conn, DBusMessage *msg, const char 
   cDBusHelper::SendReply(conn, reply);
 }
 
+void  cDBusHelper::SendReply(GDBusMethodInvocation *Invocation, int  ReplyCode, const char *ReplyMessage)
+{
+  GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("(is)"));
+  g_variant_builder_add(builder, "i", ReplyCode);
+  g_variant_builder_add(builder, "s", ReplyMessage);
+  g_dbus_method_invocation_return_value(Invocation, g_variant_builder_end(builder));
+  g_variant_builder_unref(builder);
+}
+
 cDBusTcpAddress *cDBusHelper::GetNetworkAddress(void)
 {
   cString filename = cString::sprintf("%s/network-address.conf", *_pluginConfigDir);

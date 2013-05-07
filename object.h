@@ -10,7 +10,7 @@
 class cDBusConnection;
 class cDBusObject;
 
-typedef void (*cDBusMethodFunc)(const gchar *ObjectPath, GVariant *Parameters, GDBusMethodInvocation *Invocation);
+typedef void (*cDBusMethodFunc)(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation);
 
 class cDBusMethod : public cListObject
 {

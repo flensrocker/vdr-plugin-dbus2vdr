@@ -215,6 +215,7 @@ bool cPluginDbus2vdr::Start(void)
      cDBusPlugin::AddAllPlugins(session_bus);
      session_bus->AddObject(new cDBusPluginManager);
      session_bus->AddObject(new cDBusStatus);
+     session_bus->AddObject(new cDBusRemote);
      session_bus->Start();
      }
   
@@ -308,7 +309,7 @@ time_t cPluginDbus2vdr::WakeupTime(void)
 cOsdObject *cPluginDbus2vdr::MainMenuAction(void)
 {
   // Perform the action when selected from the main VDR menu.
-  return cDBusDispatcherRemote::MainMenuAction;
+  return cDBusRemote::MainMenuAction;
 }
 
 cMenuSetupPage *cPluginDbus2vdr::SetupMenu(void)

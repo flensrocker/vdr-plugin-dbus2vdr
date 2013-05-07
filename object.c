@@ -18,7 +18,7 @@ void  cDBusObject::handle_method_call(GDBusConnection *connection, const gchar *
   cDBusObject *obj = (cDBusObject*)user_data;
   for (cDBusMethod *m = obj->_methods.First(); m; m = obj->_methods.Next(m)) {
       if (g_strcmp0(m->_name, method_name) == 0) {
-         m->_method(object_path, parameters, invocation);
+         m->_method(obj, parameters, invocation);
          return;
          }
       }

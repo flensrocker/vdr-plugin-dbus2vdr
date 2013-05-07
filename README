@@ -81,7 +81,7 @@ Interface "channel"
   vdr-dbus-send.sh /Channels channel.GetFromTo int32:from_index int32:to_index
 
 - list channels like SVDRP command CHAN
-  vdr-dbus-send.sh /Channels channel.List [string:'[ :groups | <number> | <name> | <id> ]']
+  vdr-dbus-send.sh /Channels channel.List string:'[ :groups | <number> | <name> | <id> ]'
 
   The returned array contains the channel number and the string from the channels.conf.
 
@@ -128,10 +128,14 @@ Interface "epg"
 
 Interface "plugin"
 ------------------
+If a plugin's name contains a hyphen, it will be replaced with an underscore in its
+object-path, e.g. streamdev-server will be found at /Plugins/streamdev_server.
+
 - send SVDRP commands to plugins
   vdr-dbus-send.sh /Plugins/<pluginname> plugin.SVDRPCommand string:'command' string:'parameter'
 
-If the SVDRP command doesn't take a parameter you can ommit it or pass an empty string.
+If the SVDRP command doesn't take a parameter you must pass an empty string. GDBus doesn't allow
+a method with varying arguments.
 
 - call Service method of plugins
   vdr-dbus-send.sh /Plugins/<pluginname> plugin.Service string:'id' string:'data'
@@ -183,7 +187,8 @@ Interface "remote"
   vdr-dbus-send.sh /Remote remote.Status
 
 - hit a key, you may specify more than one key
-  vdr-dbus-send.sh /Remote remote.HitKey string:'Menu' string:'Down' string:'Down' ...
+  vdr-dbus-send.sh /Remote remote.HitKey string:'Menu'
+  vdr-dbus-send.sh /Remote remote.HitKeys array:string:'Menu','Down','Down','Ok',...
 
 - display list of strings on the osd and let the user select one
   vdr-dbus-send.sh /Remote remote.AskUser string:'title' array:string:'item 1','item 2',...
@@ -196,7 +201,7 @@ Interface "remote"
   vdr-dbus-send.sh /Remote remote.CallPlugin string:'name-of-plugin'
 
 - switch channel like SVDRP command CHAN
-  vdr-dbus-send.sh /Remote remote.SwitchChannel [string:'[ + | - | <number> | <name> | <id> ]']
+  vdr-dbus-send.sh /Remote remote.SwitchChannel string:'[ + | - | <number> | <name> | <id> ]'
 
 - get/set volume like SVDRP command VOLU
   vdr-dbus-send.sh /Remote remote.GetVolume
