@@ -30,6 +30,7 @@ public:
   static void SendReply(DBusConnection *conn, DBusMessage *msg, int  returncode, const char *message);
   static void SendReply(DBusConnection *conn, DBusMessage *msg, const char *message);
 
+  static void AddKeyValue(GVariantBuilder *Array, const char *Key, const gchar *Type, void **Value);
   static void SendReply(GDBusMethodInvocation *Invocation, int  ReplyCode, const char *ReplyMessage);
 
   static cDBusTcpAddress *GetNetworkAddress(void);

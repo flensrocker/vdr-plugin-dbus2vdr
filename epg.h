@@ -2,6 +2,7 @@
 #define __DBUS2VDR_EPG_H
 
 #include "message.h"
+#include "object.h"
 
 
 class cDBusDispatcherEpg : public cDBusMessageDispatcher
@@ -12,6 +13,14 @@ public:
 
 protected:
   virtual bool          OnIntrospect(DBusMessage *msg, cString &Data);
+};
+
+
+class cDBusEpg : public cDBusObject
+{
+public:
+  cDBusEpg(void);
+  virtual ~cDBusEpg(void);
 };
 
 #endif

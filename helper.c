@@ -137,6 +137,22 @@ void  cDBusHelper::SendReply(DBusConnection *conn, DBusMessage *msg, const char 
   cDBusHelper::SendReply(conn, reply);
 }
 
+void  cDBusHelper::AddKeyValue(GVariantBuilder *Array, const char *Key, const gchar *Type, void **Value)
+{
+  GVariantBuilder *element = g_variant_builder_new(G_VARIANT_TYPE("(sv)"));
+
+  g_variant_builder_add(element, "s", Key);
+
+  GVariantBuilder *variant = g_variant_builder_new(G_VARIANT_TYPE("v"));
+  g_variant_builder_add(variant, Type, *Value);
+  g_variant_builder_add_value(element, g_variant_builder_end(variant));
+
+  g_variant_builder_add_value(Array, g_variant_builder_end(element));
+
+  g_variant_builder_unref(variant);
+  g_variant_builder_unref(element);
+}
+
 void  cDBusHelper::SendReply(GDBusMethodInvocation *Invocation, int  ReplyCode, const char *ReplyMessage)
 {
   GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("(is)"));

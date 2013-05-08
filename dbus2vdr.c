@@ -212,6 +212,7 @@ bool cPluginDbus2vdr::Start(void)
   if (enable_session) {
      session_bus = new cDBusConnection(*busname, G_BUS_TYPE_SESSION);
      session_bus->AddObject(new cDBusChannels);
+     session_bus->AddObject(new cDBusEpg);
      cDBusPlugin::AddAllPlugins(session_bus);
      session_bus->AddObject(new cDBusPluginManager);
      session_bus->AddObject(new cDBusSetup);
