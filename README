@@ -134,14 +134,15 @@ object-path, e.g. streamdev-server will be found at /Plugins/streamdev_server.
 - send SVDRP commands to plugins
   vdr-dbus-send.sh /Plugins/<pluginname> plugin.SVDRPCommand string:'command' string:'parameter'
 
-If the SVDRP command doesn't take a parameter you must pass an empty string. GDBus doesn't allow
-a method with varying arguments.
+If the SVDRP command doesn't take a parameter you must pass an empty string.
 
 - call Service method of plugins
   vdr-dbus-send.sh /Plugins/<pluginname> plugin.Service string:'id' string:'data'
 
+Interface "pluginmanager"
+------------------
 - list all loaded plugins
-  vdr-dbus-send.sh /Plugins plugin.List
+  vdr-dbus-send.sh /Plugins pluginmanager.List
   You'll get an array of structs containing two strings, the name and the version of the plugins.
 
 Interface "recording"
