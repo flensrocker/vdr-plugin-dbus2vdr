@@ -323,6 +323,9 @@ Interface "skin"
   vdr-dbus-send.sh /Skin skin.CurrentSkin
   You will get the index, name and description.
 
+- set the current skin
+  vdr-dbus-send.sh /Skin skin.SetSkin string:'name'
+
 Interface "timer"
 -----------------
 - list all timers
