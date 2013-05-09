@@ -180,6 +180,25 @@ Interface "recording"
   
   If framenumber is -1, playing is resumed at the last saved position.
 
+If your vdr is patched with the "extra video directories" patch there are also the following methods.
+
+- add extra video directory
+  vdr-dbus-send.sh /Recordings recording.AddExtraVideoDirectory string:directory
+
+  Don't forget to manually update your recordings after adding all directories.
+
+- clear extra video directories list
+  vdr-dbus-send.sh /Recordings recording.ClearExtraVideoDirectories
+
+- delete an extra video directory
+  vdr-dbus-send.sh /Recordings recording.DeleteExtraVideoDirectory string:directory
+
+- list all extra video directories
+  vdr-dbus-send.sh /Recordings recording.ListExtraVideoDirectories
+
+  Besides the usual reply-code and -message you get an array of strings with the
+  currently present video directories.
+
 Interface "remote"
 ------------------
 - enable/disable the remote
