@@ -2,6 +2,7 @@
 #define __DBUS2VDR_TIMER_H
 
 #include "message.h"
+#include "object.h"
 
 
 class cDBusDispatcherTimerConst : public cDBusMessageDispatcher
@@ -22,6 +23,28 @@ public:
 
 protected:
   virtual bool          OnIntrospect(DBusMessage *msg, cString &Data);
+};
+
+
+class cDBusTimers;
+
+class cDBusTimersConst : public cDBusObject
+{
+friend class cDBusTimers;
+
+private:
+  cDBusTimersConst(const char *NodeInfo);
+
+public:
+  cDBusTimersConst(void);
+  virtual ~cDBusTimersConst(void);
+};
+
+class cDBusTimers : public cDBusTimersConst
+{
+public:
+  cDBusTimers(void);
+  virtual ~cDBusTimers(void);
 };
 
 #endif

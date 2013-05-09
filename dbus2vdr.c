@@ -216,11 +216,12 @@ bool cPluginDbus2vdr::Start(void)
      cDBusPlugin::AddAllPlugins(session_bus);
      session_bus->AddObject(new cDBusPluginManager);
      session_bus->AddObject(new cDBusRecordings);
+     session_bus->AddObject(new cDBusRemote);
      session_bus->AddObject(new cDBusSetup);
      session_bus->AddObject(new cDBusShutdown);
      session_bus->AddObject(new cDBusSkin);
      session_bus->AddObject(new cDBusStatus);
-     session_bus->AddObject(new cDBusRemote);
+     session_bus->AddObject(new cDBusTimers);
      session_bus->Start();
      }
   

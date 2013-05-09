@@ -342,6 +342,12 @@ Interface "timer"
     uint64  stoptime in seconds since epoch (time_t format)
     string  title of the event
 
+- add new timer
+  vdr-dbus-send.sh /Timers timer.New string:'timer'
+
+- delete a timer
+  vdr-dbus-send.sh /Timers timer.Delete int32:number
+
 Interface "vdr"
 -----------------
 - get status of vdr
