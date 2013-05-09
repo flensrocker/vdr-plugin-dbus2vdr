@@ -222,6 +222,7 @@ bool cPluginDbus2vdr::Start(void)
      session_bus->AddObject(new cDBusSkin);
      session_bus->AddObject(new cDBusStatus);
      session_bus->AddObject(new cDBusTimers);
+     session_bus->AddObject(new cDBusVdr);
      session_bus->Start();
      }
   
@@ -244,7 +245,8 @@ bool cPluginDbus2vdr::Start(void)
   if (enable_osd)
      new cDBusOsdProvider();
 
-  cDBusDispatcherVdr::SetStatus(cDBusDispatcherVdr::statusStart);
+  if (cDBusVdr::SetStatus(cDBusVdr::statusStart))
+     cDBusDispatcherVdr::SendStatus(cDBusVdr::statusStart);
 
   return true;
 }
@@ -259,7 +261,8 @@ void cPluginDbus2vdr::Stop(void)
      cDBusMonitor::SendUpstartSignal("stopped");
      }
 
-  cDBusDispatcherVdr::SetStatus(cDBusDispatcherVdr::statusStop);
+  if (cDBusVdr::SetStatus(cDBusVdr::statusStop))
+     cDBusDispatcherVdr::SendStatus(cDBusVdr::statusStop);
 
   cDBusMonitor::StopUpstartSender();
   cDBusMonitor::StopMonitor();
@@ -291,7 +294,8 @@ void cPluginDbus2vdr::MainThreadHook(void)
   if (first_main_thread) {
      first_main_thread = false;
 
-     cDBusDispatcherVdr::SetStatus(cDBusDispatcherVdr::statusReady);
+     if (cDBusVdr::SetStatus(cDBusVdr::statusReady))
+        cDBusDispatcherVdr::SendStatus(cDBusVdr::statusReady);
 
      if (send_upstart_signals == 0) {
         send_upstart_signals++;
