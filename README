@@ -279,7 +279,7 @@ is stored in the setup.conf. You may need to restart vdr.
 Interface "shutdown"
 --------------------
 - ask vdr if it is ready for shutdown
-  vdr-dbus-send.sh /Shutdown shutdown.ConfirmShutdown [boolean:true]
+  vdr-dbus-send.sh /Shutdown shutdown.ConfirmShutdown boolean:true
   possible reply codes:
     250: vdr is ready for shutdown
     550: vdr is not ready for shutdown (unknown reason)
@@ -298,7 +298,7 @@ Interface "shutdown"
   If SHUTDOWNCMD is given use this command for shutdown.
   'shutdown-wrapper' is a tool which calls the shutdown-hooks.
   If the hooks need elevated privileges set the SUID bit of the wrapper accordingly.
-  The optional boolean argument "ignoreuser" will ignore user activity. This may be
+  The boolean argument "ignoreuser" will ignore user activity. This may be
   useful for external frontends like XBMC etc..
 
 - ask if vdr was started manually
