@@ -40,6 +40,7 @@ private:
   // Add any member variables or functions you may need here.
   bool enable_osd;
   int  send_upstart_signals;
+  bool enable_system;
   bool enable_session;
   bool enable_network;
   bool first_main_thread;
@@ -78,6 +79,7 @@ cPluginDbus2vdr::cPluginDbus2vdr(void)
   // VDR OBJECTS TO EXIST OR PRODUCE ANY OUTPUT!
   enable_osd = false;
   send_upstart_signals = -1;
+  enable_system = true;
   enable_session = false;
   enable_network = false;
   first_main_thread = true;
@@ -103,10 +105,10 @@ const char *cPluginDbus2vdr::CommandLineHelp(void)
          "    creates an OSD provider which will save the OSD as PNG files\n"
          "  --upstart\n"
          "    enable Upstart started/stopped events\n"
-         "  --poll-timeout\n"
-         "    timeout in milliseconds for dbus_connection_read_write_dispatch\n"
          "  --session\n"
          "    connect to session D-Bus daemon\n"
+         "  --no-system\n"
+         "    don't connect to system D-Bus daemon\n"
          "  --network\n"
          "    enable network support for peer2peer communication\n"
          "    a local dbus-daemon has to be started manually\n"
@@ -121,8 +123,8 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
     {"shutdown-hooks-wrapper", required_argument, 0, 'w'},
     {"osd", no_argument, 0, 'o'},
     {"upstart", no_argument, 0, 'u'},
-    {"poll-timeout", required_argument, 0, 'p'},
     {"session", no_argument, 0, 's' | 0x100},
+    {"no-system", no_argument, 0, 's' | 0x200},
     {"network", no_argument, 0, 'n'},
     {0, 0, 0, 0}
   };
@@ -143,14 +145,20 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
            {
              if (optarg != NULL) {
                 isyslog("dbus2vdr: use shutdown-hooks in %s", optarg);
-                cDBusShutdownActions::SetShutdownHooksDir(optarg);
+                cDBusShutdown::SetShutdownHooksDir(optarg);
                 }
              break;
            }
           case 's' | 0x100:
            {
              enable_session = true;
-             isyslog("dbus2vdr: enable session support");
+             isyslog("dbus2vdr: enable session-bus");
+             break;
+           }
+          case 's' | 0x200:
+           {
+             enable_system = false;
+             isyslog("dbus2vdr: disable system-bus support");
              break;
            }
           case 'u':
@@ -163,15 +171,7 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
            {
              if (optarg != NULL) {
                 isyslog("dbus2vdr: use shutdown-hooks-wrapper %s", optarg);
-                cDBusShutdownActions::SetShutdownHooksWrapper(optarg);
-                }
-             break;
-           }
-          case 'p':
-           {
-             if ((optarg != NULL) && isnumber(optarg)) {
-                isyslog("dbus2vdr: use poll-timeout %s", optarg);
-                cDBusMonitor::PollTimeoutMs = strtol(optarg, NULL, 10);
+                cDBusShutdown::SetShutdownHooksWrapper(optarg);
                 }
              break;
            }
@@ -191,7 +191,7 @@ bool cPluginDbus2vdr::Initialize(void)
   // Initialize any background activities the plugin shall perform.
   if (!dbus_threads_init_default())
      esyslog("dbus2vdr: dbus_threads_init_default returns an error - not good!");
-  cDBusDispatcherShutdown::StartupTime = time(NULL);
+  cDBusShutdown::StartupTime = time(NULL);
   return true;
 }
 
@@ -209,6 +209,23 @@ bool cPluginDbus2vdr::Start(void)
   else
      busname = cString::sprintf("%s", DBUS_VDR_BUSNAME);
 #endif
+  if (enable_system) {
+     system_bus = new cDBusConnection(*busname, G_BUS_TYPE_SYSTEM);
+     system_bus->AddObject(new cDBusChannels);
+     system_bus->AddObject(new cDBusEpg);
+     cDBusPlugin::AddAllPlugins(system_bus);
+     system_bus->AddObject(new cDBusPluginManager);
+     system_bus->AddObject(new cDBusRecordings);
+     system_bus->AddObject(new cDBusRemote);
+     system_bus->AddObject(new cDBusSetup);
+     system_bus->AddObject(new cDBusShutdown);
+     system_bus->AddObject(new cDBusSkin);
+     system_bus->AddObject(new cDBusStatus);
+     system_bus->AddObject(new cDBusTimers);
+     system_bus->AddObject(new cDBusVdr);
+     system_bus->Start();
+     }
+
   if (enable_session) {
      session_bus = new cDBusConnection(*busname, G_BUS_TYPE_SESSION);
      session_bus->AddObject(new cDBusChannels);
@@ -226,27 +243,17 @@ bool cPluginDbus2vdr::Start(void)
      session_bus->Start();
      }
   
-  new cDBusDispatcherEpg;
-  new cDBusDispatcherOsd;
-  new cDBusDispatcherPlugin;
-  new cDBusDispatcherRecording;
-  new cDBusDispatcherRemote;
-  new cDBusDispatcherSetup;
-  new cDBusDispatcherShutdown;
-  new cDBusDispatcherSkin;
-  new cDBusDispatcherTimer;
-  new cDBusDispatcherVdr;
   if (enable_network) {
-     new cDBusDispatcherRecordingConst(busNetwork);
-     new cDBusDispatcherTimerConst(busNetwork);
+     //network_bus = new cDBusConnection(*busname, address);
+     //network_bus->AddObject(new cDBusRecordingsConst);
+     //network_bus->AddObject(new cDBusTimersConst);
+     //network_bus->Start();
      }
-  cDBusMonitor::StartMonitor(enable_network);
   
   if (enable_osd)
      new cDBusOsdProvider();
 
-  if (cDBusVdr::SetStatus(cDBusVdr::statusStart))
-     cDBusDispatcherVdr::SendStatus(cDBusVdr::statusStart);
+  cDBusVdr::SetStatus(cDBusVdr::statusStart);
 
   return true;
 }
@@ -261,12 +268,9 @@ void cPluginDbus2vdr::Stop(void)
      cDBusMonitor::SendUpstartSignal("stopped");
      }
 
-  if (cDBusVdr::SetStatus(cDBusVdr::statusStop))
-     cDBusDispatcherVdr::SendStatus(cDBusVdr::statusStop);
+  cDBusVdr::SetStatus(cDBusVdr::statusStop);
 
   cDBusMonitor::StopUpstartSender();
-  cDBusMonitor::StopMonitor();
-  cDBusMessageDispatcher::Shutdown();
 
   if (network_bus != NULL) {
      delete network_bus;
@@ -294,8 +298,7 @@ void cPluginDbus2vdr::MainThreadHook(void)
   if (first_main_thread) {
      first_main_thread = false;
 
-     if (cDBusVdr::SetStatus(cDBusVdr::statusReady))
-        cDBusDispatcherVdr::SendStatus(cDBusVdr::statusReady);
+     cDBusVdr::SetStatus(cDBusVdr::statusReady);
 
      if (send_upstart_signals == 0) {
         send_upstart_signals++;

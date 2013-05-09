@@ -60,8 +60,6 @@ void cDBusMonitor::StartMonitor(bool enableNetwork)
      busname = cString::sprintf("%s", DBUS_VDR_BUSNAME);
 #endif
 
-  if (_monitor[busSystem] == NULL)
-     _monitor[busSystem] = new cDBusMonitor(new cDBusSystemBus(*busname), busSystem);
   if (enableNetwork && (_monitor[busNetwork] == NULL))
      _monitor[busNetwork] = new cDBusMonitor(new cDBusNetworkBus(*busname), busNetwork);
 

@@ -65,12 +65,12 @@ Commandline Arguments
         (see comments below at section "OSD")
 -u, --upstart
         enable Upstart started/stopped events
--p, --poll-timeout
-        timeout in milliseconds for dbus_connection_read_write_dispatch
-        default: 10ms
-        lower values may cause higher cpu load but will increase speed of reaction
 -n, --network
         enable network support (see comments below at section "Network")
+--session
+        connect to the session D-Bus daemon
+--no-system
+        don't connect to the system D-Bus daemon
 
 Interface "channel"
 -------------------
@@ -325,6 +325,26 @@ Interface "skin"
 
 - set the current skin
   vdr-dbus-send.sh /Skin skin.SetSkin string:'name'
+
+Interface "status"
+------------------
+Via the status interface the signals from vdr's cStatus class will be emitted
+
+- "ChannelSwitch"
+    int32  DeviceNumber
+    int32  ChannelNumber
+    bool   LiveView
+
+- "Recording"
+    int32  DeviceNumber
+    string Name
+    string FileName
+    bool   On
+
+- "Replaying"
+    string Name
+    string FileName
+    bool   On
 
 Interface "timer"
 -----------------
