@@ -35,9 +35,6 @@ public:
 
   static bool SendSignal(DBusMessage *msg, eBusType bus);
 
-  static void SendUpstartSignal(const char *action);
-  static void StopUpstartSender(void);
-
 protected:
   virtual void Action(void);
 };

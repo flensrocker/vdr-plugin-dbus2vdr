@@ -26,6 +26,7 @@
 #include "skin.h"
 #include "status.h"
 #include "timer.h"
+#include "upstart.h"
 #include "vdr.h"
 
 #include <vdr/osdbase.h>
@@ -265,12 +266,10 @@ void cPluginDbus2vdr::Stop(void)
   // Stop any background activities the plugin is performing.
   if (send_upstart_signals == 1) {
      send_upstart_signals++;
-     cDBusMonitor::SendUpstartSignal("stopped");
+     cDBusUpstart::EmitPluginEvent(system_bus, "stopped");
      }
 
   cDBusVdr::SetStatus(cDBusVdr::statusStop);
-
-  cDBusMonitor::StopUpstartSender();
 
   if (network_bus != NULL) {
      delete network_bus;
@@ -304,7 +303,7 @@ void cPluginDbus2vdr::MainThreadHook(void)
         send_upstart_signals++;
         isyslog("dbus2vdr: raise SIGSTOP for Upstart");
         raise(SIGSTOP);
-        cDBusMonitor::SendUpstartSignal("started");
+        cDBusUpstart::EmitPluginEvent(system_bus, "started");
         }
      }
 }

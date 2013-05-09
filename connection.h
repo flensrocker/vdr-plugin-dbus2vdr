@@ -28,6 +28,22 @@ public:
     virtual ~cDBusSignal(void);
   };
 
+  class cDBusMethodCall : public cListObject
+  {
+  friend class cDBusConnection;
+
+  private:
+    gchar    *_destination_busname;
+    gchar    *_object_path;
+    gchar    *_interface;
+    gchar    *_method;
+    GVariant *_parameters;
+
+  public:
+    cDBusMethodCall(const char *DestinationBusname, const char *ObjectPath, const char *Interface, const char *Method, GVariant *Parameters);
+    virtual ~cDBusMethodCall(void);
+  };
+
 private:
   // wrapper functions for GMainLoop calls
   static void      on_name_acquired(GDBusConnection *connection,
@@ -47,6 +63,7 @@ private:
                             gpointer user_data);
   static gboolean  do_flush(gpointer user_data);
   static gboolean  do_emit_signal(gpointer user_data);
+  static gboolean  do_call_method(gpointer user_data);
 
   gchar           *_busname;
   GBusType         _bus_type;
@@ -59,8 +76,9 @@ private:
   guint            _connect_status;
   guint            _disconnect_status;
 
-  cList<cDBusObject> _objects;
-  cList<cDBusSignal> _signals;
+  cList<cDBusObject>     _objects;
+  cList<cDBusSignal>     _signals;
+  cList<cDBusMethodCall> _method_calls;
 
   void  Init(const char *Busname);
   void  Connect(void);
@@ -83,6 +101,7 @@ public:
 
   // "Signal" will be deleted by cDBusConnection
   void  EmitSignal(cDBusSignal *Signal);
+  void  CallMethod(cDBusMethodCall *Call);
 };
 
 #endif

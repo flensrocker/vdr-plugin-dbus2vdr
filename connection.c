@@ -25,6 +25,29 @@ cDBusConnection::cDBusSignal::~cDBusSignal(void)
 }
 
 
+cDBusConnection::cDBusMethodCall::cDBusMethodCall(const char *DestinationBusname, const char *ObjectPath, const char *Interface, const char *Method, GVariant *Parameters)
+{
+  _destination_busname = g_strdup(DestinationBusname);
+  _object_path = g_strdup(ObjectPath);
+  _interface = g_strdup(Interface);
+  _method = g_strdup(Method);
+  if (Parameters != NULL)
+     _parameters = g_variant_ref(Parameters);
+  else
+     _parameters = NULL;
+}
+
+cDBusConnection::cDBusMethodCall::~cDBusMethodCall(void)
+{
+  g_free(_destination_busname);
+  g_free(_object_path);
+  g_free(_interface);
+  g_free(_method);
+  if (_parameters != NULL)
+     g_variant_unref(_parameters);
+}
+
+
 cDBusConnection::cDBusConnection(const char *Busname, GBusType  Type)
 {
   Init(Busname);
@@ -85,6 +108,20 @@ void  cDBusConnection::EmitSignal(cDBusSignal *Signal)
      GSource *source = g_idle_source_new();
      g_source_set_priority(source, G_PRIORITY_DEFAULT);
      g_source_set_callback(source, do_emit_signal, this, NULL);
+     g_source_attach(source, _context);
+     }
+  Unlock();
+}
+
+void  cDBusConnection::CallMethod(cDBusMethodCall *Call)
+{
+  Lock();
+  bool addHandler = (_method_calls.Count() == 0);
+  _method_calls.Add(Call);
+  if (addHandler) {
+     GSource *source = g_idle_source_new();
+     g_source_set_priority(source, G_PRIORITY_DEFAULT);
+     g_source_set_callback(source, do_call_method, this, NULL);
      g_source_attach(source, _context);
      }
   Unlock();
@@ -360,6 +397,34 @@ gboolean  cDBusConnection::do_emit_signal(gpointer user_data)
          }
       }
   conn->_signals.Clear();
+  conn->Unlock();
+  return FALSE;
+}
+
+gboolean  cDBusConnection::do_call_method(gpointer user_data)
+{
+  if (user_data == NULL)
+     return FALSE;
+
+  dsyslog("dbus2vdr: do_call_method");
+  cDBusConnection *conn = (cDBusConnection*)user_data;
+
+  // we're about to disconnect, so forget the pending signals
+  if (conn->_disconnect_status > 0)
+     return FALSE;
+
+  // we're not successfully connected, so try again later
+  if (conn->_connect_status < 3)
+     return TRUE;
+
+  conn->Lock();
+  for (cDBusMethodCall *c = conn->_method_calls.First(); c; c = conn->_method_calls.Next(c)) {
+      gchar *p = g_variant_print(c->_parameters, TRUE);
+      dsyslog("dbus2vdr: call method %s %s %s %s", c->_object_path, c->_interface, c->_method, p);
+      g_free(p);
+      g_dbus_connection_call(conn->_connection, c->_destination_busname, c->_object_path, c->_interface, c->_method, c->_parameters, NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, NULL, NULL);
+      }
+  conn->_method_calls.Clear();
   conn->Unlock();
   return FALSE;
 }
