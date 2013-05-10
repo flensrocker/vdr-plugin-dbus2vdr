@@ -1,6 +1,7 @@
 #include "helper.h"
 #include "bus.h"
 
+#include <dbus/dbus.h>
 #include <vdr/plugin.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -61,80 +62,6 @@ void cDBusHelper::ToUtf8(cString &text)
      text = converter.Convert(*text);
      mutex.Unlock();
      }
-}
-
-void cDBusHelper::AddArg(DBusMessageIter &args, int type, const void *value)
-{
-  if (value == NULL)
-     return;
-  if (!dbus_message_iter_append_basic(&args, type, value))
-     esyslog("dbus2vdr: AddArg: out of memory while appending argument");
-}
-
-void cDBusHelper::AddKeyValue(DBusMessageIter &array, const char *key, int type, const char *vtype, void *value)
-{
-  DBusMessageIter element;
-  DBusMessageIter variant;
-
-  if (!dbus_message_iter_open_container(&array, DBUS_TYPE_STRUCT, NULL, &element))
-     esyslog("dbus2vdr: AddKeyValue: can't open struct container");
-  AddArg(element, DBUS_TYPE_STRING, &key);
-  if (!dbus_message_iter_open_container(&element, DBUS_TYPE_VARIANT, vtype, &variant))
-     esyslog("dbus2vdr: AddKeyValue: can't open variant container");
-  AddArg(variant, type, value);
-  if (!dbus_message_iter_close_container(&element, &variant))
-     esyslog("dbus2vdr: AddKeyValue: can't close variant container");
-  if (!dbus_message_iter_close_container(&array, &element))
-     esyslog("dbus2vdr: AddKeyValue: can't close struct container");
-}
-
-int  cDBusHelper::GetNextArg(DBusMessageIter& args, int type, void *value)
-{
-  if (dbus_message_iter_get_arg_type(&args) != type)
-     return -1;
-  dbus_message_iter_get_basic(&args, value);
-  if (dbus_message_iter_next(&args))
-     return 1;
-  return 0;
-}
-
-void  cDBusHelper::SendReply(DBusConnection *conn, DBusMessage *reply)
-{
-  dbus_uint32_t serial = 0;
-  if (!dbus_connection_send(conn, reply, &serial))
-     esyslog("dbus2vdr: SendReply: out of memory while sending the reply");
-  dbus_message_unref(reply);
-}
-
-void  cDBusHelper::SendReply(DBusConnection *conn, DBusMessage *msg, int  returncode, const char *message)
-{
-  DBusMessage *reply = dbus_message_new_method_return(msg);
-  DBusMessageIter args;
-  dbus_message_iter_init_append(reply, &args);
-
-  if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &returncode))
-     esyslog("dbus2vdr: SendReply: out of memory while appending the return-code");
-
-  if (message != NULL) {
-     if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &message))
-        esyslog("dbus2vdr: SendReply: out of memory while appending the reply-message");
-     }
-
-  cDBusHelper::SendReply(conn, reply);
-}
-
-void  cDBusHelper::SendReply(DBusConnection *conn, DBusMessage *msg, const char *message)
-{
-  DBusMessage *reply = dbus_message_new_method_return(msg);
-  DBusMessageIter args;
-  dbus_message_iter_init_append(reply, &args);
-
-  if (message != NULL) {
-     if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &message))
-        esyslog("dbus2vdr: SendReply: out of memory while appending the reply-message");
-     }
-
-  cDBusHelper::SendReply(conn, reply);
 }
 
 void  cDBusHelper::AddKeyValue(GVariantBuilder *Array, const char *Key, const gchar *Type, void **Value)

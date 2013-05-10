@@ -9,6 +9,7 @@
 #include <getopt.h>
 #include <signal.h>
 
+#include <dbus/dbus.h>
 #include <glib-object.h>
 
 #include "common.h"
