@@ -1,8 +1,8 @@
 #include "osd.h"
 
 #include "common.h"
+#include "connection.h"
 #include "helper.h"
-#include "monitor.h"
 
 #include <sys/time.h>
 
@@ -101,9 +101,10 @@ void cDBusOsd::Flush(void)
 
 cDBusOsdProvider *cDBusOsdProvider::_provider = NULL;
 
-cDBusOsdProvider::cDBusOsdProvider(void)
+cDBusOsdProvider::cDBusOsdProvider(cDBusObject *Object)
 {
   _provider = this;
+  _object = Object;
   isyslog("dbus2vdr: new DBus-OSD-provider");
   SetDescription("dbus2vdr: osd-provider signal");
   Start();
@@ -133,34 +134,29 @@ void cDBusOsdProvider::Action(void)
              msgQueue.Del(dbmsg, false);
         }
         if (dbmsg != NULL) {
-           DBusMessage *msg = dbus_message_new_signal("/OSD", DBUS_VDR_OSD_INTERFACE, dbmsg->action);
-           if (msg != NULL) {
-              DBusMessageIter args;
-              dbus_message_iter_init_append(msg, &args);
+           GVariantBuilder *builder = NULL;
+           if (strcmp(dbmsg->action, "Open") == 0) {
+              builder = g_variant_builder_new(G_VARIANT_TYPE("(sii)"));
+              g_variant_builder_add(builder, "s", *dbmsg->file);
+              g_variant_builder_add(builder, "i", dbmsg->left);
+              g_variant_builder_add(builder, "i", dbmsg->top);
+              }
+           else if (strcmp(dbmsg->action, "Display") == 0) {
+              builder = g_variant_builder_new(G_VARIANT_TYPE("(siiii)"));
+              g_variant_builder_add(builder, "s", *dbmsg->file);
+              g_variant_builder_add(builder, "i", dbmsg->left);
+              g_variant_builder_add(builder, "i", dbmsg->top);
+              g_variant_builder_add(builder, "i", dbmsg->vx);
+              g_variant_builder_add(builder, "i", dbmsg->vy);
+              }
+           else if (strcmp(dbmsg->action, "Close") == 0) {
+              builder = g_variant_builder_new(G_VARIANT_TYPE("(s)"));
+              g_variant_builder_add(builder, "s", *dbmsg->file);
+              }
 
-              bool msgOk= true;
-              bool display= (strcmp(dbmsg->action, "Display") == 0);
-
-              // osdid or filename for every signal
-              const char *file = *dbmsg->file;
-              if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &file))
-                 msgOk = false;
-              else if (display || (strcmp(dbmsg->action, "Open") == 0)) { // top and left only for Open and Display
-                 if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &dbmsg->left))
-                    msgOk = false;
-                 else if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &dbmsg->top))
-                    msgOk = false;
-                 else if (display) { // vx and vy only for Display
-                    if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &dbmsg->vx))
-                       msgOk = false;
-                    else if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &dbmsg->vy))
-                       msgOk = false;
-                    }
-                 }
-              if (msgOk && cDBusMonitor::SendSignal(msg, busSystem))
-                 msg = NULL;
-              else
-                 dbus_message_unref(msg);
+           if ((builder != NULL) && (_object != NULL)) {
+              _object->Connection()->EmitSignal(new cDBusConnection::cDBusSignal(NULL, "/OSD", DBUS_VDR_OSD_INTERFACE, dbmsg->action, g_variant_builder_end(builder)));
+              g_variant_builder_unref(builder);
               }
            delete dbmsg;
            }
@@ -187,86 +183,38 @@ cDbusOsdMsg::~cDbusOsdMsg(void)
 }
 
 
-cDBusMessageOsd::cDBusMessageOsd(cDBusMessageOsd::eAction action, DBusConnection* conn, DBusMessage* msg)
-:cDBusMessage(conn, msg)
-,_action(action)
+class cDBusOsdObjectHelper
 {
-}
+public:
+  static const char *_xmlNodeInfo;
 
-cDBusMessageOsd::~cDBusMessageOsd(void)
-{
-}
+  static void CreateProvider(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
+  {
+    if (cDBusOsdProvider::_provider == NULL) {
+       new cDBusOsdProvider(Object);
+       cDBusHelper::SendReply(Invocation, 250, "DBus-OSD-provider created");
+       return;
+       }
+    cDBusHelper::SendReply(Invocation, 900, "DBus-OSD-provider already active");
+  };
 
-void cDBusMessageOsd::Process(void)
-{
-  switch (_action) {
-    case dmoCreateProvider:
-      CreateProvider();
-      break;
-    case dmoDeleteProvider:
-      DeleteProvider();
-      break;
-    }
-}
+  static void DeleteProvider(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
+  {
+    if (cDBusOsdProvider::_provider != NULL) {
+       delete cDBusOsdProvider::_provider;
+       // try to re-create the OSD provider of the primary device
+       // I don't know if it's "good" or work with all output plugins
+       cDevice *pd = cDevice::PrimaryDevice();
+       if (pd)
+          cDevice::SetPrimaryDevice(pd->CardIndex() + 1);
+       cDBusHelper::SendReply(Invocation, 250, "DBus-OSD-provider deleted");
+       return;
+       }
+    cDBusHelper::SendReply(Invocation, 900, "DBus-OSD-provider not active");
+  };
+};
 
-void cDBusMessageOsd::CreateProvider(void)
-{
-  if (cDBusOsdProvider::_provider == NULL) {
-     new cDBusOsdProvider;
-     cDBusHelper::SendReply(_conn, _msg, 250, "DBus-OSD-provider created");
-     return;
-     }
-  cDBusHelper::SendReply(_conn, _msg, 900, "DBus-OSD-provider already active");
-}
-
-void cDBusMessageOsd::DeleteProvider(void)
-{
-  if (cDBusOsdProvider::_provider != NULL) {
-     delete cDBusOsdProvider::_provider;
-     // try to re-create the OSD provider of the primary device
-     // I don't know if it's "good" or work with all output plugins
-     cDevice *pd = cDevice::PrimaryDevice();
-     if (pd)
-        cDevice::SetPrimaryDevice(pd->CardIndex() + 1);
-     cDBusHelper::SendReply(_conn, _msg, 250, "DBus-OSD-provider deleted");
-     return;
-     }
-  cDBusHelper::SendReply(_conn, _msg, 900, "DBus-OSD-provider not active");
-}
-
-
-cDBusDispatcherOsd::cDBusDispatcherOsd(void)
-:cDBusMessageDispatcher(busSystem, DBUS_VDR_OSD_INTERFACE)
-{
-}
-
-cDBusDispatcherOsd::~cDBusDispatcherOsd(void)
-{
-}
-
-cDBusMessage *cDBusDispatcherOsd::CreateMessage(DBusConnection* conn, DBusMessage* msg)
-{
-  if ((conn == NULL) || (msg == NULL))
-     return NULL;
-
-  const char *object = dbus_message_get_path(msg);
-  if ((object == NULL) || (strcmp(object, "/OSD") != 0))
-     return NULL;
-
-  if (dbus_message_is_method_call(msg, DBUS_VDR_OSD_INTERFACE, "CreateProvider"))
-     return new cDBusMessageOsd(cDBusMessageOsd::dmoCreateProvider, conn, msg);
-
-  if (dbus_message_is_method_call(msg, DBUS_VDR_OSD_INTERFACE, "DeleteProvider"))
-     return new cDBusMessageOsd(cDBusMessageOsd::dmoDeleteProvider, conn, msg);
-
-  return NULL;
-}
-
-bool          cDBusDispatcherOsd::OnIntrospect(DBusMessage *msg, cString &Data)
-{
-  if (strcmp(dbus_message_get_path(msg), "/OSD") != 0)
-     return false;
-  Data =
+const char *cDBusOsdObjectHelper::_xmlNodeInfo =
   "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
   "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
   "<node>\n"
@@ -296,5 +244,14 @@ bool          cDBusDispatcherOsd::OnIntrospect(DBusMessage *msg, cString &Data)
   "    </signal>\n"
   "  </interface>\n"
   "</node>\n";
-  return true;
+
+cDBusOsdObject::cDBusOsdObject(void)
+:cDBusObject("/OSD", cDBusOsdObjectHelper::_xmlNodeInfo)
+{
+  AddMethod("CreateProvider", cDBusOsdObjectHelper::CreateProvider);
+  AddMethod("DeleteProvider", cDBusOsdObjectHelper::DeleteProvider);
+}
+
+cDBusOsdObject::~cDBusOsdObject(void)
+{
 }

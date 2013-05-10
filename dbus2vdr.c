@@ -17,7 +17,6 @@
 #include "epg.h"
 #include "helper.h"
 #include "plugin.h"
-#include "monitor.h"
 #include "osd.h"
 #include "recording.h"
 #include "remote.h"
@@ -214,6 +213,8 @@ bool cPluginDbus2vdr::Start(void)
      system_bus = new cDBusConnection(*busname, G_BUS_TYPE_SYSTEM);
      system_bus->AddObject(new cDBusChannels);
      system_bus->AddObject(new cDBusEpg);
+     if (enable_osd)
+        system_bus->AddObject(new cDBusOsdObject);
      cDBusPlugin::AddAllPlugins(system_bus);
      system_bus->AddObject(new cDBusPluginManager);
      system_bus->AddObject(new cDBusRecordings);
@@ -231,6 +232,8 @@ bool cPluginDbus2vdr::Start(void)
      session_bus = new cDBusConnection(*busname, G_BUS_TYPE_SESSION);
      session_bus->AddObject(new cDBusChannels);
      session_bus->AddObject(new cDBusEpg);
+     if (enable_osd)
+        session_bus->AddObject(new cDBusOsdObject);
      cDBusPlugin::AddAllPlugins(session_bus);
      session_bus->AddObject(new cDBusPluginManager);
      session_bus->AddObject(new cDBusRecordings);
@@ -251,9 +254,6 @@ bool cPluginDbus2vdr::Start(void)
      //network_bus->Start();
      }
   
-  if (enable_osd)
-     new cDBusOsdProvider();
-
   cDBusVdr::SetStatus(cDBusVdr::statusStart);
 
   return true;

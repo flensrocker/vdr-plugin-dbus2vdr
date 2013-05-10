@@ -1,7 +1,7 @@
 #ifndef __DBUS2VDR_OSD_H
 #define __DBUS2VDR_OSD_H
 
-#include "message.h"
+#include "object.h"
 
 #include <vdr/osd.h>
 
@@ -77,12 +77,16 @@ public:
   virtual ~cDbusOsdMsg(void);
 };
 
+class cDBusOsdObjectHelper;
+
 class cDBusOsdProvider : public cOsdProvider, public cThread
 {
-friend class cDBusMessageOsd;
+friend class cDBusOsdObjectHelper;
 
 private:
   static cDBusOsdProvider *_provider;
+
+  cDBusObject       *_object;
 
   cMutex             msgMutex;
   cCondVar           msgCond;
@@ -98,41 +102,17 @@ protected:
   virtual void Action(void);
 
 public:
-  cDBusOsdProvider(void);
+  cDBusOsdProvider(cDBusObject *Object);
   virtual ~cDBusOsdProvider();
 
   void SendMessage(cDbusOsdMsg *Msg);
 };
 
-class cDBusMessageOsd : public cDBusMessage
-{
-friend class cDBusDispatcherOsd;
-
-public:
-  enum eAction { dmoCreateProvider, dmoDeleteProvider };
-
-  virtual ~cDBusMessageOsd(void);
-
-protected:
-  virtual void Process(void);
-
-private:
-  cDBusMessageOsd(eAction action, DBusConnection* conn, DBusMessage* msg);
-  void CreateProvider(void);
-  void DeleteProvider(void);
-
-  eAction _action;
-};
-
-class cDBusDispatcherOsd : public cDBusMessageDispatcher
+class cDBusOsdObject : public cDBusObject
 {
 public:
-  cDBusDispatcherOsd(void);
-  virtual ~cDBusDispatcherOsd(void);
-
-protected:
-  virtual cDBusMessage *CreateMessage(DBusConnection* conn, DBusMessage* msg);
-  virtual bool          OnIntrospect(DBusMessage *msg, cString &Data);
+  cDBusOsdObject(void);
+  virtual ~cDBusOsdObject(void);
 };
 
 #endif

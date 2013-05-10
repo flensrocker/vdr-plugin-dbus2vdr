@@ -2,7 +2,6 @@
 #include "common.h"
 #include "connection.h"
 #include "helper.h"
-#include "monitor.h"
 
 #include <vdr/recording.h>
 
