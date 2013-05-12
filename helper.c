@@ -1,5 +1,4 @@
 #include "helper.h"
-#include "bus.h"
 
 #include <dbus/dbus.h>
 #include <vdr/plugin.h>
@@ -89,11 +88,10 @@ void  cDBusHelper::SendReply(GDBusMethodInvocation *Invocation, int  ReplyCode, 
   g_variant_builder_unref(builder);
 }
 
-cDBusTcpAddress *cDBusHelper::GetNetworkAddress(void)
+cDBusTcpAddress *cDBusTcpAddress::LoadFromFile(const char *Filename)
 {
-  cString filename = cString::sprintf("%s/network-address.conf", *_pluginConfigDir);
-  dsyslog("dbus2vdr: loading network address from file %s", *filename);
-  FILE *f = fopen(*filename, "r");
+  dsyslog("dbus2vdr: loading network address from file %s", Filename);
+  FILE *f = fopen(Filename, "r");
   if (f == NULL)
      return NULL;
   cReadLine r;
@@ -125,6 +123,17 @@ cDBusTcpAddress *cDBusHelper::GetNetworkAddress(void)
       }
   dbus_address_entries_free(addresses);
   return address;
+}
+
+
+const char *cDBusTcpAddress::Address(void)
+{
+  if (*_address == NULL) {
+     char *host = dbus_address_escape_value(*Host);
+     _address = cString::sprintf("tcp:host=%s,port=%d", host, Port);
+     dbus_free(host);
+     }
+  return *_address;
 }
 
 

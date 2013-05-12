@@ -6,7 +6,22 @@
 #include <vdr/tools.h>
 
 
-class cDBusTcpAddress;
+class cDBusTcpAddress
+{
+private:
+  cString _address;
+
+public:
+  const cString Host;
+  const int     Port;
+
+  cDBusTcpAddress(const char *host, int port)
+   :Host(host),Port(port) {}
+
+  const char *Address(void);
+
+  static cDBusTcpAddress *LoadFromFile(const char *Filename);
+};
 
 class cDBusHelper
 {
@@ -20,8 +35,6 @@ public:
 
   static void AddKeyValue(GVariantBuilder *Array, const char *Key, const gchar *Type, void **Value);
   static void SendReply(GDBusMethodInvocation *Invocation, int  ReplyCode, const char *ReplyMessage);
-
-  static cDBusTcpAddress *GetNetworkAddress(void);
 };
 
 // copy of vdr's cPipe but returns exit code of child on Close

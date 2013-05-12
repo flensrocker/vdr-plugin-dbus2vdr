@@ -1,4 +1,5 @@
 #include "connection.h"
+#include "helper.h"
 #include "object.h"
 
 
@@ -54,10 +55,10 @@ cDBusConnection::cDBusConnection(const char *Busname, GBusType  Type)
   _bus_type = Type;
 }
 
-cDBusConnection::cDBusConnection(const char *Busname, const char *Address)
+cDBusConnection::cDBusConnection(const char *Busname, const char *Filename)
 {
   Init(Busname);
-  _bus_address = g_strdup(Address);
+  _filename = g_strdup(Filename);
 }
 
 cDBusConnection::~cDBusConnection(void)
@@ -71,9 +72,19 @@ cDBusConnection::~cDBusConnection(void)
      _busname = NULL;
      }
 
+  if (_filename != NULL) {
+     g_free(_filename);
+     _filename = NULL;
+     }
+
   if (_bus_address != NULL) {
-     g_free(_bus_address);
+     delete _bus_address;
      _bus_address = NULL;
+     }
+
+  if (_file_monitor != NULL) {
+     g_object_unref(_file_monitor);
+     _file_monitor = NULL;
      }
 }
 
@@ -81,7 +92,9 @@ void  cDBusConnection::Init(const char *Busname)
 {
   _busname = g_strdup(Busname);
   _bus_type = G_BUS_TYPE_NONE;
+  _filename = NULL;
   _bus_address = NULL;
+  _file_monitor = NULL;
   _context = NULL;
   _loop = NULL;
   _connection = NULL;
@@ -155,7 +168,10 @@ void  cDBusConnection::Connect(void)
 
   GSource *source = g_idle_source_new();
   g_source_set_priority(source, G_PRIORITY_DEFAULT);
-  g_source_set_callback(source, do_connect, this, NULL);
+  if (_filename != NULL)
+     g_source_set_callback(source, do_monitor_file, this, NULL);
+  else
+     g_source_set_callback(source, do_connect, this, NULL);
   g_source_attach(source, _context);
 }
 
@@ -231,7 +247,11 @@ void  cDBusConnection::on_bus_get(GObject *source_object, GAsyncResult *res, gpo
 
   dsyslog("dbus2vdr: on_bus_get");
   cDBusConnection *conn = (cDBusConnection*)user_data;
-  conn->_connection = g_bus_get_finish(res, NULL);
+  if (conn->_bus_type != G_BUS_TYPE_NONE)
+     conn->_connection = g_bus_get_finish(res, NULL);
+  else if (conn->_bus_address != NULL)
+     conn->_connection = g_dbus_connection_new_for_address_finish(res, NULL);
+
   if (conn->_connection != NULL) {
      conn->_connect_status = 3;
      g_dbus_connection_set_exit_on_close(conn->_connection, FALSE);
@@ -270,7 +290,7 @@ gboolean  cDBusConnection::do_reconnect(gpointer user_data)
         return TRUE;
         }
      if (conn->_bus_address != NULL) {
-        g_dbus_connection_new_for_address(conn->_bus_address,
+        g_dbus_connection_new_for_address(conn->_bus_address->Address(),
                                           G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION,
                                           NULL,
                                           NULL,
@@ -299,7 +319,7 @@ gboolean  cDBusConnection::do_connect(gpointer user_data)
      if (conn->_bus_type != G_BUS_TYPE_NONE)
         g_bus_get(conn->_bus_type, NULL, on_bus_get, user_data);
      else if (conn->_bus_address != NULL)
-        g_dbus_connection_new_for_address(conn->_bus_address, G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION, NULL, NULL, on_bus_get, user_data);
+        g_dbus_connection_new_for_address(conn->_bus_address->Address(), G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION, NULL, NULL, on_bus_get, user_data);
      else {
         esyslog("dbus2vdr: can't connect bus without address");
         return FALSE;
@@ -336,6 +356,67 @@ gboolean  cDBusConnection::do_disconnect(gpointer user_data)
 
   g_main_loop_quit(conn->_loop);
   return FALSE;
+}
+
+gboolean  cDBusConnection::do_monitor_file(gpointer user_data)
+{
+  dsyslog("dbus2vdr: do_monitor_file");
+  cDBusConnection *conn = (cDBusConnection*)user_data;
+  if (conn->_filename != NULL) {
+     GFile *file = g_file_new_for_path(conn->_filename);
+     GFile *absFile = g_file_resolve_relative_path(file, conn->_filename);
+     if (g_file_query_exists(absFile, NULL)) {
+        conn->_bus_address = cDBusTcpAddress::LoadFromFile(conn->_filename);
+        if (conn->_bus_address != NULL) {
+           GSource *source = g_idle_source_new();
+           g_source_set_priority(source, G_PRIORITY_DEFAULT);
+           g_source_set_callback(source, do_connect, user_data, NULL);
+           g_source_attach(source, conn->_context);
+           }
+        }
+     conn->_file_monitor = g_file_monitor_file(absFile, G_FILE_MONITOR_SEND_MOVED, NULL, NULL);
+     g_signal_connect(conn->_file_monitor, "changed", G_CALLBACK(on_monitor_file), user_data);
+     g_object_unref(absFile);
+     g_object_unref(file);
+     dsyslog("dbus2vdr: file-monitor connected to %s", conn->_filename);
+     }
+  return FALSE;
+}
+
+void      cDBusConnection::on_monitor_file(GFileMonitor *monitor, GFile *first, GFile *second, GFileMonitorEvent event, gpointer user_data)
+{
+  dsyslog("dbus2vdr: on_monitor_file");
+  cDBusConnection *conn = (cDBusConnection*)user_data;
+  char *filename = g_file_get_path(first);
+  switch (event) {
+    case G_FILE_MONITOR_EVENT_CHANGES_DONE_HINT:
+     {
+      isyslog("dbus2vdr: file %s changed, reloading", filename);
+      if (conn->_bus_address != NULL) {
+         delete conn->_bus_address;
+         conn->_bus_address = NULL;
+         }
+      if ((conn->_disconnect_status == 0) && (conn->_connect_status == 0) && conn->_reconnect) {
+         conn->_bus_address = cDBusTcpAddress::LoadFromFile(filename);
+         if (conn->_bus_address != NULL) {
+            GSource *source = g_idle_source_new();
+            g_source_set_priority(source, G_PRIORITY_DEFAULT);
+            g_source_set_callback(source, do_connect, user_data, NULL);
+            g_source_attach(source, conn->_context);
+            }
+         }
+      break;
+     }
+    case G_FILE_MONITOR_EVENT_DELETED:
+     {
+      isyslog("dbus2vdr: file %s deleted, disconnecting", filename);
+      conn->Disconnect();
+      break;
+     }
+    default:
+      break;
+    }
+  g_free(filename);
 }
 
 void  cDBusConnection::on_flush(GObject *source_object, GAsyncResult *res, gpointer user_data)

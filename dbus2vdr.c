@@ -249,10 +249,11 @@ bool cPluginDbus2vdr::Start(void)
      }
   
   if (enable_network) {
-     //network_bus = new cDBusConnection(*busname, address);
-     //network_bus->AddObject(new cDBusRecordingsConst);
-     //network_bus->AddObject(new cDBusTimersConst);
-     //network_bus->Start();
+     cString filename = cString::sprintf("%s/network-address.conf", cPlugin::ConfigDirectory("dbus2vdr"));
+     network_bus = new cDBusConnection(*busname, *filename);
+     network_bus->AddObject(new cDBusRecordingsConst);
+     network_bus->AddObject(new cDBusTimersConst);
+     network_bus->Start();
      }
   
   cDBusVdr::SetStatus(cDBusVdr::statusStart);

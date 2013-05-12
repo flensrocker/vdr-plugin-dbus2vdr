@@ -8,6 +8,7 @@
 
 
 class cDBusObject;
+class cDBusTcpAddress;
 
 class cDBusConnection : public cThread
 {
@@ -38,6 +39,7 @@ public:
     gchar    *_interface;
     gchar    *_method;
     GVariant *_parameters;
+    //TODO: add callback
 
   public:
     cDBusMethodCall(const char *DestinationBusname, const char *ObjectPath, const char *Interface, const char *Method, GVariant *Parameters);
@@ -58,16 +60,25 @@ private:
   static gboolean  do_reconnect(gpointer user_data);
   static gboolean  do_connect(gpointer user_data);
   static gboolean  do_disconnect(gpointer user_data);
+
+  static gboolean  do_monitor_file(gpointer user_data);
+  static void      on_monitor_file(GFileMonitor *monitor, GFile *first, GFile *second, GFileMonitorEvent event, gpointer user_data);
+
   static void      on_flush(GObject *source_object,
                             GAsyncResult *res,
                             gpointer user_data);
   static gboolean  do_flush(gpointer user_data);
+
   static gboolean  do_emit_signal(gpointer user_data);
   static gboolean  do_call_method(gpointer user_data);
 
   gchar           *_busname;
   GBusType         _bus_type;
-  gchar           *_bus_address;
+
+  gchar           *_filename;
+  GFileMonitor    *_file_monitor;
+  cDBusTcpAddress *_bus_address;
+
   GMainContext    *_context;
   GMainLoop       *_loop;
   GDBusConnection *_connection;
@@ -91,7 +102,7 @@ protected:
 
 public:
   cDBusConnection(const char *Busname, GBusType  Type);
-  cDBusConnection(const char *Busname, const char *Address);
+  cDBusConnection(const char *Busname, const char *Filename);
   virtual ~cDBusConnection(void);
 
   GDBusConnection *GetConnection(void) const { return _connection; };
