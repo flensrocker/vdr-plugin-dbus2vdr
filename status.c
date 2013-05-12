@@ -13,6 +13,10 @@ namespace cDBusStatusHelper
     "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
     "<node>\n"
     "  <interface name=\""DBUS_VDR_STATUS_INTERFACE"\">\n"
+    "    <signal name=\"TimerChange\">\n"
+    "      <arg name=\"Timer\"           type=\"s\" direction=\"out\"/>\n"
+    "      <arg name=\"Change\"          type=\"s\" direction=\"out\"/>\n"
+    "    </signal>\n"
     "    <signal name=\"ChannelSwitch\">\n"
     "      <arg name=\"DeviceNumber\"    type=\"i\" direction=\"out\"/>\n"
     "      <arg name=\"ChannelNumber\"   type=\"i\" direction=\"out\"/>\n"
@@ -71,6 +75,28 @@ namespace cDBusStatusHelper
 
     virtual void TimerChange(const cTimer *Timer, eTimerChange Change)
     {
+      const char *timer = NULL;
+      const char *change = NULL;
+
+      cString text;
+      if (Timer != NULL) {
+         text = Timer->ToText(true);
+         timer = stripspace((char*)*text);
+         }
+
+      switch (Change) {
+       case tcMod:
+        change = "tcMod";
+        break;
+       case tcAdd:
+        change = "tcAdd";
+        break;
+       case tcDel:
+        change = "tcDel";
+        break;
+       }
+
+      EmitSignal("TimerChange", g_variant_new("(ss)", EMPTY(timer), EMPTY(change)));
     };
 
     virtual void ChannelSwitch(const cDevice *Device, int ChannelNumber, bool LiveView)
