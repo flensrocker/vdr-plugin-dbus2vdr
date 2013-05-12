@@ -24,6 +24,9 @@ namespace cDBusPluginsHelper
     "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
     "<node>\n"
     "  <interface name=\""DBUS_VDR_PLUGIN_INTERFACE"\">\n"
+    "    <method name=\"List\">\n"
+    "      <arg name=\"pluginlist\"   type=\"a(ss)\" direction=\"out\"/>\n"
+    "    </method>\n"
     "    <method name=\"SVDRPCommand\">\n"
     "      <arg name=\"command\"      type=\"s\" direction=\"in\"/>\n"
     "      <arg name=\"option\"       type=\"s\" direction=\"in\"/>\n"
@@ -120,6 +123,7 @@ namespace cDBusPluginsHelper
 cDBusPlugin::cDBusPlugin(const char *Path)
 :cDBusObject(Path, cDBusPluginsHelper::_xmlNodeInfoPlugin)
 {
+  AddMethod("List", cDBusPluginsHelper::List);
   AddMethod("SVDRPCommand", cDBusPluginsHelper::SVDRPCommand);
   AddMethod("Service", cDBusPluginsHelper::Service);
 }
