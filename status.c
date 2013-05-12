@@ -29,6 +29,21 @@ namespace cDBusStatusHelper
     "      <arg name=\"FileName\"        type=\"s\" direction=\"out\"/>\n"
     "      <arg name=\"On\"              type=\"b\" direction=\"out\"/>\n"
     "    </signal>\n"
+    "    <signal name=\"SetVolume\">\n"
+    "      <arg name=\"Volume\"          type=\"i\" direction=\"out\"/>\n"
+    "      <arg name=\"Absolute\"        type=\"b\" direction=\"out\"/>\n"
+    "    </signal>\n"
+    "    <signal name=\"SetAudioTrack\">\n"
+    "      <arg name=\"Index\"           type=\"i\" direction=\"out\"/>\n"
+    "      <arg name=\"Tracks\"          type=\"as\" direction=\"out\"/>\n"
+    "    </signal>\n"
+    "    <signal name=\"SetAudioChannel\">\n"
+    "      <arg name=\"AudioChannel\"    type=\"i\" direction=\"out\"/>\n"
+    "    </signal>\n"
+    "    <signal name=\"SetSubtitleTrack\">\n"
+    "      <arg name=\"Index\"           type=\"i\" direction=\"out\"/>\n"
+    "      <arg name=\"Tracks\"          type=\"as\" direction=\"out\"/>\n"
+    "    </signal>\n"
     "  </interface>\n"
     "</node>\n";
 
@@ -84,18 +99,38 @@ namespace cDBusStatusHelper
 
     virtual void SetVolume(int Volume, bool Absolute)
     {
+      EmitSignal("SetVolume", g_variant_new("(ib)", Volume, Absolute));
     };
 
     virtual void SetAudioTrack(int Index, const char * const *Tracks)
     {
+      GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("(ias)"));
+      g_variant_builder_add(builder, "i", Index);
+      GVariantBuilder *array = g_variant_builder_new(G_VARIANT_TYPE("as"));
+      for (int i = 0; Tracks[i] != NULL; i++)
+            g_variant_builder_add(array, "s", Tracks[i]);
+      g_variant_builder_add_value(builder, g_variant_builder_end(array));
+      EmitSignal("SetAudioTrack", g_variant_builder_end(builder));
+      g_variant_builder_unref(array);
+      g_variant_builder_unref(builder);
     };
 
     virtual void SetAudioChannel(int AudioChannel)
     {
+      EmitSignal("SetAudioChannel", g_variant_new("(i)", AudioChannel));
     };
 
     virtual void SetSubtitleTrack(int Index, const char * const *Tracks)
     {
+      GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("(ias)"));
+      g_variant_builder_add(builder, "i", Index);
+      GVariantBuilder *array = g_variant_builder_new(G_VARIANT_TYPE("as"));
+      for (int i = 0; Tracks[i] != NULL; i++)
+            g_variant_builder_add(array, "s", Tracks[i]);
+      g_variant_builder_add_value(builder, g_variant_builder_end(array));
+      EmitSignal("SetSubtitleTrack", g_variant_builder_end(builder));
+      g_variant_builder_unref(array);
+      g_variant_builder_unref(builder);
     };
 
     virtual void OsdClear(void)
