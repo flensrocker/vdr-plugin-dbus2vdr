@@ -10,7 +10,7 @@
 class cDBusObject;
 class cDBusTcpAddress;
 
-class cDBusConnection : public cThread
+class cDBusConnection
 {
 public:
   class cDBusSignal : public cListObject
@@ -72,6 +72,11 @@ private:
   static gboolean  do_emit_signal(gpointer user_data);
   static gboolean  do_call_method(gpointer user_data);
 
+  static gpointer  do_action(gpointer data);
+
+  GThread         *_thread;
+  GMutex           _mutex;
+
   gchar           *_busname;
   GBusType         _bus_type;
 
@@ -109,6 +114,8 @@ public:
 
   // must be called before "Start"
   void  AddObject(cDBusObject *Object);
+
+  void  Start(void);
 
   // "Signal" will be deleted by cDBusConnection
   void  EmitSignal(cDBusSignal *Signal);

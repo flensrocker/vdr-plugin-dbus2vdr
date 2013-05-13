@@ -63,9 +63,9 @@ cDBusConnection::cDBusConnection(const char *Busname, const char *Filename)
 
 cDBusConnection::~cDBusConnection(void)
 {
-  Cancel(-1);
   Disconnect();
-  Cancel(5);
+  if (_thread != NULL)
+     g_thread_join(_thread);
 
   if (_busname != NULL) {
      g_free(_busname);
@@ -86,10 +86,19 @@ cDBusConnection::~cDBusConnection(void)
      g_object_unref(_file_monitor);
      _file_monitor = NULL;
      }
+
+  if (_thread != NULL) {
+     g_thread_unref(_thread);
+     _thread = NULL;
+     }
+  g_mutex_clear(&_mutex);
 }
 
 void  cDBusConnection::Init(const char *Busname)
 {
+  _thread = NULL;
+  g_mutex_init(&_mutex);
+
   _busname = g_strdup(Busname);
   _bus_type = G_BUS_TYPE_NONE;
   _filename = NULL;
@@ -112,9 +121,18 @@ void  cDBusConnection::AddObject(cDBusObject *Object)
      }
 }
 
+void  cDBusConnection::Start(void)
+{
+  if (_thread != NULL) {
+     esyslog("dbus2vdr: connection started multiple times!");
+     return;
+     }
+  _thread = g_thread_new("connection", do_action, this);
+}
+
 void  cDBusConnection::EmitSignal(cDBusSignal *Signal)
 {
-  Lock();
+  g_mutex_lock(&_mutex);
   bool addHandler = (_signals.Count() == 0);
   _signals.Add(Signal);
   if (addHandler) {
@@ -123,12 +141,12 @@ void  cDBusConnection::EmitSignal(cDBusSignal *Signal)
      g_source_set_callback(source, do_emit_signal, this, NULL);
      g_source_attach(source, _context);
      }
-  Unlock();
+  g_mutex_unlock(&_mutex);
 }
 
 void  cDBusConnection::CallMethod(cDBusMethodCall *Call)
 {
-  Lock();
+  g_mutex_lock(&_mutex);
   bool addHandler = (_method_calls.Count() == 0);
   _method_calls.Add(Call);
   if (addHandler) {
@@ -137,7 +155,16 @@ void  cDBusConnection::CallMethod(cDBusMethodCall *Call)
      g_source_set_callback(source, do_call_method, this, NULL);
      g_source_attach(source, _context);
      }
-  Unlock();
+  g_mutex_unlock(&_mutex);
+}
+
+gpointer  cDBusConnection::do_action(gpointer data)
+{
+  isyslog("dbus2vdr: connection thread started");
+  if (data != NULL)
+     ((cDBusConnection*)data)->Action();
+  isyslog("dbus2vdr: connection thread stopped");
+  return NULL;
 }
 
 void  cDBusConnection::Action(void)
@@ -464,7 +491,7 @@ gboolean  cDBusConnection::do_emit_signal(gpointer user_data)
   if (conn->_connect_status < 3)
      return TRUE;
 
-  conn->Lock();
+  g_mutex_lock(&conn->_mutex);
   GError *err = NULL;
   for (cDBusSignal *s = conn->_signals.First(); s; s = conn->_signals.Next(s)) {
       gchar *p = g_variant_print(s->_parameters, TRUE);
@@ -478,7 +505,7 @@ gboolean  cDBusConnection::do_emit_signal(gpointer user_data)
          }
       }
   conn->_signals.Clear();
-  conn->Unlock();
+  g_mutex_unlock(&conn->_mutex);
   return FALSE;
 }
 
@@ -498,7 +525,7 @@ gboolean  cDBusConnection::do_call_method(gpointer user_data)
   if (conn->_connect_status < 3)
      return TRUE;
 
-  conn->Lock();
+  g_mutex_lock(&conn->_mutex);
   for (cDBusMethodCall *c = conn->_method_calls.First(); c; c = conn->_method_calls.Next(c)) {
       gchar *p = g_variant_print(c->_parameters, TRUE);
       dsyslog("dbus2vdr: call method %s %s %s %s", c->_object_path, c->_interface, c->_method, p);
@@ -506,6 +533,6 @@ gboolean  cDBusConnection::do_call_method(gpointer user_data)
       g_dbus_connection_call(conn->_connection, c->_destination_busname, c->_object_path, c->_interface, c->_method, c->_parameters, NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, NULL, NULL);
       }
   conn->_method_calls.Clear();
-  conn->Unlock();
+  g_mutex_unlock(&conn->_mutex);
   return FALSE;
 }
