@@ -10,6 +10,7 @@ cDBusConnection::cDBusConnection(const char *Busname, GBusType  Type, GMainConte
   _context = Context;
   _connection = NULL;
   _owner_id = 0;
+  _auto_reconnect = TRUE;
   _reconnect = TRUE;
   _connect_status = 0;
   _disconnect_status = 0;
@@ -90,10 +91,10 @@ void  cDBusConnection::Flush(void)
   g_mutex_unlock(&_flush_mutex);
 }
 
-void  cDBusConnection::Connect(void)
+void  cDBusConnection::Connect(gboolean AutoReconnect)
 {
   dsyslog("dbus2vdr: %s: Connect", Name());
-  _reconnect = TRUE;
+  _reconnect = AutoReconnect;
   _connect_status = 0;
 
   GSource *source = g_idle_source_new();
@@ -118,7 +119,7 @@ void  cDBusConnection::Disconnect(void)
      g_source_set_callback(source, do_disconnect, this, NULL);
   g_source_attach(source, _context);
 
-  // wait till really disconnected
+  // wait until really disconnected
   while (_disconnect_status < 2)
         g_cond_wait(&_disconnect_cond, &_disconnect_mutex);
   _disconnect_status = 0;
@@ -171,7 +172,7 @@ void  cDBusConnection::on_name_lost(GDBusConnection *connection, const gchar *na
      conn->_connect_status = 1;
 
   if (conn->_reconnect)
-     conn->Connect();
+     conn->Connect(TRUE);
 }
 
 void  cDBusConnection::on_bus_get(GObject *source_object, GAsyncResult *res, gpointer user_data)

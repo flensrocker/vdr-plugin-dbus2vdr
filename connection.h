@@ -135,6 +135,7 @@ private:
   GMainContext    *_context;
   GDBusConnection *_connection;
   guint            _owner_id;
+  gboolean         _auto_reconnect;
   gboolean         _reconnect;
   guint            _connect_status;
 
@@ -163,7 +164,7 @@ public:
   void  AddObject(cDBusObject *Object);
 
   // "Connect" is async
-  void  Connect(void);
+  void  Connect(gboolean AutoReconnect);
   // "Disconnect" blocks
   void  Disconnect(void);
 

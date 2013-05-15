@@ -234,13 +234,13 @@ bool cPluginDbus2vdr::Start(void)
   if (enable_system) {
      system_bus = new cDBusConnection(*busname, G_BUS_TYPE_SYSTEM, NULL);
      AddAllObjects(system_bus, enable_osd);
-     system_bus->Connect();
+     system_bus->Connect(TRUE);
      }
 
   if (enable_session) {
      session_bus = new cDBusConnection(*busname, G_BUS_TYPE_SESSION, NULL);
      AddAllObjects(session_bus, enable_osd);
-     session_bus->Connect();
+     session_bus->Connect(TRUE);
      }
 
   // TODO build handler for dbus2vdr-daemon connection
@@ -249,7 +249,7 @@ bool cPluginDbus2vdr::Start(void)
   //   network_bus = new cDBusConnection(*busname, *filename);
   //   network_bus->AddObject(new cDBusRecordingsConst);
   //   network_bus->AddObject(new cDBusTimersConst);
-  //   network_bus->Connect();
+  //   network_bus->Connect(FALSE);
   //   }
   
   cDBusVdr::SetStatus(cDBusVdr::statusStart);
