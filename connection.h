@@ -172,7 +172,7 @@ public:
   void  EmitSignal(cDBusSignal *Signal);
   void  CallMethod(cDBusMethodCall *Call);
   // "Flush" blocks
-  void  Flush(void);
+  bool  Flush(void);
 };
 
 #endif

@@ -39,6 +39,7 @@ static const char *MAINMENUENTRY  = NULL;
 class cPluginDbus2vdr : public cPlugin {
 private:
   // Add any member variables or functions you may need here.
+  bool enable_mainloop;
   bool enable_osd;
   int  send_upstart_signals;
   bool enable_system;
@@ -79,6 +80,7 @@ cPluginDbus2vdr::cPluginDbus2vdr(void)
   // Initialize any member variables here.
   // DON'T DO ANYTHING ELSE THAT MAY HAVE SIDE EFFECTS, REQUIRE GLOBAL
   // VDR OBJECTS TO EXIST OR PRODUCE ANY OUTPUT!
+  enable_mainloop = true;
   enable_osd = false;
   send_upstart_signals = -1;
   enable_system = true;
@@ -112,6 +114,8 @@ const char *cPluginDbus2vdr::CommandLineHelp(void)
          "    connect to session D-Bus daemon\n"
          "  --no-system\n"
          "    don't connect to system D-Bus daemon\n"
+         "  --no-mainloop\n"
+         "    don't start GMainLoop (don't use this option if you don't understand)\n"
          "  --network\n"
          "    enable network support for peer2peer communication\n"
          "    a local dbus-daemon has to be started manually\n"
@@ -129,6 +133,7 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
     {"session", no_argument, 0, 's' | 0x100},
     {"no-system", no_argument, 0, 's' | 0x200},
     {"network", no_argument, 0, 'n'},
+    {"no-mainloop", no_argument, 0, 'n' | 0x100},
     {0, 0, 0, 0}
   };
 
@@ -184,6 +189,12 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
              isyslog("dbus2vdr: enable network support");
              break;
            }
+          case 'n' | 0x100:
+           {
+             enable_mainloop = false;
+             isyslog("dbus2vdr: disable mainloop");
+             break;
+           }
           }
         }
   return true;
@@ -220,7 +231,8 @@ bool cPluginDbus2vdr::Start(void)
 {
   cDBusHelper::SetConfigDirectory(cPlugin::ConfigDirectory("dbus2vdr"));
   // Start any background activities the plugin shall perform.
-  main_loop = new cDBusMainLoop(NULL);
+  if (enable_mainloop)
+     main_loop = new cDBusMainLoop(NULL);
 
   cString busname;
 #if VDRVERSNUM < 10704

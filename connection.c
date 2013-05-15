@@ -35,6 +35,7 @@ cDBusConnection::~cDBusConnection(void)
   g_cond_clear(&_disconnect_cond);
   g_mutex_clear(&_flush_mutex);
   g_cond_clear(&_flush_cond);
+  dsyslog("dbus2vdr: %s: ~cDBusConnection", Name());
 }
 
 const char  *cDBusConnection::Name(void) const
@@ -82,13 +83,16 @@ void  cDBusConnection::CallMethod(cDBusMethodCall *Call)
   g_mutex_unlock(&_flush_mutex);
 }
 
-void  cDBusConnection::Flush(void)
+bool  cDBusConnection::Flush(void)
 {
   dsyslog("dbus2vdr: %s: Flush", Name());
+  if (_connect_status == 0)
+     return false;
   g_mutex_lock(&_flush_mutex);
   while ((_signals.Count() > 0) || (_method_calls.Count() > 0))
         g_cond_wait(&_flush_cond, &_flush_mutex);
   g_mutex_unlock(&_flush_mutex);
+  return true;
 }
 
 void  cDBusConnection::Connect(gboolean AutoReconnect)
@@ -106,6 +110,8 @@ void  cDBusConnection::Connect(gboolean AutoReconnect)
 void  cDBusConnection::Disconnect(void)
 {
   dsyslog("dbus2vdr: %s: Disconnect", Name());
+  if (_connect_status == 0)
+     return;
   g_mutex_lock(&_disconnect_mutex);
   _reconnect = FALSE;
   _disconnect_status = 1;
