@@ -61,14 +61,14 @@ void  cDBusObject::Register(void)
   if (_registration_id != 0)
      Unregister();
   _registration_id = g_dbus_connection_register_object(_connection->GetConnection(), Path(), _introspection_data->interfaces[0], &_interface_vtable, this, NULL, NULL);
-  dsyslog("dbus2vdr: register object %s with id %d", Path(), _registration_id);
+  dsyslog("dbus2vdr: %s: register object %s with id %d", _connection->Name(), Path(), _registration_id);
 }
 
 void  cDBusObject::Unregister(void)
 {
   if (_registration_id != 0) {
      if ((_connection != NULL) && (_connection->GetConnection() != NULL)) {
-        dsyslog("dbus2vdr: unregister object %s with id %d", Path(), _registration_id);
+        dsyslog("dbus2vdr: %s: unregister object %s with id %d", _connection->Name(), Path(), _registration_id);
         g_dbus_connection_unregister_object(_connection->GetConnection(), _registration_id);
         }
      _registration_id = 0;

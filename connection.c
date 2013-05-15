@@ -55,12 +55,6 @@ cDBusConnection::cDBusConnection(const char *Busname, GBusType  Type)
   _bus_type = Type;
 }
 
-cDBusConnection::cDBusConnection(const char *Busname, const char *Filename)
-{
-  Init(Busname);
-  _filename = g_strdup(Filename);
-}
-
 cDBusConnection::~cDBusConnection(void)
 {
   Disconnect();
@@ -70,21 +64,6 @@ cDBusConnection::~cDBusConnection(void)
   if (_busname != NULL) {
      g_free(_busname);
      _busname = NULL;
-     }
-
-  if (_filename != NULL) {
-     g_free(_filename);
-     _filename = NULL;
-     }
-
-  if (_bus_address != NULL) {
-     delete _bus_address;
-     _bus_address = NULL;
-     }
-
-  if (_file_monitor != NULL) {
-     g_object_unref(_file_monitor);
-     _file_monitor = NULL;
      }
 
   if (_thread != NULL) {
@@ -101,9 +80,6 @@ void  cDBusConnection::Init(const char *Busname)
 
   _busname = g_strdup(Busname);
   _bus_type = G_BUS_TYPE_NONE;
-  _filename = NULL;
-  _bus_address = NULL;
-  _file_monitor = NULL;
   _context = NULL;
   _loop = NULL;
   _connection = NULL;
@@ -111,6 +87,15 @@ void  cDBusConnection::Init(const char *Busname)
   _reconnect = TRUE;
   _connect_status = 0;
   _disconnect_status = 0;
+}
+
+const char  *cDBusConnection::Name(void) const
+{
+  if (_bus_type == G_BUS_TYPE_SYSTEM)
+     return "SystemBus";
+  if (_bus_type == G_BUS_TYPE_SESSION)
+     return "SessionBus";
+  return "UnknownBus";
 }
 
 void  cDBusConnection::AddObject(cDBusObject *Object)
@@ -124,7 +109,7 @@ void  cDBusConnection::AddObject(cDBusObject *Object)
 void  cDBusConnection::Start(void)
 {
   if (_thread != NULL) {
-     esyslog("dbus2vdr: connection started multiple times!");
+     esyslog("dbus2vdr: %s: connection started multiple times!", Name());
      return;
      }
   _thread = g_thread_new("connection", do_action, this);
@@ -160,10 +145,12 @@ void  cDBusConnection::CallMethod(cDBusMethodCall *Call)
 
 gpointer  cDBusConnection::do_action(gpointer data)
 {
-  isyslog("dbus2vdr: connection thread started");
-  if (data != NULL)
-     ((cDBusConnection*)data)->Action();
-  isyslog("dbus2vdr: connection thread stopped");
+  if (data != NULL) {
+     cDBusConnection *conn = (cDBusConnection*)data;
+     isyslog("dbus2vdr: %s: connection thread started", conn->Name());
+     conn->Action();
+     isyslog("dbus2vdr: %s: connection thread stopped", conn->Name());
+     }
   return NULL;
 }
 
@@ -188,23 +175,20 @@ void  cDBusConnection::Action(void)
 
 void  cDBusConnection::Connect(void)
 {
-  dsyslog("dbus2vdr: Connect");
+  dsyslog("dbus2vdr: %s: Connect", Name());
   _reconnect = TRUE;
   _connect_status = 0;
   _disconnect_status = 0;
 
   GSource *source = g_idle_source_new();
   g_source_set_priority(source, G_PRIORITY_DEFAULT);
-  if (_filename != NULL)
-     g_source_set_callback(source, do_monitor_file, this, NULL);
-  else
-     g_source_set_callback(source, do_connect, this, NULL);
+  g_source_set_callback(source, do_connect, this, NULL);
   g_source_attach(source, _context);
 }
 
 void  cDBusConnection::Disconnect(void)
 {
-  dsyslog("dbus2vdr: Disconnect");
+  dsyslog("dbus2vdr: %s: Disconnect", Name());
   _reconnect = FALSE;
   _disconnect_status = 1;
 
@@ -223,14 +207,14 @@ void  cDBusConnection::RegisterObjects(void)
   if (_connection == NULL)
      return;
 
-  dsyslog("dbus2vdr: RegisterObjects");
+  dsyslog("dbus2vdr: %s: RegisterObjects", Name());
   for (cDBusObject *obj = _objects.First(); obj; obj = _objects.Next(obj))
       obj->Register();
 }
 
 void  cDBusConnection::UnregisterObjects(void)
 {
-  dsyslog("dbus2vdr: UnregisterObjects");
+  dsyslog("dbus2vdr: %s: UnregisterObjects", Name());
   for (cDBusObject *obj = _objects.First(); obj; obj = _objects.Next(obj))
       obj->Unregister();
 }
@@ -240,8 +224,8 @@ void  cDBusConnection::on_name_acquired(GDBusConnection *connection, const gchar
   if (user_data == NULL)
      return;
 
-  dsyslog("dbus2vdr: on_name_acquired");
-  //cDBusConnection *conn = (cDBusConnection*)user_data;
+  cDBusConnection *conn = (cDBusConnection*)user_data;
+  dsyslog("dbus2vdr: %s: on_name_acquired %s", conn->Name(), name);
 }
 
 void  cDBusConnection::on_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data)
@@ -249,8 +233,8 @@ void  cDBusConnection::on_name_lost(GDBusConnection *connection, const gchar *na
   if (user_data == NULL)
      return;
 
-  dsyslog("dbus2vdr: on_name_lost");
   cDBusConnection *conn = (cDBusConnection*)user_data;
+  dsyslog("dbus2vdr: %s: on_name_lost %s", conn->Name(), name);
   conn->UnregisterObjects();
 
   g_bus_unown_name(conn->_owner_id);
@@ -272,14 +256,13 @@ void  cDBusConnection::on_bus_get(GObject *source_object, GAsyncResult *res, gpo
   if (user_data == NULL)
      return;
 
-  dsyslog("dbus2vdr: on_bus_get");
   cDBusConnection *conn = (cDBusConnection*)user_data;
+  dsyslog("dbus2vdr: %s: on_bus_get", conn->Name());
   if (conn->_bus_type != G_BUS_TYPE_NONE)
      conn->_connection = g_bus_get_finish(res, NULL);
-  else if (conn->_bus_address != NULL)
-     conn->_connection = g_dbus_connection_new_for_address_finish(res, NULL);
 
   if (conn->_connection != NULL) {
+     isyslog("dbus2vdr: %s: connected with unique name %s", conn->Name(), g_dbus_connection_get_unique_name(conn->_connection));
      conn->_connect_status = 3;
      g_dbus_connection_set_exit_on_close(conn->_connection, FALSE);
      conn->RegisterObjects();
@@ -300,8 +283,8 @@ gboolean  cDBusConnection::do_reconnect(gpointer user_data)
   if (user_data == NULL)
      return FALSE;
 
-  dsyslog("dbus2vdr: do_reconnect");
   cDBusConnection *conn = (cDBusConnection*)user_data;
+  dsyslog("dbus2vdr: %s: do_reconnect", conn->Name());
   if (!conn->_reconnect)
      return FALSE;
 
@@ -316,16 +299,7 @@ gboolean  cDBusConnection::do_reconnect(gpointer user_data)
         g_bus_get(conn->_bus_type, NULL, on_bus_get, user_data);
         return TRUE;
         }
-     if (conn->_bus_address != NULL) {
-        g_dbus_connection_new_for_address(conn->_bus_address->Address(),
-                                          G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION,
-                                          NULL,
-                                          NULL,
-                                          on_bus_get,
-                                          user_data);
-        return TRUE;
-        }
-     esyslog("dbus2vdr: can't connect bus without address");
+     esyslog("dbus2vdr: %s: can't connect bus without address", conn->Name());
      return FALSE;
      }
   else if (conn->_connect_status == 2)
@@ -339,16 +313,14 @@ gboolean  cDBusConnection::do_connect(gpointer user_data)
   if (user_data == NULL)
      return FALSE;
 
-  dsyslog("dbus2vdr: do_connect");
   cDBusConnection *conn = (cDBusConnection*)user_data;
+  dsyslog("dbus2vdr: %s: do_connect", conn->Name());
   if (conn->_connect_status == 0) {
      conn->_connect_status = 2;
      if (conn->_bus_type != G_BUS_TYPE_NONE)
         g_bus_get(conn->_bus_type, NULL, on_bus_get, user_data);
-     else if (conn->_bus_address != NULL)
-        g_dbus_connection_new_for_address(conn->_bus_address->Address(), G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION, NULL, NULL, on_bus_get, user_data);
      else {
-        esyslog("dbus2vdr: can't connect bus without address");
+        esyslog("dbus2vdr: %s: can't connect bus without address", conn->Name());
         return FALSE;
         }
 
@@ -365,8 +337,8 @@ gboolean  cDBusConnection::do_disconnect(gpointer user_data)
   if (user_data == NULL)
      return FALSE;
 
-  dsyslog("dbus2vdr: do_disconnect");
   cDBusConnection *conn = (cDBusConnection*)user_data;
+  dsyslog("dbus2vdr: %s: do_disconnect", conn->Name());
   if (conn->_connection != NULL)
      conn->UnregisterObjects();
 
@@ -381,69 +353,9 @@ gboolean  cDBusConnection::do_disconnect(gpointer user_data)
      conn->_connect_status = 0;
      }
 
-  g_main_loop_quit(conn->_loop);
+  if (conn->_loop != NULL)
+     g_main_loop_quit(conn->_loop);
   return FALSE;
-}
-
-gboolean  cDBusConnection::do_monitor_file(gpointer user_data)
-{
-  dsyslog("dbus2vdr: do_monitor_file");
-  cDBusConnection *conn = (cDBusConnection*)user_data;
-  if (conn->_filename != NULL) {
-     GFile *file = g_file_new_for_path(conn->_filename);
-     GFile *absFile = g_file_resolve_relative_path(file, conn->_filename);
-     if (g_file_query_exists(absFile, NULL)) {
-        conn->_bus_address = cDBusTcpAddress::LoadFromFile(conn->_filename);
-        if (conn->_bus_address != NULL) {
-           GSource *source = g_idle_source_new();
-           g_source_set_priority(source, G_PRIORITY_DEFAULT);
-           g_source_set_callback(source, do_connect, user_data, NULL);
-           g_source_attach(source, conn->_context);
-           }
-        }
-     conn->_file_monitor = g_file_monitor_file(absFile, G_FILE_MONITOR_SEND_MOVED, NULL, NULL);
-     g_signal_connect(conn->_file_monitor, "changed", G_CALLBACK(on_monitor_file), user_data);
-     g_object_unref(absFile);
-     g_object_unref(file);
-     dsyslog("dbus2vdr: file-monitor connected to %s", conn->_filename);
-     }
-  return FALSE;
-}
-
-void      cDBusConnection::on_monitor_file(GFileMonitor *monitor, GFile *first, GFile *second, GFileMonitorEvent event, gpointer user_data)
-{
-  dsyslog("dbus2vdr: on_monitor_file");
-  cDBusConnection *conn = (cDBusConnection*)user_data;
-  char *filename = g_file_get_path(first);
-  switch (event) {
-    case G_FILE_MONITOR_EVENT_CHANGES_DONE_HINT:
-     {
-      isyslog("dbus2vdr: file %s changed, reloading", filename);
-      if (conn->_bus_address != NULL) {
-         delete conn->_bus_address;
-         conn->_bus_address = NULL;
-         }
-      if ((conn->_disconnect_status == 0) && (conn->_connect_status == 0) && conn->_reconnect) {
-         conn->_bus_address = cDBusTcpAddress::LoadFromFile(filename);
-         if (conn->_bus_address != NULL) {
-            GSource *source = g_idle_source_new();
-            g_source_set_priority(source, G_PRIORITY_DEFAULT);
-            g_source_set_callback(source, do_connect, user_data, NULL);
-            g_source_attach(source, conn->_context);
-            }
-         }
-      break;
-     }
-    case G_FILE_MONITOR_EVENT_DELETED:
-     {
-      isyslog("dbus2vdr: file %s deleted, disconnecting", filename);
-      conn->Disconnect();
-      break;
-     }
-    default:
-      break;
-    }
-  g_free(filename);
 }
 
 void  cDBusConnection::on_flush(GObject *source_object, GAsyncResult *res, gpointer user_data)
@@ -451,8 +363,8 @@ void  cDBusConnection::on_flush(GObject *source_object, GAsyncResult *res, gpoin
   if (user_data == NULL)
      return;
 
-  dsyslog("dbus2vdr: on_flush");
   cDBusConnection *conn = (cDBusConnection*)user_data;
+  dsyslog("dbus2vdr: %s: on_flush", conn->Name());
   g_dbus_connection_flush_finish(conn->_connection, res, NULL);
   if (conn->_disconnect_status == 0)
      return;
@@ -468,8 +380,8 @@ gboolean  cDBusConnection::do_flush(gpointer user_data)
   if (user_data == NULL)
      return FALSE;
 
-  dsyslog("dbus2vdr: do_flush");
   cDBusConnection *conn = (cDBusConnection*)user_data;
+  dsyslog("dbus2vdr: %s: do_flush", conn->Name());
   g_dbus_connection_flush(conn->_connection, NULL, on_flush, user_data);
 
   return FALSE;
@@ -480,7 +392,6 @@ gboolean  cDBusConnection::do_emit_signal(gpointer user_data)
   if (user_data == NULL)
      return FALSE;
 
-  dsyslog("dbus2vdr: do_emit_signal");
   cDBusConnection *conn = (cDBusConnection*)user_data;
 
   // we're about to disconnect, so forget the pending signals
@@ -495,11 +406,11 @@ gboolean  cDBusConnection::do_emit_signal(gpointer user_data)
   GError *err = NULL;
   for (cDBusSignal *s = conn->_signals.First(); s; s = conn->_signals.Next(s)) {
       gchar *p = g_variant_print(s->_parameters, TRUE);
-      dsyslog("dbus2vdr: emit signal %s %s %s %s", s->_object_path, s->_interface, s->_signal, p);
+      dsyslog("dbus2vdr: %s: emit signal %s %s %s %s", conn->Name(), s->_object_path, s->_interface, s->_signal, p);
       g_free(p);
       g_dbus_connection_emit_signal(conn->_connection, s->_destination_busname, s->_object_path, s->_interface, s->_signal, s->_parameters, &err);
       if (err != NULL) {
-         esyslog("dbus2vdr: g_dbus_connection_emit_signal reports: %s", err->message);
+         esyslog("dbus2vdr: %s: g_dbus_connection_emit_signal reports: %s", conn->Name(), err->message);
          g_error_free(err);
          err = NULL;
          }
@@ -514,7 +425,6 @@ gboolean  cDBusConnection::do_call_method(gpointer user_data)
   if (user_data == NULL)
      return FALSE;
 
-  dsyslog("dbus2vdr: do_call_method");
   cDBusConnection *conn = (cDBusConnection*)user_data;
 
   // we're about to disconnect, so forget the pending signals
@@ -528,7 +438,7 @@ gboolean  cDBusConnection::do_call_method(gpointer user_data)
   g_mutex_lock(&conn->_mutex);
   for (cDBusMethodCall *c = conn->_method_calls.First(); c; c = conn->_method_calls.Next(c)) {
       gchar *p = g_variant_print(c->_parameters, TRUE);
-      dsyslog("dbus2vdr: call method %s %s %s %s", c->_object_path, c->_interface, c->_method, p);
+      dsyslog("dbus2vdr: %s: call method %s %s %s %s", conn->Name(), c->_object_path, c->_interface, c->_method, p);
       g_free(p);
       g_dbus_connection_call(conn->_connection, c->_destination_busname, c->_object_path, c->_interface, c->_method, c->_parameters, NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, NULL, NULL);
       }

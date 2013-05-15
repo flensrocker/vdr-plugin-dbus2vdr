@@ -46,6 +46,7 @@ private:
   bool enable_network;
   bool first_main_thread;
 
+  cMainLoop       *main_loop;
   cDBusConnection *system_bus;
   cDBusConnection *session_bus;
   cDBusConnection *network_bus;
@@ -85,6 +86,7 @@ cPluginDbus2vdr::cPluginDbus2vdr(void)
   enable_network = false;
   first_main_thread = true;
   g_type_init();
+  main_loop = NULL;
   system_bus = NULL;
   session_bus = NULL;
   network_bus = NULL;
@@ -200,6 +202,7 @@ bool cPluginDbus2vdr::Start(void)
 {
   cDBusHelper::SetConfigDirectory(cPlugin::ConfigDirectory("dbus2vdr"));
   // Start any background activities the plugin shall perform.
+  //main_loop = new cMainLoop();
 
   cString busname;
 #if VDRVERSNUM < 10704
@@ -248,13 +251,13 @@ bool cPluginDbus2vdr::Start(void)
      session_bus->Start();
      }
   
-  if (enable_network) {
-     cString filename = cString::sprintf("%s/network-address.conf", cPlugin::ConfigDirectory("dbus2vdr"));
-     network_bus = new cDBusConnection(*busname, *filename);
-     network_bus->AddObject(new cDBusRecordingsConst);
-     network_bus->AddObject(new cDBusTimersConst);
-     network_bus->Start();
-     }
+  //if (enable_network) {
+  //   cString filename = cString::sprintf("%s/network-address.conf", cPlugin::ConfigDirectory("dbus2vdr"));
+  //   network_bus = new cDBusConnection(*busname, *filename);
+  //   network_bus->AddObject(new cDBusRecordingsConst);
+  //   network_bus->AddObject(new cDBusTimersConst);
+  //   network_bus->Start();
+  //   }
   
   cDBusVdr::SetStatus(cDBusVdr::statusStart);
 
@@ -284,6 +287,10 @@ void cPluginDbus2vdr::Stop(void)
   if (system_bus != NULL) {
      delete system_bus;
      system_bus = NULL;
+     }
+  if (main_loop != NULL) {
+     delete main_loop;
+     main_loop = NULL;
      }
 }
 

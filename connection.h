@@ -10,6 +10,48 @@
 class cDBusObject;
 class cDBusTcpAddress;
 
+class cMainLoop
+{
+private:
+  GThread         *_thread;
+  GMainLoop       *_loop;
+
+  static gpointer  do_loop(gpointer data)
+  {
+    dsyslog("dbus2vdr: mainloop started");
+    if (data != NULL) {
+       cMainLoop *mainloop = (cMainLoop*)data;
+       mainloop->_loop = g_main_loop_new(NULL, FALSE);
+       if (mainloop->_loop != NULL)
+          g_main_loop_run(mainloop->_loop);
+       }
+    dsyslog("dbus2vdr: mainloop stopped");
+    return NULL;
+  };
+
+public:
+  cMainLoop(void)
+  {
+    _loop = NULL;
+    _thread = g_thread_new("mainloop", do_loop, this);
+  };
+
+  virtual ~cMainLoop(void)
+  {
+    if (_loop != NULL)
+       g_main_loop_quit(_loop);
+    if (_thread != NULL) {
+       g_thread_join(_thread);
+       g_thread_unref(_thread);
+       _thread = NULL;
+	      }
+    if (_loop != NULL) {
+       g_main_loop_unref(_loop);
+       _loop = NULL;
+       }
+  };
+};
+
 class cDBusConnection
 {
 public:
@@ -61,9 +103,6 @@ private:
   static gboolean  do_connect(gpointer user_data);
   static gboolean  do_disconnect(gpointer user_data);
 
-  static gboolean  do_monitor_file(gpointer user_data);
-  static void      on_monitor_file(GFileMonitor *monitor, GFile *first, GFile *second, GFileMonitorEvent event, gpointer user_data);
-
   static void      on_flush(GObject *source_object,
                             GAsyncResult *res,
                             gpointer user_data);
@@ -79,10 +118,6 @@ private:
 
   gchar           *_busname;
   GBusType         _bus_type;
-
-  gchar           *_filename;
-  GFileMonitor    *_file_monitor;
-  cDBusTcpAddress *_bus_address;
 
   GMainContext    *_context;
   GMainLoop       *_loop;
@@ -107,10 +142,10 @@ protected:
 
 public:
   cDBusConnection(const char *Busname, GBusType  Type);
-  cDBusConnection(const char *Busname, const char *Filename);
   virtual ~cDBusConnection(void);
 
   GDBusConnection *GetConnection(void) const { return _connection; };
+  const char      *Name(void) const;
 
   // must be called before "Start"
   void  AddObject(cDBusObject *Object);
