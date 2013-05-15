@@ -46,7 +46,7 @@ private:
   bool enable_network;
   bool first_main_thread;
 
-  cMainLoop       *main_loop;
+  cDBusMainLoop   *main_loop;
   cDBusConnection *system_bus;
   cDBusConnection *session_bus;
   cDBusConnection *network_bus;
@@ -202,7 +202,7 @@ bool cPluginDbus2vdr::Start(void)
 {
   cDBusHelper::SetConfigDirectory(cPlugin::ConfigDirectory("dbus2vdr"));
   // Start any background activities the plugin shall perform.
-  //main_loop = new cMainLoop();
+  main_loop = new cDBusMainLoop(NULL);
 
   cString busname;
 #if VDRVERSNUM < 10704
@@ -214,7 +214,7 @@ bool cPluginDbus2vdr::Start(void)
      busname = cString::sprintf("%s", DBUS_VDR_BUSNAME);
 #endif
   if (enable_system) {
-     system_bus = new cDBusConnection(*busname, G_BUS_TYPE_SYSTEM);
+     system_bus = new cDBusConnection(*busname, G_BUS_TYPE_SYSTEM, NULL);
      system_bus->AddObject(new cDBusChannels);
      system_bus->AddObject(new cDBusEpg);
      if (enable_osd)
@@ -229,11 +229,12 @@ bool cPluginDbus2vdr::Start(void)
      system_bus->AddObject(new cDBusStatus);
      system_bus->AddObject(new cDBusTimers);
      system_bus->AddObject(new cDBusVdr);
-     system_bus->Start();
+     //system_bus->Start();
+     system_bus->Connect();
      }
 
   if (enable_session) {
-     session_bus = new cDBusConnection(*busname, G_BUS_TYPE_SESSION);
+     session_bus = new cDBusConnection(*busname, G_BUS_TYPE_SESSION, NULL);
      session_bus->AddObject(new cDBusChannels);
      session_bus->AddObject(new cDBusEpg);
      if (enable_osd)
@@ -248,7 +249,8 @@ bool cPluginDbus2vdr::Start(void)
      session_bus->AddObject(new cDBusStatus);
      session_bus->AddObject(new cDBusTimers);
      session_bus->AddObject(new cDBusVdr);
-     session_bus->Start();
+     //session_bus->Start();
+     session_bus->Connect();
      }
   
   //if (enable_network) {

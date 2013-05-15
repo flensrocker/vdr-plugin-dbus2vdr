@@ -10,33 +10,55 @@
 class cDBusObject;
 class cDBusTcpAddress;
 
-class cMainLoop
+class cDBusMainLoop
 {
 private:
-  GThread         *_thread;
+  GMainContext    *_context;
   GMainLoop       *_loop;
+  GThread         *_thread;
+  
+  GMutex           _started_mutex;
+  GCond            _started_cond;
+  bool             _started;
 
   static gpointer  do_loop(gpointer data)
   {
     dsyslog("dbus2vdr: mainloop started");
     if (data != NULL) {
-       cMainLoop *mainloop = (cMainLoop*)data;
-       mainloop->_loop = g_main_loop_new(NULL, FALSE);
-       if (mainloop->_loop != NULL)
+       cDBusMainLoop *mainloop = (cDBusMainLoop*)data;
+       g_mutex_lock(&mainloop->_started_mutex);
+       mainloop->_started = true;
+       g_cond_signal(&mainloop->_started_cond);
+       g_mutex_unlock(&mainloop->_started_mutex);
+       mainloop->_loop = g_main_loop_new(mainloop->_context, FALSE);
+       if (mainloop->_loop != NULL) {
           g_main_loop_run(mainloop->_loop);
+          g_main_loop_unref(mainloop->_loop);
+          mainloop->_loop = NULL;
+          }
        }
     dsyslog("dbus2vdr: mainloop stopped");
     return NULL;
   };
 
 public:
-  cMainLoop(void)
+  cDBusMainLoop(GMainContext *Context)
   {
+    _context = Context;
     _loop = NULL;
+    _started = false;
+    g_mutex_init(&_started_mutex);
+    g_cond_init(&_started_cond);
+    g_mutex_lock(&_started_mutex);
     _thread = g_thread_new("mainloop", do_loop, this);
+    while (!_started)
+          g_cond_wait(&_started_cond, &_started_mutex);
+    g_mutex_unlock(&_started_mutex);
+    g_mutex_clear(&_started_mutex);
+    g_cond_clear(&_started_cond);
   };
 
-  virtual ~cMainLoop(void)
+  virtual ~cDBusMainLoop(void)
   {
     if (_loop != NULL)
        g_main_loop_quit(_loop);
@@ -45,10 +67,6 @@ public:
        g_thread_unref(_thread);
        _thread = NULL;
 	      }
-    if (_loop != NULL) {
-       g_main_loop_unref(_loop);
-       _loop = NULL;
-       }
   };
 };
 
@@ -111,37 +129,31 @@ private:
   static gboolean  do_emit_signal(gpointer user_data);
   static gboolean  do_call_method(gpointer user_data);
 
-  static gpointer  do_action(gpointer data);
-
-  GThread         *_thread;
-  GMutex           _mutex;
-
   gchar           *_busname;
   GBusType         _bus_type;
 
   GMainContext    *_context;
-  GMainLoop       *_loop;
   GDBusConnection *_connection;
   guint            _owner_id;
   gboolean         _reconnect;
   guint            _connect_status;
+
+  GMutex           _disconnect_mutex;
+  GCond            _disconnect_cond;
   guint            _disconnect_status;
+
+  GMutex           _flush_mutex;
+  GCond            _flush_cond;
 
   cList<cDBusObject>     _objects;
   cList<cDBusSignal>     _signals;
   cList<cDBusMethodCall> _method_calls;
 
-  void  Init(const char *Busname);
-  void  Connect(void);
-  void  Disconnect(void);
   void  RegisterObjects(void);
   void  UnregisterObjects(void);
 
-protected:
-  virtual void  Action(void);
-
 public:
-  cDBusConnection(const char *Busname, GBusType  Type);
+  cDBusConnection(const char *Busname, GBusType  Type, GMainContext *Context);
   virtual ~cDBusConnection(void);
 
   GDBusConnection *GetConnection(void) const { return _connection; };
@@ -150,11 +162,13 @@ public:
   // must be called before "Start"
   void  AddObject(cDBusObject *Object);
 
-  void  Start(void);
+  void  Connect(void);
+  void  Disconnect(void);
 
   // "Signal" will be deleted by cDBusConnection
   void  EmitSignal(cDBusSignal *Signal);
   void  CallMethod(cDBusMethodCall *Call);
+  void  Flush(void);
 };
 
 #endif

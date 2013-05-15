@@ -3,90 +3,37 @@
 #include "object.h"
 
 
-cDBusConnection::cDBusSignal::cDBusSignal(const char *DestinationBusname, const char *ObjectPath, const char *Interface, const char *Signal, GVariant *Parameters)
+cDBusConnection::cDBusConnection(const char *Busname, GBusType  Type, GMainContext *Context)
 {
-  _destination_busname = g_strdup(DestinationBusname);
-  _object_path = g_strdup(ObjectPath);
-  _interface = g_strdup(Interface);
-  _signal = g_strdup(Signal);
-  if (Parameters != NULL)
-     _parameters = g_variant_ref(Parameters);
-  else
-     _parameters = NULL;
-}
-
-cDBusConnection::cDBusSignal::~cDBusSignal(void)
-{
-  g_free(_destination_busname);
-  g_free(_object_path);
-  g_free(_interface);
-  g_free(_signal);
-  if (_parameters != NULL)
-     g_variant_unref(_parameters);
-}
-
-
-cDBusConnection::cDBusMethodCall::cDBusMethodCall(const char *DestinationBusname, const char *ObjectPath, const char *Interface, const char *Method, GVariant *Parameters)
-{
-  _destination_busname = g_strdup(DestinationBusname);
-  _object_path = g_strdup(ObjectPath);
-  _interface = g_strdup(Interface);
-  _method = g_strdup(Method);
-  if (Parameters != NULL)
-     _parameters = g_variant_ref(Parameters);
-  else
-     _parameters = NULL;
-}
-
-cDBusConnection::cDBusMethodCall::~cDBusMethodCall(void)
-{
-  g_free(_destination_busname);
-  g_free(_object_path);
-  g_free(_interface);
-  g_free(_method);
-  if (_parameters != NULL)
-     g_variant_unref(_parameters);
-}
-
-
-cDBusConnection::cDBusConnection(const char *Busname, GBusType  Type)
-{
-  Init(Busname);
+  _busname = g_strdup(Busname);
   _bus_type = Type;
+  _context = Context;
+  _connection = NULL;
+  _owner_id = 0;
+  _reconnect = TRUE;
+  _connect_status = 0;
+  _disconnect_status = 0;
+
+  g_mutex_init(&_disconnect_mutex);
+  g_cond_init(&_disconnect_cond);
+  g_mutex_init(&_flush_mutex);
+  g_cond_init(&_flush_cond);
 }
 
 cDBusConnection::~cDBusConnection(void)
 {
+  Flush();
   Disconnect();
-  if (_thread != NULL)
-     g_thread_join(_thread);
 
   if (_busname != NULL) {
      g_free(_busname);
      _busname = NULL;
      }
 
-  if (_thread != NULL) {
-     g_thread_unref(_thread);
-     _thread = NULL;
-     }
-  g_mutex_clear(&_mutex);
-}
-
-void  cDBusConnection::Init(const char *Busname)
-{
-  _thread = NULL;
-  g_mutex_init(&_mutex);
-
-  _busname = g_strdup(Busname);
-  _bus_type = G_BUS_TYPE_NONE;
-  _context = NULL;
-  _loop = NULL;
-  _connection = NULL;
-  _owner_id = 0;
-  _reconnect = TRUE;
-  _connect_status = 0;
-  _disconnect_status = 0;
+  g_mutex_clear(&_disconnect_mutex);
+  g_cond_clear(&_disconnect_cond);
+  g_mutex_clear(&_flush_mutex);
+  g_cond_clear(&_flush_cond);
 }
 
 const char  *cDBusConnection::Name(void) const
@@ -106,18 +53,9 @@ void  cDBusConnection::AddObject(cDBusObject *Object)
      }
 }
 
-void  cDBusConnection::Start(void)
-{
-  if (_thread != NULL) {
-     esyslog("dbus2vdr: %s: connection started multiple times!", Name());
-     return;
-     }
-  _thread = g_thread_new("connection", do_action, this);
-}
-
 void  cDBusConnection::EmitSignal(cDBusSignal *Signal)
 {
-  g_mutex_lock(&_mutex);
+  g_mutex_lock(&_flush_mutex);
   bool addHandler = (_signals.Count() == 0);
   _signals.Add(Signal);
   if (addHandler) {
@@ -126,12 +64,12 @@ void  cDBusConnection::EmitSignal(cDBusSignal *Signal)
      g_source_set_callback(source, do_emit_signal, this, NULL);
      g_source_attach(source, _context);
      }
-  g_mutex_unlock(&_mutex);
+  g_mutex_unlock(&_flush_mutex);
 }
 
 void  cDBusConnection::CallMethod(cDBusMethodCall *Call)
 {
-  g_mutex_lock(&_mutex);
+  g_mutex_lock(&_flush_mutex);
   bool addHandler = (_method_calls.Count() == 0);
   _method_calls.Add(Call);
   if (addHandler) {
@@ -140,37 +78,16 @@ void  cDBusConnection::CallMethod(cDBusMethodCall *Call)
      g_source_set_callback(source, do_call_method, this, NULL);
      g_source_attach(source, _context);
      }
-  g_mutex_unlock(&_mutex);
+  g_mutex_unlock(&_flush_mutex);
 }
 
-gpointer  cDBusConnection::do_action(gpointer data)
+void  cDBusConnection::Flush(void)
 {
-  if (data != NULL) {
-     cDBusConnection *conn = (cDBusConnection*)data;
-     isyslog("dbus2vdr: %s: connection thread started", conn->Name());
-     conn->Action();
-     isyslog("dbus2vdr: %s: connection thread stopped", conn->Name());
-     }
-  return NULL;
-}
-
-void  cDBusConnection::Action(void)
-{
-  _context = g_main_context_new();
-  g_main_context_push_thread_default(_context);
-
-  _loop = g_main_loop_new(_context, FALSE);
-  Connect();
-
-  g_main_loop_run(_loop);
-
-  g_main_context_pop_thread_default(_context);
-
-  g_main_loop_unref(_loop);
-  _loop = NULL;
-
-  g_main_context_unref(_context);
-  _context = NULL;
+  dsyslog("dbus2vdr: %s: Flush", Name());
+  g_mutex_lock(&_flush_mutex);
+  while ((_signals.Count() > 0) || (_method_calls.Count() > 0))
+        g_cond_wait(&_flush_cond, &_flush_mutex);
+  g_mutex_unlock(&_flush_mutex);
 }
 
 void  cDBusConnection::Connect(void)
@@ -178,7 +95,6 @@ void  cDBusConnection::Connect(void)
   dsyslog("dbus2vdr: %s: Connect", Name());
   _reconnect = TRUE;
   _connect_status = 0;
-  _disconnect_status = 0;
 
   GSource *source = g_idle_source_new();
   g_source_set_priority(source, G_PRIORITY_DEFAULT);
@@ -189,6 +105,7 @@ void  cDBusConnection::Connect(void)
 void  cDBusConnection::Disconnect(void)
 {
   dsyslog("dbus2vdr: %s: Disconnect", Name());
+  g_mutex_lock(&_disconnect_mutex);
   _reconnect = FALSE;
   _disconnect_status = 1;
 
@@ -200,6 +117,12 @@ void  cDBusConnection::Disconnect(void)
   else
      g_source_set_callback(source, do_disconnect, this, NULL);
   g_source_attach(source, _context);
+
+  // wait till really disconnected
+  while (_disconnect_status < 2)
+        g_cond_wait(&_disconnect_cond, &_disconnect_mutex);
+  _disconnect_status = 0;
+  g_mutex_unlock(&_disconnect_mutex);
 }
 
 void  cDBusConnection::RegisterObjects(void)
@@ -284,7 +207,6 @@ gboolean  cDBusConnection::do_reconnect(gpointer user_data)
      return FALSE;
 
   cDBusConnection *conn = (cDBusConnection*)user_data;
-  dsyslog("dbus2vdr: %s: do_reconnect", conn->Name());
   if (!conn->_reconnect)
      return FALSE;
 
@@ -293,13 +215,14 @@ gboolean  cDBusConnection::do_reconnect(gpointer user_data)
      return FALSE;
      }
 
+  dsyslog("dbus2vdr: %s: do_reconnect", conn->Name());
   if (conn->_connect_status == 1) {
      conn->_connect_status = 2;
      if (conn->_bus_type != G_BUS_TYPE_NONE) {
         g_bus_get(conn->_bus_type, NULL, on_bus_get, user_data);
         return TRUE;
         }
-     esyslog("dbus2vdr: %s: can't connect bus without address", conn->Name());
+     esyslog("dbus2vdr: %s: can't connect without address", conn->Name());
      return FALSE;
      }
   else if (conn->_connect_status == 2)
@@ -352,9 +275,11 @@ gboolean  cDBusConnection::do_disconnect(gpointer user_data)
      conn->_connection = NULL;
      conn->_connect_status = 0;
      }
+  g_mutex_lock(&conn->_disconnect_mutex);
+  conn->_disconnect_status = 2;
+  g_cond_signal(&conn->_disconnect_cond);
+  g_mutex_unlock(&conn->_disconnect_mutex);
 
-  if (conn->_loop != NULL)
-     g_main_loop_quit(conn->_loop);
   return FALSE;
 }
 
@@ -366,8 +291,13 @@ void  cDBusConnection::on_flush(GObject *source_object, GAsyncResult *res, gpoin
   cDBusConnection *conn = (cDBusConnection*)user_data;
   dsyslog("dbus2vdr: %s: on_flush", conn->Name());
   g_dbus_connection_flush_finish(conn->_connection, res, NULL);
-  if (conn->_disconnect_status == 0)
+
+  g_mutex_lock(&conn->_disconnect_mutex);
+  if (conn->_disconnect_status == 0) {
+     g_mutex_unlock(&conn->_disconnect_mutex);
      return;
+     }
+  g_mutex_unlock(&conn->_disconnect_mutex);
 
   GSource *source = g_idle_source_new();
   g_source_set_priority(source, G_PRIORITY_DEFAULT);
@@ -395,14 +325,18 @@ gboolean  cDBusConnection::do_emit_signal(gpointer user_data)
   cDBusConnection *conn = (cDBusConnection*)user_data;
 
   // we're about to disconnect, so forget the pending signals
-  if (conn->_disconnect_status > 0)
+  g_mutex_lock(&conn->_disconnect_mutex);
+  if (conn->_disconnect_status > 0) {
+     g_mutex_unlock(&conn->_disconnect_mutex);
      return FALSE;
+     }
+  g_mutex_unlock(&conn->_disconnect_mutex);
 
   // we're not successfully connected, so try again later
   if (conn->_connect_status < 3)
      return TRUE;
 
-  g_mutex_lock(&conn->_mutex);
+  g_mutex_lock(&conn->_flush_mutex);
   GError *err = NULL;
   for (cDBusSignal *s = conn->_signals.First(); s; s = conn->_signals.Next(s)) {
       gchar *p = g_variant_print(s->_parameters, TRUE);
@@ -416,7 +350,8 @@ gboolean  cDBusConnection::do_emit_signal(gpointer user_data)
          }
       }
   conn->_signals.Clear();
-  g_mutex_unlock(&conn->_mutex);
+  g_cond_signal(&conn->_flush_cond);
+  g_mutex_unlock(&conn->_flush_mutex);
   return FALSE;
 }
 
@@ -428,14 +363,18 @@ gboolean  cDBusConnection::do_call_method(gpointer user_data)
   cDBusConnection *conn = (cDBusConnection*)user_data;
 
   // we're about to disconnect, so forget the pending signals
-  if (conn->_disconnect_status > 0)
+  g_mutex_lock(&conn->_disconnect_mutex);
+  if (conn->_disconnect_status > 0) {
+     g_mutex_unlock(&conn->_disconnect_mutex);
      return FALSE;
+     }
+  g_mutex_unlock(&conn->_disconnect_mutex);
 
   // we're not successfully connected, so try again later
   if (conn->_connect_status < 3)
      return TRUE;
 
-  g_mutex_lock(&conn->_mutex);
+  g_mutex_lock(&conn->_flush_mutex);
   for (cDBusMethodCall *c = conn->_method_calls.First(); c; c = conn->_method_calls.Next(c)) {
       gchar *p = g_variant_print(c->_parameters, TRUE);
       dsyslog("dbus2vdr: %s: call method %s %s %s %s", conn->Name(), c->_object_path, c->_interface, c->_method, p);
@@ -443,6 +382,53 @@ gboolean  cDBusConnection::do_call_method(gpointer user_data)
       g_dbus_connection_call(conn->_connection, c->_destination_busname, c->_object_path, c->_interface, c->_method, c->_parameters, NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, NULL, NULL);
       }
   conn->_method_calls.Clear();
-  g_mutex_unlock(&conn->_mutex);
+  g_cond_signal(&conn->_flush_cond);
+  g_mutex_unlock(&conn->_flush_mutex);
   return FALSE;
+}
+
+
+cDBusConnection::cDBusSignal::cDBusSignal(const char *DestinationBusname, const char *ObjectPath, const char *Interface, const char *Signal, GVariant *Parameters)
+{
+  _destination_busname = g_strdup(DestinationBusname);
+  _object_path = g_strdup(ObjectPath);
+  _interface = g_strdup(Interface);
+  _signal = g_strdup(Signal);
+  if (Parameters != NULL)
+     _parameters = g_variant_ref(Parameters);
+  else
+     _parameters = NULL;
+}
+
+cDBusConnection::cDBusSignal::~cDBusSignal(void)
+{
+  g_free(_destination_busname);
+  g_free(_object_path);
+  g_free(_interface);
+  g_free(_signal);
+  if (_parameters != NULL)
+     g_variant_unref(_parameters);
+}
+
+
+cDBusConnection::cDBusMethodCall::cDBusMethodCall(const char *DestinationBusname, const char *ObjectPath, const char *Interface, const char *Method, GVariant *Parameters)
+{
+  _destination_busname = g_strdup(DestinationBusname);
+  _object_path = g_strdup(ObjectPath);
+  _interface = g_strdup(Interface);
+  _method = g_strdup(Method);
+  if (Parameters != NULL)
+     _parameters = g_variant_ref(Parameters);
+  else
+     _parameters = NULL;
+}
+
+cDBusConnection::cDBusMethodCall::~cDBusMethodCall(void)
+{
+  g_free(_destination_busname);
+  g_free(_object_path);
+  g_free(_interface);
+  g_free(_method);
+  if (_parameters != NULL)
+     g_variant_unref(_parameters);
 }
