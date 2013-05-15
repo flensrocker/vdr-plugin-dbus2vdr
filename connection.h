@@ -99,7 +99,7 @@ public:
     gchar    *_interface;
     gchar    *_method;
     GVariant *_parameters;
-    //TODO: add callback
+    //TODO: add callback for reply message
 
   public:
     cDBusMethodCall(const char *DestinationBusname, const char *ObjectPath, const char *Interface, const char *Method, GVariant *Parameters);
@@ -159,15 +159,18 @@ public:
   GDBusConnection *GetConnection(void) const { return _connection; };
   const char      *Name(void) const;
 
-  // must be called before "Start"
+  // must be called before "Connect"
   void  AddObject(cDBusObject *Object);
 
+  // "Connect" is async
   void  Connect(void);
+  // "Disconnect" blocks
   void  Disconnect(void);
 
-  // "Signal" will be deleted by cDBusConnection
+  // "Signal" and "Call" objects will be deleted by cDBusConnection
   void  EmitSignal(cDBusSignal *Signal);
   void  CallMethod(cDBusMethodCall *Call);
+  // "Flush" blocks
   void  Flush(void);
 };
 

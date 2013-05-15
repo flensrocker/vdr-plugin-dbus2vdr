@@ -198,6 +198,24 @@ bool cPluginDbus2vdr::Initialize(void)
   return true;
 }
 
+static void AddAllObjects(cDBusConnection *Connection, bool EnableOSD)
+{
+  Connection->AddObject(new cDBusChannels);
+  Connection->AddObject(new cDBusEpg);
+  if (EnableOSD)
+     Connection->AddObject(new cDBusOsdObject);
+  cDBusPlugin::AddAllPlugins(Connection);
+  Connection->AddObject(new cDBusPluginManager);
+  Connection->AddObject(new cDBusRecordings);
+  Connection->AddObject(new cDBusRemote);
+  Connection->AddObject(new cDBusSetup);
+  Connection->AddObject(new cDBusShutdown);
+  Connection->AddObject(new cDBusSkin);
+  Connection->AddObject(new cDBusStatus);
+  Connection->AddObject(new cDBusTimers);
+  Connection->AddObject(new cDBusVdr);
+}
+
 bool cPluginDbus2vdr::Start(void)
 {
   cDBusHelper::SetConfigDirectory(cPlugin::ConfigDirectory("dbus2vdr"));
@@ -215,50 +233,23 @@ bool cPluginDbus2vdr::Start(void)
 #endif
   if (enable_system) {
      system_bus = new cDBusConnection(*busname, G_BUS_TYPE_SYSTEM, NULL);
-     system_bus->AddObject(new cDBusChannels);
-     system_bus->AddObject(new cDBusEpg);
-     if (enable_osd)
-        system_bus->AddObject(new cDBusOsdObject);
-     cDBusPlugin::AddAllPlugins(system_bus);
-     system_bus->AddObject(new cDBusPluginManager);
-     system_bus->AddObject(new cDBusRecordings);
-     system_bus->AddObject(new cDBusRemote);
-     system_bus->AddObject(new cDBusSetup);
-     system_bus->AddObject(new cDBusShutdown);
-     system_bus->AddObject(new cDBusSkin);
-     system_bus->AddObject(new cDBusStatus);
-     system_bus->AddObject(new cDBusTimers);
-     system_bus->AddObject(new cDBusVdr);
-     //system_bus->Start();
+     AddAllObjects(system_bus, enable_osd);
      system_bus->Connect();
      }
 
   if (enable_session) {
      session_bus = new cDBusConnection(*busname, G_BUS_TYPE_SESSION, NULL);
-     session_bus->AddObject(new cDBusChannels);
-     session_bus->AddObject(new cDBusEpg);
-     if (enable_osd)
-        session_bus->AddObject(new cDBusOsdObject);
-     cDBusPlugin::AddAllPlugins(session_bus);
-     session_bus->AddObject(new cDBusPluginManager);
-     session_bus->AddObject(new cDBusRecordings);
-     session_bus->AddObject(new cDBusRemote);
-     session_bus->AddObject(new cDBusSetup);
-     session_bus->AddObject(new cDBusShutdown);
-     session_bus->AddObject(new cDBusSkin);
-     session_bus->AddObject(new cDBusStatus);
-     session_bus->AddObject(new cDBusTimers);
-     session_bus->AddObject(new cDBusVdr);
-     //session_bus->Start();
+     AddAllObjects(session_bus, enable_osd);
      session_bus->Connect();
      }
-  
+
+  // TODO build handler for dbus2vdr-daemon connection
   //if (enable_network) {
   //   cString filename = cString::sprintf("%s/network-address.conf", cPlugin::ConfigDirectory("dbus2vdr"));
   //   network_bus = new cDBusConnection(*busname, *filename);
   //   network_bus->AddObject(new cDBusRecordingsConst);
   //   network_bus->AddObject(new cDBusTimersConst);
-  //   network_bus->Start();
+  //   network_bus->Connect();
   //   }
   
   cDBusVdr::SetStatus(cDBusVdr::statusStart);
