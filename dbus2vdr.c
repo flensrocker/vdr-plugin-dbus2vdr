@@ -17,6 +17,7 @@
 #include "channel.h"
 #include "epg.h"
 #include "helper.h"
+#include "network.h"
 #include "plugin.h"
 #include "osd.h"
 #include "recording.h"
@@ -50,7 +51,7 @@ private:
   cDBusMainLoop   *main_loop;
   cDBusConnection *system_bus;
   cDBusConnection *session_bus;
-  cDBusConnection *network_bus;
+  cDBusNetwork    *network_handler;
 
 public:
   cPluginDbus2vdr(void);
@@ -91,7 +92,7 @@ cPluginDbus2vdr::cPluginDbus2vdr(void)
   main_loop = NULL;
   system_bus = NULL;
   session_bus = NULL;
-  network_bus = NULL;
+  network_handler = NULL;
 }
 
 cPluginDbus2vdr::~cPluginDbus2vdr()
@@ -256,13 +257,16 @@ bool cPluginDbus2vdr::Start(void)
      }
 
   // TODO build handler for dbus2vdr-daemon connection
-  //if (enable_network) {
+  if (enable_network) {
+     //static const char *address = "unix:abstract=/de/tvdr/vdr/plugins/dbus2vdr";
+     static const char *address = "tcp:host=hdvdr,port=33199";
+     network_handler = new cDBusNetwork(address, NULL);
   //   cString filename = cString::sprintf("%s/network-address.conf", cPlugin::ConfigDirectory("dbus2vdr"));
   //   network_bus = new cDBusConnection(*busname, *filename);
   //   network_bus->AddObject(new cDBusRecordingsConst);
   //   network_bus->AddObject(new cDBusTimersConst);
-  //   network_bus->Connect(FALSE);
-  //   }
+     network_handler->Start();
+     }
   
   cDBusVdr::SetStatus(cDBusVdr::statusStart);
 
@@ -281,9 +285,9 @@ void cPluginDbus2vdr::Stop(void)
 
   cDBusVdr::SetStatus(cDBusVdr::statusStop);
 
-  if (network_bus != NULL) {
-     delete network_bus;
-     network_bus = NULL;
+  if (network_handler != NULL) {
+     delete network_handler;
+     network_handler = NULL;
      }
   if (session_bus != NULL) {
      delete session_bus;
