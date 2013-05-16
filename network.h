@@ -7,6 +7,7 @@
 class cDBusNetwork
 {
 private:
+  static void  on_connect(GObject *source_object, GAsyncResult *res, gpointer user_data);
   static void  on_name_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data);
   static void  on_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data);
   static void  on_closed(GDBusConnection *connection, gboolean remote_peer_vanished, GError *error, gpointer user_data);
@@ -14,8 +15,6 @@ private:
   gchar        *_address;
   GMainContext *_context;
   int           _status;
-  gchar        *_guid;
-  GIOStream    *_stream;
   GDBusAuthObserver *_auth_obs;
   GDBusConnection *_connection;
   guint _owner_id;
