@@ -29,7 +29,6 @@ void  cDBusNetwork::on_connect(GObject *source_object, GAsyncResult *res, gpoint
      return;
      }
   g_dbus_connection_set_exit_on_close(net->_connection, FALSE);
-  net->_closed_handler = g_signal_connect(net->_connection, "closed", G_CALLBACK(on_closed), user_data);
   net->_owner_id = g_bus_own_name_on_connection(net->_connection, "de.tvdr.vdr", G_BUS_NAME_OWNER_FLAGS_REPLACE,
                                                 on_name_acquired, on_name_lost, user_data, NULL);
   net->_status = 1;
@@ -55,33 +54,6 @@ void  cDBusNetwork::on_name_lost(GDBusConnection *connection, const gchar *name,
   cDBusNetwork *net = (cDBusNetwork*)user_data;
   dsyslog("dbus2vdr: %s: on_name_lost %s", net->Name(), name);
 
-  if (net->_closed_handler != 0) {
-     g_signal_handler_disconnect(net->_connection, net->_closed_handler);
-     net->_closed_handler = 0;
-     }
-  if (net->_connection != NULL) {
-     g_object_unref(net->_connection);
-     net->_connection = NULL;
-     }
-  if (net->_auth_obs != NULL) {
-     g_object_unref(net->_auth_obs);
-     net->_auth_obs = NULL;
-     }
-  net->_status = 0;
-}
-
-void  cDBusNetwork::on_closed(GDBusConnection *connection, gboolean remote_peer_vanished, GError *error, gpointer user_data)
-{
-  if (user_data == NULL)
-     return;
-
-  cDBusNetwork *net = (cDBusNetwork*)user_data;
-  dsyslog("dbus2vdr: %s: on_closed with error: %s", net->Name(), error ? error->message : "(null)");
-
-  if (net->_closed_handler != 0) {
-     g_signal_handler_disconnect(net->_connection, net->_closed_handler);
-     net->_closed_handler = 0;
-     }
   if (net->_connection != NULL) {
      g_object_unref(net->_connection);
      net->_connection = NULL;
@@ -101,17 +73,12 @@ cDBusNetwork::cDBusNetwork(const char *Address, GMainContext *Context)
   _auth_obs = NULL;
   _connection = NULL;
   _owner_id = 0;
-  _closed_handler = 0;
 }
 
 cDBusNetwork::~cDBusNetwork(void)
 {
   Stop();
 
-  if (_closed_handler != 0) {
-     g_signal_handler_disconnect(_connection, _closed_handler);
-     _closed_handler = 0;
-     }
   if (_connection != NULL) {
      g_object_unref(_connection);
      _connection = NULL;
@@ -150,15 +117,11 @@ bool  cDBusNetwork::Start(void)
      _auth_obs = NULL;
      }
   _auth_obs = g_dbus_auth_observer_new();
-  if (_closed_handler != 0) {
-     g_signal_handler_disconnect(_connection, _closed_handler);
-     _closed_handler = 0;
-     }
   if (_connection != NULL) {
      g_object_unref(_connection);
      _connection = NULL;
      }
-  g_dbus_connection_new_for_address(_address, G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION, NULL /*_auth_obs*/, NULL, on_connect, this);
+  g_dbus_connection_new_for_address(_address, (GDBusConnectionFlags)(G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION | G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT), _auth_obs, NULL, on_connect, this);
   isyslog("dbus2vdr: %s: started", Name());
   return ret;
 }
