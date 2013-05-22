@@ -256,16 +256,9 @@ bool cPluginDbus2vdr::Start(void)
      session_bus->Connect(TRUE);
      }
 
-  // TODO build handler for dbus2vdr-daemon connection
   if (enable_network) {
-     //static const char *address = "unix:abstract=/de/tvdr/vdr/plugins/dbus2vdr";
-     //static const char *address = "unix:path=/tmp/dbus2vdr";
-     static const char *address = "tcp:host=hdvdr,port=33662";
-     network_handler = new cDBusNetwork(address, NULL);
-  //   cString filename = cString::sprintf("%s/network-address.conf", cPlugin::ConfigDirectory("dbus2vdr"));
-  //   network_bus = new cDBusConnection(*busname, *filename);
-  //   network_bus->AddObject(new cDBusRecordingsConst);
-  //   network_bus->AddObject(new cDBusTimersConst);
+     cString filename = cString::sprintf("%s/network-address.conf", cPlugin::ConfigDirectory(Name()));
+     network_handler = new cDBusNetwork(*busname, *filename, NULL);
      network_handler->Start();
      }
   

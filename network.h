@@ -3,30 +3,52 @@
 
 #include <gio/gio.h>
 
+#include "connection.h"
+
+
+class cDBusNetworkAddress
+{
+private:
+  cString _address;
+
+public:
+  const cString Host;
+  const int     Port;
+
+  cDBusNetworkAddress(const char *host, int port)
+   :Host(host),Port(port) {};
+  virtual ~cDBusNetworkAddress(void) {};
+
+  const char *Address(void);
+
+  static cDBusNetworkAddress *LoadFromFile(const char *Filename);
+};
 
 class cDBusNetwork
 {
 private:
-  static void  on_connect(GObject *source_object, GAsyncResult *res, gpointer user_data);
-  static void  on_name_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data);
-  static void  on_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data);
+  static gboolean  do_connect(gpointer user_data);
+  static gboolean  do_disconnect(gpointer user_data);
+  static void      on_file_changed(GFileMonitor *monitor, GFile *first, GFile *second, GFileMonitorEvent event, gpointer user_data);
 
-  gchar        *_address;
-  GMainContext *_context;
-  int           _status;
-  GDBusAuthObserver *_auth_obs;
-  GDBusConnection *_connection;
-  guint _owner_id;
+  gchar               *_busname;
+  gchar               *_filename;
+  GMainContext        *_context;
+  GFileMonitor        *_monitor;
+  GMainContext        *_monitor_context;
+  cDBusMainLoop       *_monitor_loop;
+  gulong               _signal_handler_id;
+  cDBusNetworkAddress *_address;
+  cDBusConnection     *_connection;
 
 public:
-  cDBusNetwork(const char *Address, GMainContext *Context);
+  cDBusNetwork(const char *Busname, const char *Filename, GMainContext *Context);
   virtual ~cDBusNetwork(void);
 
   const char *Name(void) const { return "NetworkHandler"; }
-  const char *Address(void) const { return _address; }
 
   // "Start" is async
-  bool  Start(void);
+  void  Start(void);
   // "Stop" blocks
   void  Stop(void);
 };

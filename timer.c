@@ -164,7 +164,7 @@ cDBusTimersConst::cDBusTimersConst(const char *NodeInfo)
 }
 
 cDBusTimersConst::cDBusTimersConst(void)
-:cDBusObject("/Recordings", cDBusTimersHelper::_xmlNodeInfoConst)
+:cDBusObject("/Timers", cDBusTimersHelper::_xmlNodeInfoConst)
 {
   AddMethod("List", cDBusTimersHelper::List);
   AddMethod("Next", cDBusTimersHelper::Next);

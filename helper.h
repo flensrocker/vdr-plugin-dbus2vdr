@@ -6,23 +6,6 @@
 #include <vdr/tools.h>
 
 
-class cDBusTcpAddress
-{
-private:
-  cString _address;
-
-public:
-  const cString Host;
-  const int     Port;
-
-  cDBusTcpAddress(const char *host, int port)
-   :Host(host),Port(port) {}
-
-  const char *Address(void);
-
-  static cDBusTcpAddress *LoadFromFile(const char *Filename);
-};
-
 class cDBusHelper
 {
 private:

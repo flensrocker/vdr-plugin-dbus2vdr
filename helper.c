@@ -88,55 +88,6 @@ void  cDBusHelper::SendReply(GDBusMethodInvocation *Invocation, int  ReplyCode, 
   g_variant_builder_unref(builder);
 }
 
-cDBusTcpAddress *cDBusTcpAddress::LoadFromFile(const char *Filename)
-{
-  dsyslog("dbus2vdr: loading network address from file %s", Filename);
-  FILE *f = fopen(Filename, "r");
-  if (f == NULL)
-     return NULL;
-  cReadLine r;
-  char *line = r.Read(f);
-  fclose(f);
-  if (line == NULL)
-     return NULL;
-  DBusError err;
-  dbus_error_init(&err);
-  DBusAddressEntry **addresses = NULL;
-  int len = 0;
-  if (!dbus_parse_address(line, &addresses, &len, &err)) {
-     esyslog("dbus2vdr: errorparsing address %s: %s", line, err.message);
-     dbus_error_free(&err);
-     return NULL;
-     }
-  cDBusTcpAddress *address = NULL;
-  for (int i = 0; i < len; i++) {
-      if (addresses[i] != NULL) {
-         if (strcmp(dbus_address_entry_get_method(addresses[i]), "tcp") == 0) {
-            const char *host = dbus_address_entry_get_value(addresses[i], "host");
-            const char *port = dbus_address_entry_get_value(addresses[i], "port");
-            if ((host != NULL) && (port != NULL) && isnumber(port)) {
-               address = new cDBusTcpAddress(host, atoi(port));
-               break;
-               }
-            }
-         }
-      }
-  dbus_address_entries_free(addresses);
-  return address;
-}
-
-
-const char *cDBusTcpAddress::Address(void)
-{
-  if (*_address == NULL) {
-     char *host = dbus_address_escape_value(*Host);
-     _address = cString::sprintf("tcp:host=%s,port=%d", host, Port);
-     dbus_free(host);
-     }
-  return *_address;
-}
-
-
 cExitPipe::cExitPipe(void)
 {
   pid = -1;

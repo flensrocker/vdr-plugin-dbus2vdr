@@ -7,6 +7,8 @@ cDBusConnection::cDBusConnection(const char *Busname, GBusType  Type, GMainConte
 {
   _busname = g_strdup(Busname);
   _bus_type = Type;
+  _bus_address = NULL;
+  _name = NULL;
   _context = Context;
   _connection = NULL;
   _owner_id = 0;
@@ -21,10 +23,35 @@ cDBusConnection::cDBusConnection(const char *Busname, GBusType  Type, GMainConte
   g_cond_init(&_flush_cond);
 }
 
+cDBusConnection::cDBusConnection(const char *Busname, const char *Name, const char *Address, GMainContext *Context)
+{
+  _busname = g_strdup(Busname);
+  _bus_type = G_BUS_TYPE_NONE;
+  _bus_address = g_strdup(Address);
+  _name = g_strdup(Name);
+  _context = Context;
+  _connection = NULL;
+  _owner_id = 0;
+  _auto_reconnect = FALSE;
+  _reconnect = FALSE;
+  _connect_status = 0;
+  _disconnect_status = 0;
+
+  g_mutex_init(&_disconnect_mutex);
+  g_cond_init(&_disconnect_cond);
+  g_mutex_init(&_flush_mutex);
+  g_cond_init(&_flush_cond);
+}
+
 cDBusConnection::~cDBusConnection(void)
 {
   Flush();
   Disconnect();
+
+  if (_bus_address != NULL) {
+     g_free(_bus_address);
+     _bus_address = NULL;
+     }
 
   if (_busname != NULL) {
      g_free(_busname);
@@ -36,10 +63,17 @@ cDBusConnection::~cDBusConnection(void)
   g_mutex_clear(&_flush_mutex);
   g_cond_clear(&_flush_cond);
   dsyslog("dbus2vdr: %s: ~cDBusConnection", Name());
+
+  if (_name != NULL) {
+     g_free(_name);
+     _name = NULL;
+     }
 }
 
 const char  *cDBusConnection::Name(void) const
 {
+  if (_name != NULL)
+     return _name;
   if (_bus_type == G_BUS_TYPE_SYSTEM)
      return "SystemBus";
   if (_bus_type == G_BUS_TYPE_SESSION)
@@ -179,6 +213,7 @@ void  cDBusConnection::on_name_lost(GDBusConnection *connection, const gchar *na
 
   if (conn->_reconnect)
      conn->Connect(TRUE);
+  // TODO: send signal?
 }
 
 void  cDBusConnection::on_bus_get(GObject *source_object, GAsyncResult *res, gpointer user_data)
@@ -190,6 +225,22 @@ void  cDBusConnection::on_bus_get(GObject *source_object, GAsyncResult *res, gpo
   dsyslog("dbus2vdr: %s: on_bus_get", conn->Name());
   if (conn->_bus_type != G_BUS_TYPE_NONE)
      conn->_connection = g_bus_get_finish(res, NULL);
+  else if (conn->_bus_address != NULL) {
+     GError *err = NULL;
+     conn->_connection = g_dbus_connection_new_for_address_finish(res, &err);
+     if ((conn->_connection == NULL) || (err != NULL)) {
+        esyslog("dbus2vdr: %s: can't get connection for address %s", conn->Name(), conn->_bus_address);
+        if (err != NULL) {
+           esyslog("dbus2vdr: %s: error: %s", conn->Name(), err->message);
+           g_error_free(err);
+           err = NULL;
+           }
+        if (conn->_connection != NULL) {
+           g_object_unref(conn->_connection);
+           conn->_connection = NULL;
+           }
+        }
+     }
 
   if (conn->_connection != NULL) {
      isyslog("dbus2vdr: %s: connected with unique name %s", conn->Name(), g_dbus_connection_get_unique_name(conn->_connection));
@@ -229,6 +280,10 @@ gboolean  cDBusConnection::do_reconnect(gpointer user_data)
         g_bus_get(conn->_bus_type, NULL, on_bus_get, user_data);
         return TRUE;
         }
+     if (conn->_bus_address != NULL) {
+        g_dbus_connection_new_for_address(conn->_bus_address, (GDBusConnectionFlags)(G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION | G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT), NULL, NULL, on_bus_get, user_data);
+        return TRUE;
+        }
      esyslog("dbus2vdr: %s: can't connect without address", conn->Name());
      return FALSE;
      }
@@ -249,6 +304,8 @@ gboolean  cDBusConnection::do_connect(gpointer user_data)
      conn->_connect_status = 2;
      if (conn->_bus_type != G_BUS_TYPE_NONE)
         g_bus_get(conn->_bus_type, NULL, on_bus_get, user_data);
+     else if (conn->_bus_address != NULL)
+        g_dbus_connection_new_for_address(conn->_bus_address, (GDBusConnectionFlags)(G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION | G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT), NULL, NULL, on_bus_get, user_data);
      else {
         esyslog("dbus2vdr: %s: can't connect bus without address", conn->Name());
         return FALSE;

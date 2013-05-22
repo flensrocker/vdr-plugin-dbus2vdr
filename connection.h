@@ -131,6 +131,8 @@ private:
 
   gchar           *_busname;
   GBusType         _bus_type;
+  gchar           *_bus_address;
+  gchar           *_name;
 
   GMainContext    *_context;
   GDBusConnection *_connection;
@@ -155,6 +157,7 @@ private:
 
 public:
   cDBusConnection(const char *Busname, GBusType  Type, GMainContext *Context);
+  cDBusConnection(const char *Busname, const char *Name, const char *Address, GMainContext *Context);
   virtual ~cDBusConnection(void);
 
   GDBusConnection *GetConnection(void) const { return _connection; };
