@@ -57,6 +57,7 @@ namespace cDBusStatusHelper
   {
   private:
     cDBusStatus *_status;
+    bool         _network;
 
     void EmitSignal(const char *Signal, GVariant *Parameters)
     {
@@ -64,9 +65,10 @@ namespace cDBusStatusHelper
     };
 
   public:
-    cVdrStatus(cDBusStatus *Status)
+    cVdrStatus(cDBusStatus *Status, bool Network)
     {
       _status = Status;
+      _network = Network;
     };
 
     virtual ~cVdrStatus(void)
@@ -101,6 +103,9 @@ namespace cDBusStatusHelper
 
     virtual void ChannelSwitch(const cDevice *Device, int ChannelNumber, bool LiveView)
     {
+      if (_network)
+         return;
+
       gint32 deviceNumber = -1;
       if (Device != NULL)
          deviceNumber = Device->DeviceNumber();
@@ -110,6 +115,9 @@ namespace cDBusStatusHelper
 
     virtual void Recording(const cDevice *Device, const char *Name, const char *FileName, bool On)
     {
+      if (_network)
+         return;
+
       gint32 deviceNumber = -1;
       if (Device != NULL)
          deviceNumber = Device->DeviceNumber();
@@ -119,17 +127,26 @@ namespace cDBusStatusHelper
 
     virtual void Replaying(const cControl *Control, const char *Name, const char *FileName, bool On)
     {
+      if (_network)
+         return;
+
       gboolean on = (On ? TRUE : FALSE);
       EmitSignal("Replaying", g_variant_new("(ssb)", EMPTY(Name), EMPTY(FileName), on));
     };
 
     virtual void SetVolume(int Volume, bool Absolute)
     {
+      if (_network)
+         return;
+
       EmitSignal("SetVolume", g_variant_new("(ib)", Volume, Absolute));
     };
 
     virtual void SetAudioTrack(int Index, const char * const *Tracks)
     {
+      if (_network)
+         return;
+
       GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("(ias)"));
       g_variant_builder_add(builder, "i", Index);
       GVariantBuilder *array = g_variant_builder_new(G_VARIANT_TYPE("as"));
@@ -143,11 +160,17 @@ namespace cDBusStatusHelper
 
     virtual void SetAudioChannel(int AudioChannel)
     {
+      if (_network)
+         return;
+
       EmitSignal("SetAudioChannel", g_variant_new("(i)", AudioChannel));
     };
 
     virtual void SetSubtitleTrack(int Index, const char * const *Tracks)
     {
+      if (_network)
+         return;
+
       GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("(ias)"));
       g_variant_builder_add(builder, "i", Index);
       GVariantBuilder *array = g_variant_builder_new(G_VARIANT_TYPE("as"));
@@ -161,38 +184,56 @@ namespace cDBusStatusHelper
 
     virtual void OsdClear(void)
     {
+      if (_network)
+         return;
     };
 
     virtual void OsdTitle(const char *Title)
     {
+      if (_network)
+         return;
     };
 
     virtual void OsdStatusMessage(const char *Message)
     {
+      if (_network)
+         return;
     };
 
     virtual void OsdHelpKeys(const char *Red, const char *Green, const char *Yellow, const char *Blue)
     {
+      if (_network)
+         return;
     };
 
     virtual void OsdItem(const char *Text, int Index)
     {
+      if (_network)
+         return;
     };
 
     virtual void OsdCurrentItem(const char *Text)
     {
+      if (_network)
+         return;
     };
 
     virtual void OsdTextItem(const char *Text, bool Scroll)
     {
+      if (_network)
+         return;
     };
 
     virtual void OsdChannel(const char *Text)
     {
+      if (_network)
+         return;
     };
 
     virtual void OsdProgramme(time_t PresentTime, const char *PresentTitle, const char *PresentSubtitle, time_t FollowingTime, const char *FollowingTitle, const char *FollowingSubtitle)
     {
+      if (_network)
+         return;
     };
   };
 
@@ -200,10 +241,10 @@ namespace cDBusStatusHelper
 }
 
 
-cDBusStatus::cDBusStatus(void)
+cDBusStatus::cDBusStatus(bool Network)
 :cDBusObject("/Status", cDBusStatusHelper::_xmlNodeInfo)
 {
-  _status = new cDBusStatusHelper::cVdrStatus(this);
+  _status = new cDBusStatusHelper::cVdrStatus(this, Network);
 }
 
 cDBusStatus::~cDBusStatus(void)

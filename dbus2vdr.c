@@ -223,7 +223,7 @@ static void AddAllObjects(cDBusConnection *Connection, bool EnableOSD)
   Connection->AddObject(new cDBusSetup);
   Connection->AddObject(new cDBusShutdown);
   Connection->AddObject(new cDBusSkin);
-  Connection->AddObject(new cDBusStatus);
+  Connection->AddObject(new cDBusStatus(false));
   Connection->AddObject(new cDBusTimers);
   Connection->AddObject(new cDBusVdr);
 }

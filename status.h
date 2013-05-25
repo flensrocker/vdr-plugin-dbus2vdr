@@ -18,7 +18,7 @@ private:
   cDBusStatusHelper::cVdrStatus *_status;
 
 public:
-  cDBusStatus(void);
+  cDBusStatus(bool Network);
   virtual ~cDBusStatus(void);
 };
 

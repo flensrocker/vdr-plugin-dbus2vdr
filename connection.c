@@ -9,6 +9,8 @@ cDBusConnection::cDBusConnection(const char *Busname, GBusType  Type, GMainConte
   _bus_type = Type;
   _bus_address = NULL;
   _name = NULL;
+  _on_name_acquired = NULL;
+  _on_name_lost = NULL;
   _context = Context;
   _connection = NULL;
   _owner_id = 0;
@@ -29,6 +31,8 @@ cDBusConnection::cDBusConnection(const char *Busname, const char *Name, const ch
   _bus_type = G_BUS_TYPE_NONE;
   _bus_address = g_strdup(Address);
   _name = g_strdup(Name);
+  _on_name_acquired = NULL;
+  _on_name_lost = NULL;
   _context = Context;
   _connection = NULL;
   _owner_id = 0;
@@ -190,6 +194,8 @@ void  cDBusConnection::on_name_acquired(GDBusConnection *connection, const gchar
 
   cDBusConnection *conn = (cDBusConnection*)user_data;
   dsyslog("dbus2vdr: %s: on_name_acquired %s", conn->Name(), name);
+  if (conn->_on_name_acquired != NULL)
+     conn->_on_name_acquired(conn, conn->_on_name_user_data);
 }
 
 void  cDBusConnection::on_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data)
@@ -213,7 +219,9 @@ void  cDBusConnection::on_name_lost(GDBusConnection *connection, const gchar *na
 
   if (conn->_reconnect)
      conn->Connect(TRUE);
-  // TODO: send signal?
+
+  if (conn->_on_name_lost != NULL)
+     conn->_on_name_lost(conn, conn->_on_name_user_data);
 }
 
 void  cDBusConnection::on_bus_get(GObject *source_object, GAsyncResult *res, gpointer user_data)

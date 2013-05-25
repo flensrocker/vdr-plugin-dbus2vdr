@@ -1,6 +1,7 @@
 #include "network.h"
 
 #include "recording.h"
+#include "status.h"
 #include "timer.h"
 #include "vdr.h"
 
@@ -48,10 +49,13 @@ gboolean  cDBusNetwork::do_connect(gpointer user_data)
         delete net->_address;
      net->_address = cDBusNetworkAddress::LoadFromFile(net->_filename);
      if (net->_address != NULL) {
+        net->_avahi_name = strescape(*cString::sprintf("dbus2vdr on %s", *net->_address->Host), "\\,");
         if (net->_connection != NULL)
            delete net->_connection;
         net->_connection = new cDBusConnection(net->_busname, net->Name(), net->_address->Address(), net->_context);
+        net->_connection->SetCallbacks(on_name_acquired, on_name_lost, net);
         net->_connection->AddObject(new cDBusRecordingsConst);
+        net->_connection->AddObject(new cDBusStatus(true));
         net->_connection->AddObject(new cDBusTimersConst);
         net->_connection->AddObject(new cDBusVdr);
         net->_connection->Connect(FALSE);
@@ -123,6 +127,36 @@ void cDBusNetwork::on_file_changed(GFileMonitor *monitor, GFile *first, GFile *s
   g_free(event_name);
 }
 
+void cDBusNetwork::on_name_acquired(cDBusConnection *Connection, gpointer UserData)
+{
+  if (UserData == NULL)
+     return;
+
+  cDBusNetwork *net = (cDBusNetwork*)UserData;
+  dsyslog("dbus2vdr: %s: on_name_acquired", net->Name());
+  if ((net->_address != NULL) && (net->_avahi4vdr != NULL)) {
+     int replyCode = 0;
+     cString parameter = cString::sprintf("caller=dbus2vdr,name=%s,type=_dbus._tcp,port=%d,subtype=_vdr_dbus2vdr._sub._dbus._tcp", *net->_avahi_name, net->_address->Port);
+     net->_avahi_id = net->_avahi4vdr->SVDRPCommand("CreateService", *parameter, replyCode);
+     dsyslog("dbus2vdr: %s: avahi service created (id %s)", net->Name(), *net->_avahi_id);
+     }
+}
+
+void cDBusNetwork::on_name_lost(cDBusConnection *Connection, gpointer UserData)
+{
+  if (UserData == NULL)
+     return;
+
+  cDBusNetwork *net = (cDBusNetwork*)UserData;
+  dsyslog("dbus2vdr: %s: on_name_lost", net->Name());
+  if ((net->_avahi4vdr != NULL) && (*net->_avahi_id != NULL)) {
+     int replyCode = 0;
+     net->_avahi4vdr->SVDRPCommand("DeleteService", *net->_avahi_id, replyCode);
+     dsyslog("dbus2vdr: %s: avahi service deleted (id %s)", net->Name(), *net->_avahi_id);
+     net->_avahi_id = NULL;
+     }
+}
+
 cDBusNetwork::cDBusNetwork(const char *Busname, const char *Filename, GMainContext *Context)
 {
   _busname = strdup(Busname);
@@ -134,6 +168,7 @@ cDBusNetwork::cDBusNetwork(const char *Busname, const char *Filename, GMainConte
   _signal_handler_id = 0;
   _address = NULL;
   _connection = NULL;
+  _avahi4vdr = cPluginManager::GetPlugin("avahi4vdr");
 }
 
 cDBusNetwork::~cDBusNetwork(void)

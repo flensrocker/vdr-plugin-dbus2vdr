@@ -70,6 +70,11 @@ public:
   };
 };
 
+class cDBusConnection;
+
+typedef void (*cDBusNameAcquiredFunc)(cDBusConnection *Connection, gpointer UserData);
+typedef void (*cDBusNameLostFunc)(cDBusConnection *Connection, gpointer UserData);
+
 class cDBusConnection
 {
 public:
@@ -134,6 +139,10 @@ private:
   gchar           *_bus_address;
   gchar           *_name;
 
+  cDBusNameAcquiredFunc  _on_name_acquired;
+  cDBusNameLostFunc      _on_name_lost;
+  gpointer               _on_name_user_data;
+
   GMainContext    *_context;
   GDBusConnection *_connection;
   guint            _owner_id;
@@ -165,6 +174,12 @@ public:
 
   // must be called before "Connect"
   void  AddObject(cDBusObject *Object);
+  void  SetCallbacks(cDBusNameAcquiredFunc OnNameAcquired, cDBusNameLostFunc OnNameLost, gpointer OnNameUserData)
+  {
+    _on_name_acquired = OnNameAcquired;
+    _on_name_lost = OnNameLost;
+    _on_name_user_data = OnNameUserData;
+  };
 
   // "Connect" is async
   void  Connect(gboolean AutoReconnect);
