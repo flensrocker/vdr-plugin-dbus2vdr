@@ -108,7 +108,7 @@ namespace cDBusStatusHelper
 
       gint32 deviceNumber = -1;
       if (Device != NULL)
-         deviceNumber = Device->DeviceNumber();
+         deviceNumber = Device->DeviceNumber() + 1;
       gboolean liveView = (LiveView ? TRUE : FALSE);
       EmitSignal("ChannelSwitch", g_variant_new("(iib)", deviceNumber, ChannelNumber, liveView));
     };
@@ -120,7 +120,7 @@ namespace cDBusStatusHelper
 
       gint32 deviceNumber = -1;
       if (Device != NULL)
-         deviceNumber = Device->DeviceNumber();
+         deviceNumber = Device->DeviceNumber() + 1;
       gboolean on = (On ? TRUE : FALSE);
       EmitSignal("Recording", g_variant_new("(issb)", deviceNumber, EMPTY(Name), EMPTY(FileName), on));
     };
