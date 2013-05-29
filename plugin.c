@@ -17,6 +17,11 @@ namespace cDBusPluginsHelper
     "      <arg name=\"pluginlist\"   type=\"a(ss)\" direction=\"out\"/>\n"
     "    </method>\n"
     "  </interface>\n"
+    "  <interface name=\""DBUS_VDR_PLUGIN_INTERFACE"\">\n"
+    "    <method name=\"List\">\n"
+    "      <arg name=\"pluginlist\"   type=\"a(ss)\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "  </interface>\n"
     "</node>\n";
 
   static const char *_xmlNodeInfoPlugin = 
@@ -45,6 +50,9 @@ namespace cDBusPluginsHelper
 
   static void List(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
+    if (g_strcmp0(g_dbus_method_invocation_get_interface_name(Invocation), DBUS_VDR_PLUGIN_INTERFACE) == 0)
+       esyslog("dbus2vdr: use of deprecated interface: 'List' should be called with the interface '%s'!", DBUS_VDR_PLUGINMANAGER_INTERFACE);
+
 #define EMPTY(s) (s == NULL ? "" : s)
     GVariantBuilder *array = g_variant_builder_new(G_VARIANT_TYPE("a(ss)"));
     int index = 0;
