@@ -334,7 +334,8 @@ Interface "skin"
 
 Interface "status"
 ------------------
-Via the status interface the signals from vdr's cStatus class will be emitted
+Via the status interface the signals from vdr's cStatus class will be emitted.
+See <vdr/status.h> for more information about the parameters.
 
 - "ChannelSwitch"
     int32  DeviceNumber
@@ -351,6 +352,25 @@ Via the status interface the signals from vdr's cStatus class will be emitted
     string Name
     string FileName
     bool   On
+
+- "SetAudioChannel"
+    int32  AudioChannel
+
+- "SetAudioTrack"
+    int32  Index
+    array:string Tracks
+
+- "SetSubtitleTrack"
+    int32  Index
+    array:string Tracks
+
+- "SetVolume"
+    int32   Volume
+    boolean Absolute
+
+- "TimerChange"
+    string Timer
+    string Change (may be "tcMod", "tcAdd" or "tcDel")
 
 Interface "timer"
 -----------------
@@ -444,6 +464,13 @@ You can watch the signals with (or write your own program):
 
 Since the DBus signals are not really "fast" the files may not exist anymore if you
 receive them.
+
+Systemd
+-------
+When all plugins are started and dbus2vdr enters the first time the "MainThreadHook"
+it can notify systemd with a sd_notify call and "READY=1". systemd will then know that
+vdr has been fully initialised and dependant services can be started.
+You have to use "Type=notify" at the service definition file.
 
 Upstart
 -------
