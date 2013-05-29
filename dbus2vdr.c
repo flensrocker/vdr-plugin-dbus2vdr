@@ -33,7 +33,7 @@
 #include <vdr/osdbase.h>
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "10-gdbus";
+static const char *VERSION        = "11";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -291,6 +291,7 @@ void cPluginDbus2vdr::Stop(void)
      delete system_bus;
      system_bus = NULL;
      }
+  cDBusObject::FreeThreadPool();
   if (main_loop != NULL) {
      delete main_loop;
      main_loop = NULL;

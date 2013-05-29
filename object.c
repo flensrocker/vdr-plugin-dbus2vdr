@@ -9,21 +9,78 @@ const GDBusInterfaceVTable cDBusObject::_interface_vtable =
   NULL
 };
 
+class cWorkerData
+{
+public:
+  static GThreadPool *_thread_pool;
+  
+  cDBusObject *_object;
+  GDBusMethodInvocation *_invocation;
+  
+  cWorkerData(cDBusObject *Object, GDBusMethodInvocation *Invocation)
+  {
+    _object = Object;
+    _invocation = Invocation;
+  };
+};
+
+GThreadPool *cWorkerData::_thread_pool = NULL;
+
+void  cDBusObject::FreeThreadPool(void)
+{
+  if (cWorkerData::_thread_pool != NULL) {
+     g_thread_pool_free(cWorkerData::_thread_pool, FALSE, TRUE);
+     cWorkerData::_thread_pool = NULL;
+     isyslog("dbus2vdr: thread-pool for handling method-calls stopped");
+     }
+}
+
+void  cDBusObject::do_work(gpointer data, gpointer user_data)
+{
+  if (data == NULL)
+     return;
+
+  cWorkerData *workerData = (cWorkerData*)data;
+  const gchar *method_name = g_dbus_method_invocation_get_method_name(workerData->_invocation);
+  dsyslog("dbus2vdr: do_work on %s.%s", workerData->_object->Path(), method_name);
+  bool err = true;
+  for (cDBusMethod *m = workerData->_object->_methods.First(); m; m = workerData->_object->_methods.Next(m)) {
+      if (g_strcmp0(m->_name, method_name) == 0) {
+         m->_method(workerData->_object, g_dbus_method_invocation_get_parameters(workerData->_invocation), workerData->_invocation);
+         err = false;
+         break;
+         }
+      }
+  if (err) {
+     gchar *message = g_strdup_printf("method '%s.%s' on object '%s' is not implemented yet", g_dbus_method_invocation_get_interface_name(workerData->_invocation), g_dbus_method_invocation_get_method_name(workerData->_invocation), g_dbus_method_invocation_get_object_path(workerData->_invocation));
+     g_dbus_method_invocation_return_error(workerData->_invocation, G_IO_ERROR, G_IO_ERROR_FAILED_HANDLED, message);
+     g_free(message);
+     }
+  delete workerData;
+}
+
 void  cDBusObject::handle_method_call(GDBusConnection *connection, const gchar *sender, const gchar *object_path, const gchar *interface_name, const gchar *method_name, GVariant *parameters, GDBusMethodInvocation *invocation, gpointer user_data)
 {
   if (user_data == NULL)
      return;
 
   dsyslog("dbus2vdr: handle_method_call: sender '%s', object '%s', interface '%s', method '%s'", sender, object_path, interface_name, method_name);
-  cDBusObject *obj = (cDBusObject*)user_data;
-  for (cDBusMethod *m = obj->_methods.First(); m; m = obj->_methods.Next(m)) {
-      if (g_strcmp0(m->_name, method_name) == 0) {
-         m->_method(obj, parameters, invocation);
-         return;
-         }
-      }
-
-  obj->HandleMethodCall(connection, sender, object_path, interface_name, method_name, parameters, invocation);
+  cWorkerData *workerData = new cWorkerData((cDBusObject*)user_data, invocation);
+  if (cWorkerData::_thread_pool == NULL) {
+     GError *err = NULL;
+     cWorkerData::_thread_pool = g_thread_pool_new(do_work, NULL, 10, FALSE, &err);
+     if (err != NULL) {
+        esyslog("dbus2vdr: g_thread_pool_new reports: %s", err->message);
+        g_error_free(err);
+        if (cWorkerData::_thread_pool != NULL)
+           g_thread_pool_free(cWorkerData::_thread_pool, TRUE, FALSE);
+        cWorkerData::_thread_pool = NULL;
+        do_work(workerData, invocation);
+        return;
+        }
+     isyslog("dbus2vdr: thread-pool for handling method-calls started");
+     }
+  g_thread_pool_push(cWorkerData::_thread_pool, workerData, NULL);
 }
 
 cDBusObject::cDBusObject(const char *Path, const char *XmlNodeInfo)
@@ -107,17 +164,4 @@ void  cDBusObject::AddMethod(const char *Name, cDBusMethodFunc Method)
 {
   if ((Name != NULL) && (Method != NULL))
      _methods.Add(new cDBusMethod(Name, Method));
-}
-
-void  cDBusObject::HandleMethodCall(GDBusConnection       *connection,
-                                    const gchar           *sender,
-                                    const gchar           *object_path,
-                                    const gchar           *interface_name,
-                                    const gchar           *method_name,
-                                    GVariant              *parameters,
-                                    GDBusMethodInvocation *invocation)
-{
-  gchar *message = g_strdup_printf("method '%s.%s' on object '%s' is not implemented yet", interface_name, method_name, object_path);
-  g_dbus_method_invocation_return_error(invocation, G_IO_ERROR, G_IO_ERROR_FAILED_HANDLED, message);
-  g_free(message);
 }

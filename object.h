@@ -31,6 +31,7 @@ class cDBusObject : public cListObject
 private:
   friend class cDBusConnection;
 
+  static void  do_work(gpointer data, gpointer user_data);
   static void  handle_method_call(GDBusConnection       *connection,
                                   const gchar           *sender,
                                   const gchar           *object_path,
@@ -57,19 +58,13 @@ protected:
   void  AddMethod(const char *Name, cDBusMethodFunc Method);
 
 public:
+  static void  FreeThreadPool(void);
+
   cDBusObject(const char *Path, const char *XmlNodeInfo);
   virtual ~cDBusObject(void);
 
   cDBusConnection *Connection(void) const { return _connection; };
   const gchar  *Path(void) const { return _path; };
-
-  virtual void  HandleMethodCall(GDBusConnection       *connection,
-                                 const gchar           *sender,
-                                 const gchar           *object_path,
-                                 const gchar           *interface_name,
-                                 const gchar           *method_name,
-                                 GVariant              *parameters,
-                                 GDBusMethodInvocation *invocation);
 };
 
 #endif
