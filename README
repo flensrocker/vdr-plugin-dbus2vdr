@@ -512,15 +512,10 @@ will know what to do...
 How to implement new interfaces
 -------------------------------
 - add the interface name to common.h
-- create a subclass of cDBusMessageDispatcher and pass the interface name
+- create a subclass of cDBusObject and pass the object path and introspection data
   to its base constructor
-simple:
-- call AddPath and AddAction for supported methods
-complicated:
-- if you need special processing of object paths and method names then
-  override CreateMessage and return objects derived from cDBusMessage
-- return introspection data in OnIntrospect
-- add a 'new cDBusDispatcherYourName' to cPluginDbus2vdr::Start
+- call AddMethod for all supported methods
+- add the object to the desired connections (system, session, network)
 
 Notes to myself
 ---------------
