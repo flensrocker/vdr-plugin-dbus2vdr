@@ -227,3 +227,6 @@ VDR Plugin 'dbus2vdr' Revision History
 
 2013-04-29: Version 10
 - add vdr interface for status signals
+
+2013-05-29: Version 11
+- complete rewrite, now using GIO/GDBus
