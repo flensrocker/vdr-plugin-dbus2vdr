@@ -411,7 +411,9 @@ gboolean  cDBusConnection::do_emit_signal(gpointer user_data)
   g_mutex_lock(&conn->_flush_mutex);
   GError *err = NULL;
   for (cDBusSignal *s = conn->_signals.First(); s; s = conn->_signals.Next(s)) {
-      gchar *p = g_variant_print(s->_parameters, TRUE);
+      gchar *p = NULL;
+      if (s->_parameters != NULL)
+         p = g_variant_print(s->_parameters, TRUE);
       dsyslog("dbus2vdr: %s: emit signal %s %s %s %s", conn->Name(), s->_object_path, s->_interface, s->_signal, p);
       g_free(p);
       g_dbus_connection_emit_signal(conn->_connection, s->_destination_busname, s->_object_path, s->_interface, s->_signal, s->_parameters, &err);
@@ -448,7 +450,9 @@ gboolean  cDBusConnection::do_call_method(gpointer user_data)
 
   g_mutex_lock(&conn->_flush_mutex);
   for (cDBusMethodCall *c = conn->_method_calls.First(); c; c = conn->_method_calls.Next(c)) {
-      gchar *p = g_variant_print(c->_parameters, TRUE);
+      gchar *p = NULL;
+      if (c->_parameters != NULL)
+         p = g_variant_print(c->_parameters, TRUE);
       dsyslog("dbus2vdr: %s: call method %s %s %s %s", conn->Name(), c->_object_path, c->_interface, c->_method, p);
       g_free(p);
       g_dbus_connection_call(conn->_connection, c->_destination_busname, c->_object_path, c->_interface, c->_method, c->_parameters, NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, NULL, NULL);
