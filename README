@@ -63,14 +63,20 @@ Commandline Arguments
 -o, --osd
         creates an OSD-provider which will save the OSD as PNG files
         (see comments below at section "OSD")
+--systemd
+        use sd_notify to notify systemd
 -u, --upstart
         enable Upstart started/stopped events
 -n, --network
-        enable network support (see comments below at section "Network")
+        enable network support
+        (see comments below at section "Network")
 --session
         connect to the session D-Bus daemon
 --no-system
         don't connect to the system D-Bus daemon
+--no-mainloop
+        don't start GMainLoop
+        (don't use this option if you don't understand)
 
 Interface "channel"
 -------------------
@@ -396,8 +402,7 @@ etc/network.conf. There's also a sample Upstart job at etc/dbus2vdr.conf.
 This job should run as a user job, not as a system job, since it's
 reachable from the net.
 Interfaces must explicitly be enabled to listen on the network monitor.
-For now a subset of the timer interface is implemented. It is used to
-distribute timers around the vdr on the same subset.
+For now a subset of the status, timer and recording interface is implemented.
 (work in progress, must be documented...)
 
 OSD

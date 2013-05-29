@@ -22,6 +22,7 @@
 #include "osd.h"
 #include "recording.h"
 #include "remote.h"
+#include "sd-daemon.h"
 #include "setup.h"
 #include "shutdown.h"
 #include "skin.h"
@@ -43,6 +44,7 @@ private:
   bool enable_mainloop;
   bool enable_osd;
   int  send_upstart_signals;
+  bool enable_systemd;
   bool enable_system;
   bool enable_session;
   bool enable_network;
@@ -84,6 +86,7 @@ cPluginDbus2vdr::cPluginDbus2vdr(void)
   enable_mainloop = true;
   enable_osd = false;
   send_upstart_signals = -1;
+  enable_systemd = false;
   enable_system = true;
   enable_session = false;
   enable_network = false;
@@ -109,6 +112,8 @@ const char *cPluginDbus2vdr::CommandLineHelp(void)
          "    path to a program that will call the shutdown-hooks with suid\n"
          "  --osd\n"
          "    creates an OSD provider which will save the OSD as PNG files\n"
+         "  --systemd\n"
+         "    use sd_notify to notify systemd\n"
          "  --upstart\n"
          "    enable Upstart started/stopped events\n"
          "  --session\n"
@@ -133,6 +138,7 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
     {"upstart", no_argument, 0, 'u'},
     {"session", no_argument, 0, 's' | 0x100},
     {"no-system", no_argument, 0, 's' | 0x200},
+    {"systemd", no_argument, 0, 's' | 0x400},
     {"network", no_argument, 0, 'n'},
     {"no-mainloop", no_argument, 0, 'n' | 0x100},
     {0, 0, 0, 0}
@@ -168,6 +174,12 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
            {
              enable_system = false;
              isyslog("dbus2vdr: disable system-bus support");
+             break;
+           }
+          case 's' | 0x400:
+           {
+             enable_systemd = true;
+             isyslog("dbus2vdr: enable systemd notify support");
              break;
            }
           case 'u':
@@ -261,8 +273,11 @@ bool cPluginDbus2vdr::Start(void)
      network_handler = new cDBusNetwork(*busname, *filename, NULL);
      network_handler->Start();
      }
-  
+
+  // emit status "Start" on the various notification channels
   cDBusVdr::SetStatus(cDBusVdr::statusStart);
+  if (enable_systemd)
+     sd_notify(0, "STATUS=Start\n");
 
   return true;
 }
@@ -271,12 +286,13 @@ void cPluginDbus2vdr::Stop(void)
 {
   cDBusRemote::MainMenuAction = NULL;
 
-  // Stop any background activities the plugin is performing.
+  // emit status "Stop" on the various notification channels
+  if (enable_systemd)
+     sd_notify(0, "STATUS=Stop\n");
   if (send_upstart_signals == 1) {
      send_upstart_signals++;
      cDBusUpstart::EmitPluginEvent(system_bus, "stopped");
      }
-
   cDBusVdr::SetStatus(cDBusVdr::statusStop);
 
   if (network_handler != NULL) {
@@ -310,8 +326,10 @@ void cPluginDbus2vdr::MainThreadHook(void)
   if (first_main_thread) {
      first_main_thread = false;
 
+     // emit status "Ready" on the various notification channels
      cDBusVdr::SetStatus(cDBusVdr::statusReady);
-
+     if (enable_systemd)
+        sd_notify(0, "READY=1\nSTATUS=Ready\n");
      if (send_upstart_signals == 0) {
         send_upstart_signals++;
         isyslog("dbus2vdr: raise SIGSTOP for Upstart");
