@@ -29,9 +29,6 @@ namespace cDBusPluginsHelper
     "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
     "<node>\n"
     "  <interface name=\""DBUS_VDR_PLUGIN_INTERFACE"\">\n"
-    "    <method name=\"List\">\n"
-    "      <arg name=\"pluginlist\"   type=\"a(ss)\" direction=\"out\"/>\n"
-    "    </method>\n"
     "    <method name=\"SVDRPCommand\">\n"
     "      <arg name=\"command\"      type=\"s\" direction=\"in\"/>\n"
     "      <arg name=\"option\"       type=\"s\" direction=\"in\"/>\n"
@@ -43,8 +40,6 @@ namespace cDBusPluginsHelper
     "      <arg name=\"data\"         type=\"s\" direction=\"in\"/>\n"
     "      <arg name=\"return\"       type=\"b\" direction=\"out\"/>\n"
     "    </method>\n"
-    "    <signal name=\"Started\">\n"
-    "    </signal>\n"
     "  </interface>\n"
     "</node>\n";
 
