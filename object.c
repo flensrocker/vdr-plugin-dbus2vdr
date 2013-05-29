@@ -29,7 +29,7 @@ void  cDBusObject::handle_method_call(GDBusConnection *connection, const gchar *
 cDBusObject::cDBusObject(const char *Path, const char *XmlNodeInfo)
 {
   _path = g_strdup(Path);
-  _registration_id = 0;
+  _registration_ids = NULL;
   _connection = NULL;
 
   GError *err = NULL;
@@ -51,6 +51,10 @@ cDBusObject::~cDBusObject(void)
      g_free(_path);
      _path = NULL;
      }
+  if (_registration_ids != NULL) {
+     g_array_free(_registration_ids, TRUE);
+     _registration_ids = NULL;
+     }
 }
 
 void  cDBusObject::Register(void)
@@ -58,20 +62,35 @@ void  cDBusObject::Register(void)
   if ((_connection == NULL) || (_connection->GetConnection() == NULL))
      return;
 
-  if (_registration_id != 0)
+  if (_registration_ids != NULL)
      Unregister();
-  _registration_id = g_dbus_connection_register_object(_connection->GetConnection(), Path(), _introspection_data->interfaces[0], &_interface_vtable, this, NULL, NULL);
-  dsyslog("dbus2vdr: %s: register object %s with id %d", _connection->Name(), Path(), _registration_id);
+  int len = 0;
+  while (_introspection_data->interfaces[len] != NULL)
+        len++;
+  if (_registration_ids != NULL)
+     g_array_free(_registration_ids, TRUE);
+  _registration_ids = g_array_new(FALSE, TRUE, sizeof(guint));
+  for (int i = 0; i < len; i++) {
+      guint id = g_dbus_connection_register_object(_connection->GetConnection(), Path(), _introspection_data->interfaces[i], &_interface_vtable, this, NULL, NULL);
+      g_array_append_val(_registration_ids, id);
+      dsyslog("dbus2vdr: %s: register object %s with interface %s on id %d", _connection->Name(), Path(), _introspection_data->interfaces[i]->name, id);
+      }
 }
 
 void  cDBusObject::Unregister(void)
 {
-  if (_registration_id != 0) {
+  if (_registration_ids != NULL) {
      if ((_connection != NULL) && (_connection->GetConnection() != NULL)) {
-        dsyslog("dbus2vdr: %s: unregister object %s with id %d", _connection->Name(), Path(), _registration_id);
-        g_dbus_connection_unregister_object(_connection->GetConnection(), _registration_id);
+        for (guint i = 0; i < _registration_ids->len; i++) {
+            guint id = g_array_index(_registration_ids, guint, i);
+            if (id != 0) {
+               dsyslog("dbus2vdr: %s: unregister object %s with interface %s on id %d", _connection->Name(), Path(), _introspection_data->interfaces[i]->name, id);
+               g_dbus_connection_unregister_object(_connection->GetConnection(), id);
+               }
+            }
         }
-     _registration_id = 0;
+     g_array_free(_registration_ids, TRUE);
+     _registration_ids = NULL;
      }
 }
 

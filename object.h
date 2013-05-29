@@ -42,7 +42,7 @@ private:
 
   gchar             *_path;
   GDBusNodeInfo     *_introspection_data;
-  guint              _registration_id;
+  GArray            *_registration_ids;
   cDBusConnection   *_connection;
   cList<cDBusMethod> _methods;
 
