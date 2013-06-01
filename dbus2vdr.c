@@ -34,7 +34,7 @@
 #include <vdr/osdbase.h>
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "11";
+static const char *VERSION        = "12";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -387,7 +387,18 @@ const char **cPluginDbus2vdr::SVDRPHelpPages(void)
 
 cString cPluginDbus2vdr::SVDRPCommand(const char *Command, const char *Option, int &ReplyCode)
 {
+  if (Command == NULL)
+     return NULL;
+
   // Process SVDRP commands this plugin implements
+  if (strcmp(Command, "RunsMainLoop") == 0) {
+     if (enable_mainloop) {
+        ReplyCode = 900;
+        return "dbus2vdr runs the default GMainLoop";
+        }
+     ReplyCode = 901;
+     return "dbus2vdr does not run the default GMainLoop";
+     }
   return NULL;
 }
 
