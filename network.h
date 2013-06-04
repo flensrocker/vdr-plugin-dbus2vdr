@@ -26,6 +26,26 @@ public:
   static cDBusNetworkAddress *LoadFromFile(const char *Filename);
 };
 
+class cDBusNetworkClient : public cListObject
+{
+private:
+  gchar *_name;
+  gchar *_host;
+  gchar *_address;
+  int    _port;
+
+public:
+  cDBusNetworkClient(const char *Name, const char *Host, const char *Address, int Port);
+  virtual ~cDBusNetworkClient(void);
+
+  const char  *Name() const { return _name; }
+  const char  *Host() const { return _host; }
+  const char  *Address() const { return _address; }
+  int          Port() const { return _port; }
+
+  virtual int Compare(const cListObject &ListObject) const;
+};
+
 class cDBusNetwork
 {
 private:
@@ -48,17 +68,23 @@ private:
   cPlugin            *_avahi4vdr;
   cString             _avahi_name;
   cString             _avahi_id;
+  cString             _avahi_browser_id;
+  cList<cDBusNetworkClient> _clients;
 
 public:
   cDBusNetwork(const char *Busname, const char *Filename, GMainContext *Context);
   virtual ~cDBusNetwork(void);
 
   const char *Name(void) const { return "NetworkHandler"; }
+  const char *AvahiBrowserId(void) const { return *_avahi_browser_id; }
 
   // "Start" is async
   void  Start(void);
   // "Stop" blocks
   void  Stop(void);
+  
+  void  AddClient(cDBusNetworkClient *Client);
+  void  RemoveClient(const char *Name);
 };
 
 #endif

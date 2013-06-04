@@ -8,6 +8,8 @@
 #include <dbus/dbus.h>
 #include <vdr/tools.h>
 
+#include "avahi-helper.h"
+
 
 static char *decode_event(GFileMonitorEvent ev)
 {
@@ -210,6 +212,13 @@ void  cDBusNetwork::Start(void)
 
   _monitor_loop = new cDBusMainLoop(_monitor_context);
 
+  if (_avahi4vdr != NULL) {
+     int replyCode = 0;
+     cString reply = _avahi4vdr->SVDRPCommand("CreateBrowser", "caller=dbus2vdr,protocol=IPv4,type=_vdr_dbus2vdr._sub._dbus._tcp", replyCode);
+     cAvahiHelper options(reply);
+     _avahi_browser_id = options.Get("id");
+     }
+
   isyslog("dbus2vdr: %s: started", Name());
 }
 
@@ -219,6 +228,13 @@ void  cDBusNetwork::Stop(void)
      return;
 
   isyslog("dbus2vdr: %s: stopping", Name());
+
+  if (_avahi4vdr != NULL) {
+     if (strlen(*_avahi_browser_id) > 0) {
+        int replyCode = 0;
+        _avahi4vdr->SVDRPCommand("DeleteBrowser", *_avahi_browser_id, replyCode);
+        }
+     }
 
   if (_monitor_loop != NULL) {
      delete _monitor_loop;
@@ -246,6 +262,23 @@ void  cDBusNetwork::Stop(void)
      }
 
   isyslog("dbus2vdr: %s: stopped", Name());
+}
+
+void  cDBusNetwork::AddClient(cDBusNetworkClient *Client)
+{
+  isyslog("dbus2vdr: %s: add client '%s' ['%s'] with address '%s' on port %d", Name(), Client->Name(), Client->Host(), Client->Address(), Client->Port());
+  _clients.Add(Client);
+}
+
+void  cDBusNetwork::RemoveClient(const char *Name)
+{
+  isyslog("dbus2vdr: %s: remove client '%s'", this->Name(), Name);
+  for (cDBusNetworkClient *c = _clients.First(); c; c = _clients.Next(c)) {
+      if (g_strcmp0(c->Name(), Name) == 0) {
+         _clients.Del(c, true);
+         break;
+         }
+      }
 }
 
 
@@ -286,7 +319,6 @@ cDBusNetworkAddress *cDBusNetworkAddress::LoadFromFile(const char *Filename)
   return address;
 }
 
-
 const char *cDBusNetworkAddress::Address(void)
 {
   if (*_address == NULL) {
@@ -295,4 +327,35 @@ const char *cDBusNetworkAddress::Address(void)
      dbus_free(host);
      }
   return *_address;
+}
+
+
+cDBusNetworkClient::cDBusNetworkClient(const char *Name, const char *Host, const char *Address, int Port)
+{
+  _name = g_strdup(Name);
+  _host = g_strdup(Host);
+  _address = g_strdup(Address);
+  _port = Port;
+}
+
+cDBusNetworkClient::~cDBusNetworkClient(void)
+{
+  if (_name != NULL) {
+     g_free(_name);
+     _name = NULL;
+     }
+  if (_host != NULL) {
+     g_free(_host);
+     _host = NULL;
+     }
+  if (_address != NULL) {
+     g_free(_address);
+     _address = NULL;
+     }
+}
+
+int  cDBusNetworkClient::Compare(const cListObject &ListObject) const
+{
+  cDBusNetworkClient &other = (cDBusNetworkClient&)ListObject;
+  return g_strcmp0(_name, other._name);
 }

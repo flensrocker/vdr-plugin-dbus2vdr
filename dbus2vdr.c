@@ -34,7 +34,10 @@
 #include <vdr/osdbase.h>
 #include <vdr/plugin.h>
 
-static const char *VERSION        = "12";
+#include "avahi-helper.h"
+
+
+static const char *VERSION        = "12a";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -373,6 +376,51 @@ bool cPluginDbus2vdr::Service(const char *Id, void *Data)
 {
   if (strcmp(Id, "avahi4vdr-event") == 0) {
      isyslog("dbus2vdr: avahi4vdr-event: %s", (const char*)Data);
+     cAvahiHelper options((const char*)Data);
+     const char *event = options.Get("event");
+     const char *browser_id = options.Get("id");
+
+     if ((event != NULL)
+      && (browser_id != NULL)
+      && (network_handler != NULL)
+      && (network_handler->AvahiBrowserId() != NULL)
+      && (strcmp(network_handler->AvahiBrowserId(), browser_id) == 0)) {
+        if (strcmp(event, "browser-service-resolved") == 0) {
+           const char *name = options.Get("name");
+           const char *host = options.Get("host");
+           const char *protocol = options.Get("protocol");
+           const char *address = options.Get("address");
+           const char *port = options.Get("port");
+           const char *local = options.Get("local");
+           //const char *txt = NULL;
+           //int txt_nr = 0;
+           //while (true) {
+           //      txt = options.Get("txt", txt_nr);
+           //      if (txt == NULL)
+           //         break;
+           //      txt_nr++;
+           //      }
+           if (((local == NULL) || (strcasecmp(local, "true") != 0))
+            && (name != NULL)
+            && (host != NULL)
+            && (protocol != NULL)
+            && (strcasecmp(protocol, "ipv4") == 0)
+            && (address != NULL)
+            && (port != NULL)
+            && isnumber(port))
+              network_handler->AddClient(new cDBusNetworkClient(name, host, address, atoi(port)));
+           }
+        else if (strcmp(event, "browser-service-removed") == 0) {
+           const char *name = options.Get("name");
+           const char *protocol = options.Get("protocol");
+           const char *local = options.Get("local");
+           if ((local == NULL) || (strcasecmp(local, "true") != 0)
+            && (name != NULL)
+            && (protocol != NULL)
+            && (strcasecmp(protocol, "ipv4") == 0))
+              network_handler->RemoveClient(name);
+           }
+        }
      return true;
      }
   // Handle custom service requests from other plugins
