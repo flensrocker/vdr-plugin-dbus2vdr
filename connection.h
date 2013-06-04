@@ -74,6 +74,7 @@ class cDBusConnection;
 
 typedef void (*cDBusNameAcquiredFunc)(cDBusConnection *Connection, gpointer UserData);
 typedef void (*cDBusNameLostFunc)(cDBusConnection *Connection, gpointer UserData);
+typedef void (*cDBusMethodReplyFunc)(GVariant *Reply, gpointer UserData);
 
 class cDBusConnection
 {
@@ -99,15 +100,17 @@ public:
   friend class cDBusConnection;
 
   private:
+    cDBusConnection *_connection;
     gchar    *_destination_busname;
     gchar    *_object_path;
     gchar    *_interface;
     gchar    *_method;
     GVariant *_parameters;
-    //TODO: add callback for reply message
+    cDBusMethodReplyFunc _on_reply;
+    gpointer  _on_reply_user_data;
 
   public:
-    cDBusMethodCall(const char *DestinationBusname, const char *ObjectPath, const char *Interface, const char *Method, GVariant *Parameters);
+    cDBusMethodCall(const char *DestinationBusname, const char *ObjectPath, const char *Interface, const char *Method, GVariant *Parameters, cDBusMethodReplyFunc OnReply, gpointer UserData);
     virtual ~cDBusMethodCall(void);
   };
 
@@ -133,6 +136,9 @@ private:
 
   static gboolean  do_emit_signal(gpointer user_data);
   static gboolean  do_call_method(gpointer user_data);
+  static void      do_call_reply(GObject *source_object,
+                                 GAsyncResult *res,
+                                 gpointer user_data);
 
   gchar           *_busname;
   GBusType         _bus_type;

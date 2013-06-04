@@ -111,6 +111,7 @@ void  cDBusConnection::CallMethod(cDBusMethodCall *Call)
 {
   g_mutex_lock(&_flush_mutex);
   bool addHandler = (_method_calls.Count() == 0);
+  Call->_connection = this;
   _method_calls.Add(Call);
   if (addHandler) {
      GSource *source = g_idle_source_new();
@@ -449,18 +450,44 @@ gboolean  cDBusConnection::do_call_method(gpointer user_data)
      return TRUE;
 
   g_mutex_lock(&conn->_flush_mutex);
-  for (cDBusMethodCall *c = conn->_method_calls.First(); c; c = conn->_method_calls.Next(c)) {
-      gchar *p = NULL;
-      if (c->_parameters != NULL)
-         p = g_variant_print(c->_parameters, TRUE);
-      dsyslog("dbus2vdr: %s: call method %s %s %s %s", conn->Name(), c->_object_path, c->_interface, c->_method, p);
-      g_free(p);
-      g_dbus_connection_call(conn->_connection, c->_destination_busname, c->_object_path, c->_interface, c->_method, c->_parameters, NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, NULL, NULL);
-      }
+  cDBusMethodCall *c = conn->_method_calls.First();
+  while (c) {
+        gchar *p = NULL;
+        if (c->_parameters != NULL)
+           p = g_variant_print(c->_parameters, TRUE);
+        dsyslog("dbus2vdr: %s: call method %s %s %s %s", conn->Name(), c->_object_path, c->_interface, c->_method, p);
+        g_free(p);
+        g_dbus_connection_call(conn->_connection, c->_destination_busname, c->_object_path, c->_interface, c->_method, c->_parameters, NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, (c->_on_reply == NULL ? NULL : do_call_reply), c);
+        if (c->_on_reply != NULL) {
+           cDBusMethodCall *next = conn->_method_calls.Next(c);
+           // will be deleted in do_call_reply
+           conn->_method_calls.Del( c, false);
+           c = next;
+           }
+        else
+           c = conn->_method_calls.Next(c);
+        }
   conn->_method_calls.Clear();
   g_cond_signal(&conn->_flush_cond);
   g_mutex_unlock(&conn->_flush_mutex);
   return FALSE;
+}
+
+void  cDBusConnection::do_call_reply(GObject *source_object, GAsyncResult *res, gpointer user_data)
+{
+  if (user_data == NULL)
+     return;
+
+  cDBusMethodCall *call = (cDBusMethodCall*)user_data;
+  GError *err = NULL;
+  GVariant *reply = g_dbus_connection_call_finish(call->_connection->GetConnection(), res, &err);
+  if (err != NULL) {
+     esyslog("dbus2vdr: %s: error: %s", call->_connection->Name(), err->message);
+     g_error_free(err);
+     err = NULL;
+     }
+  call->_on_reply(reply, call->_on_reply_user_data);
+  delete call;
 }
 
 
@@ -487,7 +514,7 @@ cDBusConnection::cDBusSignal::~cDBusSignal(void)
 }
 
 
-cDBusConnection::cDBusMethodCall::cDBusMethodCall(const char *DestinationBusname, const char *ObjectPath, const char *Interface, const char *Method, GVariant *Parameters)
+cDBusConnection::cDBusMethodCall::cDBusMethodCall(const char *DestinationBusname, const char *ObjectPath, const char *Interface, const char *Method, GVariant *Parameters, cDBusMethodReplyFunc OnReply, gpointer UserData)
 {
   _destination_busname = g_strdup(DestinationBusname);
   _object_path = g_strdup(ObjectPath);
@@ -497,6 +524,8 @@ cDBusConnection::cDBusMethodCall::cDBusMethodCall(const char *DestinationBusname
      _parameters = g_variant_ref(Parameters);
   else
      _parameters = NULL;
+  _on_reply = OnReply;
+  _on_reply_user_data = UserData;
 }
 
 cDBusConnection::cDBusMethodCall::~cDBusMethodCall(void)
