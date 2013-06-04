@@ -266,13 +266,11 @@ void  cDBusNetwork::Stop(void)
 
 void  cDBusNetwork::AddClient(cDBusNetworkClient *Client)
 {
-  isyslog("dbus2vdr: %s: add client '%s' ['%s'] with address '%s' on port %d", Name(), Client->Name(), Client->Host(), Client->Address(), Client->Port());
   _clients.Add(Client);
 }
 
 void  cDBusNetwork::RemoveClient(const char *Name)
 {
-  isyslog("dbus2vdr: %s: remove client '%s'", this->Name(), Name);
   for (cDBusNetworkClient *c = _clients.First(); c; c = _clients.Next(c)) {
       if (g_strcmp0(c->Name(), Name) == 0) {
          _clients.Del(c, true);
@@ -336,10 +334,12 @@ cDBusNetworkClient::cDBusNetworkClient(const char *Name, const char *Host, const
   _host = g_strdup(Host);
   _address = g_strdup(Address);
   _port = Port;
+  isyslog("dbus2vdr: new network client for '%s' ['%s'] with address '%s' on port %d", _name, _host, _address, _port);
 }
 
 cDBusNetworkClient::~cDBusNetworkClient(void)
 {
+  isyslog("dbus2vdr: remove network client '%s'", _name);
   if (_name != NULL) {
      g_free(_name);
      _name = NULL;
