@@ -34,6 +34,7 @@ private:
   static void  OnConnect(cDBusConnection *Connection, gpointer UserData);
   static void  OnDisconnect(cDBusConnection *Connection, gpointer UserData);
   static void  OnTimerChange(const gchar *SenderName, const gchar *ObjectPath, const gchar *Interface, const gchar *Signal, GVariant *Parameters, gpointer UserData);
+  static void  OnTimerList(GVariant *Reply, gpointer UserData);
 
   cDBusNetwork *_net;
 

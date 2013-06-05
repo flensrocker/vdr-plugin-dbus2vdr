@@ -362,6 +362,17 @@ void  cDBusNetworkClient::OnTimerChange(const gchar *SenderName, const gchar *Ob
 
   cDBusNetworkClient *client = (cDBusNetworkClient*)UserData;
   dsyslog("dbus2vdr: %s: timer changed on %s", client->_net->Name(), client->Name());
+  if (client->_connection != NULL)
+     client->_connection->CallMethod(new cDBusMethodCall(client->_busname, "/Timers", DBUS_VDR_TIMER_INTERFACE, "List", NULL, OnTimerList, client));
+}
+
+void  cDBusNetworkClient::OnTimerList(GVariant *Reply, gpointer UserData)
+{
+  if (UserData == NULL)
+     return;
+
+  cDBusNetworkClient *client = (cDBusNetworkClient*)UserData;
+  dsyslog("dbus2vdr: %s: get timer from %s", client->_net->Name(), client->Name());
 }
 
 cDBusNetworkClient::cDBusNetworkClient(cDBusNetwork *Net, const char *Name, const char *Host, const char *Address, int Port, const char *Busname)
