@@ -8,8 +8,6 @@
 #include "connection.h"
 #include "mainloop.h"
 
-class cDBusNetwork;
-
 
 class cDBusNetworkAddress
 {
@@ -27,38 +25,6 @@ public:
   const char *Address(void);
 
   static cDBusNetworkAddress *LoadFromFile(const char *Filename);
-};
-
-class cDBusNetworkClient : public cListObject
-{
-private:
-  static void  OnConnect(cDBusConnection *Connection, gpointer UserData);
-  static void  OnDisconnect(cDBusConnection *Connection, gpointer UserData);
-  static void  OnTimerChange(const gchar *SenderName, const gchar *ObjectPath, const gchar *Interface, const gchar *Signal, GVariant *Parameters, gpointer UserData);
-  static void  OnTimerList(GVariant *Reply, gpointer UserData);
-
-  cDBusNetwork *_net;
-
-  gchar *_name;
-  gchar *_host;
-  gchar *_address;
-  int    _port;
-  gchar *_busname;
-
-  cDBusConnection *_connection;
-  cDBusSignal     *_signal_timer_change;
-
-public:
-  cDBusNetworkClient(cDBusNetwork *Net, const char *Name, const char *Host, const char *Address, int Port, const char *Busname);
-  virtual ~cDBusNetworkClient(void);
-
-  const char  *Name() const { return _name; }
-  const char  *Host() const { return _host; }
-  const char  *Address() const { return _address; }
-  int          Port() const { return _port; }
-  const char  *Busname() const { return _busname; }
-
-  virtual int Compare(const cListObject &ListObject) const;
 };
 
 class cDBusNetwork
@@ -83,24 +49,57 @@ private:
   cPlugin            *_avahi4vdr;
   cString             _avahi_name;
   cString             _avahi_id;
-  cString             _avahi_browser_id;
-  cList<cDBusNetworkClient> _clients;
 
 public:
   cDBusNetwork(const char *Busname, const char *Filename, GMainContext *Context);
   virtual ~cDBusNetwork(void);
 
   const char *Name(void) const { return "NetworkHandler"; }
-  const char *AvahiBrowserId(void) const { return *_avahi_browser_id; }
-  GMainContext *Context() const { return _context; }
 
   // "Start" is async
   void  Start(void);
   // "Stop" blocks
   void  Stop(void);
-  
-  void  AddClient(cDBusNetworkClient *Client);
-  void  RemoveClient(const char *Name);
+};
+
+class cDBusNetworkClient : public cListObject
+{
+private:
+  static void  OnConnect(cDBusConnection *Connection, gpointer UserData);
+  static void  OnDisconnect(cDBusConnection *Connection, gpointer UserData);
+  static void  OnTimerChange(const gchar *SenderName, const gchar *ObjectPath, const gchar *Interface, const gchar *Signal, GVariant *Parameters, gpointer UserData);
+  static void  OnTimerList(GVariant *Reply, gpointer UserData);
+
+  static GMainContext *_context;
+  static cList<cDBusNetworkClient> _clients;
+  static cPlugin      *_avahi4vdr;
+  static cString       _avahi_browser_id;
+
+  gchar *_name;
+  gchar *_host;
+  gchar *_address;
+  int    _port;
+  gchar *_busname;
+
+  cDBusConnection *_connection;
+  cDBusSignal     *_signal_timer_change;
+
+public:
+  cDBusNetworkClient(const char *Name, const char *Host, const char *Address, int Port, const char *Busname);
+  virtual ~cDBusNetworkClient(void);
+
+  const char  *Name() const { return _name; }
+  const char  *Host() const { return _host; }
+  const char  *Address() const { return _address; }
+  int          Port() const { return _port; }
+  const char  *Busname() const { return _busname; }
+
+  virtual int Compare(const cListObject &ListObject) const;
+
+  static bool  StartClients(GMainContext *Context);
+  static void  StopClients(void);
+  static const char *AvahiBrowserId(void) { return *_avahi_browser_id; }
+  static void  RemoveClient(const char *Name);
 };
 
 #endif

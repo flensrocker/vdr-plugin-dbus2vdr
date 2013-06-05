@@ -213,13 +213,6 @@ void  cDBusNetwork::Start(void)
 
   _monitor_loop = new cDBusMainLoop(_monitor_context);
 
-  if (_avahi4vdr != NULL) {
-     int replyCode = 0;
-     cString reply = _avahi4vdr->SVDRPCommand("CreateBrowser", "caller=dbus2vdr,protocol=IPv4,type=_vdr_dbus2vdr._sub._dbus._tcp", replyCode);
-     cAvahiHelper options(reply);
-     _avahi_browser_id = options.Get("id");
-     }
-
   isyslog("dbus2vdr: %s: started", Name());
 }
 
@@ -229,13 +222,6 @@ void  cDBusNetwork::Stop(void)
      return;
 
   isyslog("dbus2vdr: %s: stopping", Name());
-
-  if (_avahi4vdr != NULL) {
-     if (strlen(*_avahi_browser_id) > 0) {
-        int replyCode = 0;
-        _avahi4vdr->SVDRPCommand("DeleteBrowser", *_avahi_browser_id, replyCode);
-        }
-     }
 
   if (_monitor_loop != NULL) {
      delete _monitor_loop;
@@ -263,21 +249,6 @@ void  cDBusNetwork::Stop(void)
      }
 
   isyslog("dbus2vdr: %s: stopped", Name());
-}
-
-void  cDBusNetwork::AddClient(cDBusNetworkClient *Client)
-{
-  _clients.Add(Client);
-}
-
-void  cDBusNetwork::RemoveClient(const char *Name)
-{
-  for (cDBusNetworkClient *c = _clients.First(); c; c = _clients.Next(c)) {
-      if (g_strcmp0(c->Name(), Name) == 0) {
-         _clients.Del(c, true);
-         break;
-         }
-      }
 }
 
 
@@ -329,13 +300,18 @@ const char *cDBusNetworkAddress::Address(void)
 }
 
 
+GMainContext *cDBusNetworkClient::_context = NULL;
+cList<cDBusNetworkClient> cDBusNetworkClient::_clients;
+cPlugin      *cDBusNetworkClient::_avahi4vdr = NULL;
+cString       cDBusNetworkClient::_avahi_browser_id;
+
 void  cDBusNetworkClient::OnConnect(cDBusConnection *Connection, gpointer UserData)
 {
   if (UserData == NULL)
      return;
 
   cDBusNetworkClient *client = (cDBusNetworkClient*)UserData;
-  dsyslog("dbus2vdr: %s: OnConnect %s", client->_net->Name(), client->Name());
+  dsyslog("dbus2vdr: NetworkClient: OnConnect %s", client->Name());
   if (client->_signal_timer_change == NULL) {
      client->_signal_timer_change = new cDBusSignal(client->_busname, "/Status", DBUS_VDR_STATUS_INTERFACE, "TimerChange", NULL, OnTimerChange, UserData);
      client->_connection->Subscribe(client->_signal_timer_change);
@@ -348,7 +324,7 @@ void  cDBusNetworkClient::OnDisconnect(cDBusConnection *Connection, gpointer Use
      return;
 
   cDBusNetworkClient *client = (cDBusNetworkClient*)UserData;
-  dsyslog("dbus2vdr: %s: OnDisconnect %s", client->_net->Name(), client->Name());
+  dsyslog("dbus2vdr: NetworkClient: OnDisconnect %s", client->Name());
   if ((client->_signal_timer_change != NULL) && (client->_connection != NULL)) {
      client->_connection->Unsubscribe(client->_signal_timer_change);
      client->_signal_timer_change = NULL;
@@ -361,7 +337,7 @@ void  cDBusNetworkClient::OnTimerChange(const gchar *SenderName, const gchar *Ob
      return;
 
   cDBusNetworkClient *client = (cDBusNetworkClient*)UserData;
-  dsyslog("dbus2vdr: %s: timer changed on %s", client->_net->Name(), client->Name());
+  dsyslog("dbus2vdr: NetworkClient: timer changed on %s", client->Name());
   if (client->_connection != NULL)
      client->_connection->CallMethod(new cDBusMethodCall(client->_busname, "/Timers", DBUS_VDR_TIMER_INTERFACE, "List", NULL, OnTimerList, client));
 }
@@ -372,13 +348,11 @@ void  cDBusNetworkClient::OnTimerList(GVariant *Reply, gpointer UserData)
      return;
 
   cDBusNetworkClient *client = (cDBusNetworkClient*)UserData;
-  dsyslog("dbus2vdr: %s: get timer from %s", client->_net->Name(), client->Name());
+  dsyslog("dbus2vdr: NetworkClient: get timer from %s", client->Name());
 }
 
-cDBusNetworkClient::cDBusNetworkClient(cDBusNetwork *Net, const char *Name, const char *Host, const char *Address, int Port, const char *Busname)
+cDBusNetworkClient::cDBusNetworkClient(const char *Name, const char *Host, const char *Address, int Port, const char *Busname)
 {
-  _net = Net;
-
   _name = g_strdup(Name);
   _host = g_strdup(Host);
   _address = g_strdup(Address);
@@ -387,10 +361,11 @@ cDBusNetworkClient::cDBusNetworkClient(cDBusNetwork *Net, const char *Name, cons
   _signal_timer_change = NULL;
 
   cDBusNetworkAddress address(_address, _port);
-  _connection = new cDBusConnection(NULL, _net->Name(), address.Address(), _net->Context());
+  _connection = new cDBusConnection(NULL, Name, address.Address(), _context);
   _connection->SetConnectCallbacks(OnConnect, OnDisconnect, this);
   _connection->Connect(FALSE);
 
+  _clients.Add(this);
   isyslog("dbus2vdr: new network client for '%s' ['%s'] with address '%s' on port %d with busname %s", _name, _host, _address, _port, _busname);
 }
 
@@ -419,4 +394,45 @@ int  cDBusNetworkClient::Compare(const cListObject &ListObject) const
 {
   cDBusNetworkClient &other = (cDBusNetworkClient&)ListObject;
   return g_strcmp0(_name, other._name);
+}
+
+bool  cDBusNetworkClient::StartClients(GMainContext *Context)
+{
+  _avahi4vdr = cPluginManager::GetPlugin("avahi4vdr");
+  if (_avahi4vdr == NULL)
+     return false;
+
+  if (*_avahi_browser_id == NULL) {
+     _context = Context;
+     int replyCode = 0;
+     cString reply = _avahi4vdr->SVDRPCommand("CreateBrowser", "caller=dbus2vdr,protocol=IPv4,type=_vdr_dbus2vdr._sub._dbus._tcp", replyCode);
+     cAvahiHelper options(reply);
+     _avahi_browser_id = options.Get("id");
+     }
+  return true;
+}
+
+void  cDBusNetworkClient::StopClients(void)
+{
+  if (_avahi4vdr != NULL) {
+     if (strlen(*_avahi_browser_id) > 0) {
+        int replyCode = 0;
+        _avahi4vdr->SVDRPCommand("DeleteBrowser", *_avahi_browser_id, replyCode);
+        }
+     _avahi_browser_id = NULL;
+     }
+
+  cDBusNetworkClient *c;
+  while ((c = _clients.First()) != NULL)
+        _clients.Del(c, true);
+}
+
+void  cDBusNetworkClient::RemoveClient(const char *Name)
+{
+  for (cDBusNetworkClient *c = _clients.First(); c; c = _clients.Next(c)) {
+      if (g_strcmp0(c->Name(), Name) == 0) {
+         _clients.Del(c, true);
+         break;
+         }
+      }
 }

@@ -277,6 +277,8 @@ bool cPluginDbus2vdr::Start(void)
      cString filename = cString::sprintf("%s/network-address.conf", cPlugin::ConfigDirectory(Name()));
      _network_bus = new cDBusNetwork(*busname, *filename, NULL);
      _network_bus->Start();
+     
+     cDBusNetworkClient::StartClients(NULL);
      }
 
   // emit status "Start" on the various notification channels
@@ -300,6 +302,7 @@ void cPluginDbus2vdr::Stop(void)
      }
   cDBusVdr::SetStatus(cDBusVdr::statusStop);
 
+  cDBusNetworkClient::StopClients();
   if (_network_bus != NULL) {
      delete _network_bus;
      _network_bus = NULL;
@@ -385,8 +388,8 @@ bool cPluginDbus2vdr::Service(const char *Id, void *Data)
      if ((event != NULL)
       && (browser_id != NULL)
       && (_network_bus != NULL)
-      && (_network_bus->AvahiBrowserId() != NULL)
-      && (strcmp(_network_bus->AvahiBrowserId(), browser_id) == 0)) {
+      && (cDBusNetworkClient::AvahiBrowserId() != NULL)
+      && (strcmp(cDBusNetworkClient::AvahiBrowserId(), browser_id) == 0)) {
         if (strcmp(event, "browser-service-resolved") == 0) {
            const char *name = options.Get("name");
            const char *host = options.Get("host");
@@ -414,7 +417,7 @@ bool cPluginDbus2vdr::Service(const char *Id, void *Data)
             && (port != NULL)
             && isnumber(port)
             && (busname != NULL))
-              _network_bus->AddClient(new cDBusNetworkClient(_network_bus, name, host, address, atoi(port), busname));
+              new cDBusNetworkClient(name, host, address, atoi(port), busname);
            }
         else if (strcmp(event, "browser-service-removed") == 0) {
            const char *name = options.Get("name");
@@ -424,7 +427,7 @@ bool cPluginDbus2vdr::Service(const char *Id, void *Data)
             && (name != NULL)
             && (protocol != NULL)
             && (strcasecmp(protocol, "ipv4") == 0))
-              _network_bus->RemoveClient(name);
+              cDBusNetworkClient::RemoveClient(name);
            }
         }
      return true;
