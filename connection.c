@@ -205,6 +205,9 @@ void  cDBusConnection::RegisterObjects(void)
 
 void  cDBusConnection::UnregisterObjects(void)
 {
+  if (_connection == NULL)
+     return;
+
   dsyslog("dbus2vdr: %s: UnregisterObjects", Name());
   for (cDBusObject *obj = _objects.First(); obj; obj = _objects.Next(obj))
       obj->Unregister();
@@ -230,7 +233,9 @@ void  cDBusConnection::on_name_lost(GDBusConnection *connection, const gchar *na
   dsyslog("dbus2vdr: %s: on_name_lost %s", conn->Name(), name);
   if (conn->_on_disconnect != NULL)
      conn->_on_disconnect(conn, conn->_on_connect_user_data);
-  conn->UnregisterObjects();
+
+  if (conn->_busname != NULL)
+     conn->UnregisterObjects();
 
   if (conn->_owner_id > 0) {
      g_bus_unown_name(conn->_owner_id);
@@ -281,10 +286,10 @@ void  cDBusConnection::on_bus_get(GObject *source_object, GAsyncResult *res, gpo
      isyslog("dbus2vdr: %s: connected with unique name %s", conn->Name(), g_dbus_connection_get_unique_name(conn->_connection));
      conn->_connect_status = 3;
      g_dbus_connection_set_exit_on_close(conn->_connection, FALSE);
-     conn->RegisterObjects();
      if (conn->_on_connect != NULL)
         conn->_on_connect(conn, conn->_on_connect_user_data);
      if (conn->_busname != NULL) {
+        conn->RegisterObjects();
         conn->_owner_id = g_bus_own_name_on_connection(conn->_connection,
                                                        conn->_busname,
                                                        G_BUS_NAME_OWNER_FLAGS_REPLACE,
@@ -365,7 +370,7 @@ gboolean  cDBusConnection::do_disconnect(gpointer user_data)
 
   cDBusConnection *conn = (cDBusConnection*)user_data;
   dsyslog("dbus2vdr: %s: do_disconnect", conn->Name());
-  if (conn->_connection != NULL)
+  if (conn->_busname != NULL)
      conn->UnregisterObjects();
 
   if (conn->_owner_id > 0) {
