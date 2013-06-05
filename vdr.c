@@ -63,7 +63,7 @@ bool  cDBusVdr::SetStatus(cDBusVdr::eVdrStatus Status)
 
   _objectsMutex.Lock();
   for (int i = 0; i < _objects.Size(); i++)
-      _objects[i]->Connection()->EmitSignal(new cDBusConnection::cDBusSignal(NULL, "/vdr", DBUS_VDR_VDR_INTERFACE, signal, g_variant_new("(i)", InstanceId)));
+      _objects[i]->Connection()->EmitSignal(new cDBusSignal(NULL, "/vdr", DBUS_VDR_VDR_INTERFACE, signal, g_variant_new("(i)", InstanceId), NULL, NULL));
   _objectsMutex.Unlock();
   return true;
 }

@@ -61,7 +61,7 @@ namespace cDBusStatusHelper
 
     void EmitSignal(const char *Signal, GVariant *Parameters)
     {
-      _status->Connection()->EmitSignal( new cDBusConnection::cDBusSignal(NULL, "/Status", DBUS_VDR_STATUS_INTERFACE, Signal, Parameters));
+      _status->Connection()->EmitSignal( new cDBusSignal(NULL, "/Status", DBUS_VDR_STATUS_INTERFACE, Signal, Parameters, NULL, NULL));
     };
 
   public:

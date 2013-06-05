@@ -24,7 +24,7 @@ void cDBusUpstart::EmitPluginEvent(cDBusConnection *Connection, const char *Acti
   g_variant_builder_add_value(builder, g_variant_builder_end(array));
   g_variant_builder_add(builder, "b", FALSE);
 
-  Connection->CallMethod(new cDBusConnection::cDBusMethodCall("com.ubuntu.Upstart", "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", "EmitEvent", g_variant_builder_end(builder), OnUpstartReply, NULL));
+  Connection->CallMethod(new cDBusMethodCall("com.ubuntu.Upstart", "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", "EmitEvent", g_variant_builder_end(builder), OnUpstartReply, NULL));
 
   g_variant_builder_unref(array);
   g_variant_builder_unref(builder);

@@ -74,46 +74,60 @@ class cDBusConnection;
 
 typedef void (*cDBusNameAcquiredFunc)(cDBusConnection *Connection, gpointer UserData);
 typedef void (*cDBusNameLostFunc)(cDBusConnection *Connection, gpointer UserData);
+
+typedef void (*cDBusOnConnectFunc)(cDBusConnection *Connection, gpointer UserData);
+typedef void (*cDBusOnDisconnectFunc)(cDBusConnection *Connection, gpointer UserData);
+
 typedef void (*cDBusMethodReplyFunc)(GVariant *Reply, gpointer UserData);
+typedef void (*cDBusOnSignalFunc)(const gchar *SenderName, const gchar *ObjectPath, const gchar *Interface, const gchar *Signal, GVariant *Parameters, gpointer UserData);
+
+class cDBusSignal : public cListObject
+{
+friend class cDBusConnection;
+
+private:
+  cDBusConnection *_connection;
+  guint     _subscription_id;
+  cDBusOnSignalFunc _on_signal;
+  gpointer  _on_signal_user_data;
+  gchar    *_busname;
+  gchar    *_object_path;
+  gchar    *_interface;
+  gchar    *_signal;
+  GVariant *_parameters;
+
+public:
+  cDBusSignal(const char *Busname, const char *ObjectPath, const char *Interface, const char *Signal, GVariant *Parameters, cDBusOnSignalFunc OnSignal, gpointer UserData);
+  virtual ~cDBusSignal(void);
+
+  const char  *Busname(void) const { return _busname; }
+  const char  *ObjectPath(void) const { return _object_path; }
+  const char  *Interface(void) const { return _interface; }
+  const char  *Signal(void) const { return _signal; }
+  GVariant    *Parameters(void) const { return _parameters; }
+};
+
+class cDBusMethodCall : public cListObject
+{
+friend class cDBusConnection;
+
+private:
+  cDBusConnection *_connection;
+  gchar    *_busname;
+  gchar    *_object_path;
+  gchar    *_interface;
+  gchar    *_method;
+  GVariant *_parameters;
+  cDBusMethodReplyFunc _on_reply;
+  gpointer  _on_reply_user_data;
+
+public:
+  cDBusMethodCall(const char *Busname, const char *ObjectPath, const char *Interface, const char *Method, GVariant *Parameters, cDBusMethodReplyFunc OnReply, gpointer UserData);
+  virtual ~cDBusMethodCall(void);
+};
 
 class cDBusConnection
 {
-public:
-  class cDBusSignal : public cListObject
-  {
-  friend class cDBusConnection;
-
-  private:
-    gchar    *_destination_busname;
-    gchar    *_object_path;
-    gchar    *_interface;
-    gchar    *_signal;
-    GVariant *_parameters;
-
-  public:
-    cDBusSignal(const char *DestinationBusname, const char *ObjectPath, const char *Interface, const char *Signal, GVariant *Parameters);
-    virtual ~cDBusSignal(void);
-  };
-
-  class cDBusMethodCall : public cListObject
-  {
-  friend class cDBusConnection;
-
-  private:
-    cDBusConnection *_connection;
-    gchar    *_destination_busname;
-    gchar    *_object_path;
-    gchar    *_interface;
-    gchar    *_method;
-    GVariant *_parameters;
-    cDBusMethodReplyFunc _on_reply;
-    gpointer  _on_reply_user_data;
-
-  public:
-    cDBusMethodCall(const char *DestinationBusname, const char *ObjectPath, const char *Interface, const char *Method, GVariant *Parameters, cDBusMethodReplyFunc OnReply, gpointer UserData);
-    virtual ~cDBusMethodCall(void);
-  };
-
 private:
   // wrapper functions for GMainLoop calls
   static void      on_name_acquired(GDBusConnection *connection,
@@ -139,6 +153,13 @@ private:
   static void      do_call_reply(GObject *source_object,
                                  GAsyncResult *res,
                                  gpointer user_data);
+  static void      on_signal(GDBusConnection *connection,
+                             const gchar *sender_name,
+                             const gchar *object_path,
+                             const gchar *interface_name,
+                             const gchar *signal_name,
+                             GVariant *parameters,
+                             gpointer user_data);
 
   gchar           *_busname;
   GBusType         _bus_type;
@@ -148,6 +169,10 @@ private:
   cDBusNameAcquiredFunc  _on_name_acquired;
   cDBusNameLostFunc      _on_name_lost;
   gpointer               _on_name_user_data;
+  
+  cDBusOnConnectFunc     _on_connect;
+  cDBusOnDisconnectFunc  _on_disconnect;
+  gpointer               _on_connect_user_data;
 
   GMainContext    *_context;
   GDBusConnection *_connection;
@@ -166,6 +191,7 @@ private:
   cList<cDBusObject>     _objects;
   cList<cDBusSignal>     _signals;
   cList<cDBusMethodCall> _method_calls;
+  cList<cDBusSignal>     _subscriptions;
 
   void  RegisterObjects(void);
   void  UnregisterObjects(void);
@@ -180,11 +206,17 @@ public:
 
   // must be called before "Connect"
   void  AddObject(cDBusObject *Object);
-  void  SetCallbacks(cDBusNameAcquiredFunc OnNameAcquired, cDBusNameLostFunc OnNameLost, gpointer OnNameUserData)
+  void  SetNameCallbacks(cDBusNameAcquiredFunc OnNameAcquired, cDBusNameLostFunc OnNameLost, gpointer OnNameUserData)
   {
     _on_name_acquired = OnNameAcquired;
     _on_name_lost = OnNameLost;
     _on_name_user_data = OnNameUserData;
+  };
+  void  SetConnectCallbacks(cDBusOnConnectFunc OnConnect, cDBusOnDisconnectFunc OnDisconnect, gpointer OnConnectUserData)
+  {
+    _on_connect = OnConnect;
+    _on_disconnect = OnDisconnect;
+    _on_connect_user_data = OnConnectUserData;
   };
 
   // "Connect" is async
@@ -195,6 +227,8 @@ public:
   // "Signal" and "Call" objects will be deleted by cDBusConnection
   void  EmitSignal(cDBusSignal *Signal);
   void  CallMethod(cDBusMethodCall *Call);
+  void  Subscribe(cDBusSignal *Signal);
+  void  Unsubscribe(cDBusSignal *Signal);
   // "Flush" blocks
   bool  Flush(void);
 };

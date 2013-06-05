@@ -392,14 +392,17 @@ bool cPluginDbus2vdr::Service(const char *Id, void *Data)
            const char *address = options.Get("address");
            const char *port = options.Get("port");
            const char *local = options.Get("local");
-           //const char *txt = NULL;
-           //int txt_nr = 0;
-           //while (true) {
-           //      txt = options.Get("txt", txt_nr);
-           //      if (txt == NULL)
-           //         break;
-           //      txt_nr++;
-           //      }
+           const char *busname = NULL;
+           const char *txt = NULL;
+           int txt_nr = 0;
+           while (true) {
+                 txt = options.Get("txt", txt_nr);
+                 if (txt == NULL)
+                    break;
+                 if (strncmp(txt, "busname=", 8) == 0)
+                    busname = txt + 8;
+                 txt_nr++;
+                 }
            if (((local == NULL) || (strcasecmp(local, "true") != 0))
             && (name != NULL)
             && (host != NULL)
@@ -407,8 +410,9 @@ bool cPluginDbus2vdr::Service(const char *Id, void *Data)
             && (strcasecmp(protocol, "ipv4") == 0)
             && (address != NULL)
             && (port != NULL)
-            && isnumber(port))
-              network_handler->AddClient(new cDBusNetworkClient(name, host, address, atoi(port)));
+            && isnumber(port)
+            && (busname != NULL))
+              network_handler->AddClient(new cDBusNetworkClient(network_handler, name, host, address, atoi(port), busname));
            }
         else if (strcmp(event, "browser-service-removed") == 0) {
            const char *name = options.Get("name");
@@ -423,7 +427,6 @@ bool cPluginDbus2vdr::Service(const char *Id, void *Data)
         }
      return true;
      }
-  // Handle custom service requests from other plugins
   return false;
 }
 

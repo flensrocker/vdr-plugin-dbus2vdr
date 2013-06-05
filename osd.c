@@ -155,7 +155,7 @@ void cDBusOsdProvider::Action(void)
               }
 
            if ((builder != NULL) && (_object != NULL)) {
-              _object->Connection()->EmitSignal(new cDBusConnection::cDBusSignal(NULL, "/OSD", DBUS_VDR_OSD_INTERFACE, dbmsg->action, g_variant_builder_end(builder)));
+              _object->Connection()->EmitSignal(new cDBusSignal(NULL, "/OSD", DBUS_VDR_OSD_INTERFACE, dbmsg->action, g_variant_builder_end(builder), NULL, NULL));
               g_variant_builder_unref(builder);
               }
            delete dbmsg;

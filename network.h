@@ -7,6 +7,8 @@
 
 #include "connection.h"
 
+class cDBusNetwork;
+
 
 class cDBusNetworkAddress
 {
@@ -29,19 +31,30 @@ public:
 class cDBusNetworkClient : public cListObject
 {
 private:
+  static void  OnConnect(cDBusConnection *Connection, gpointer UserData);
+  static void  OnDisconnect(cDBusConnection *Connection, gpointer UserData);
+  static void  OnTimerChange(const gchar *SenderName, const gchar *ObjectPath, const gchar *Interface, const gchar *Signal, GVariant *Parameters, gpointer UserData);
+
+  cDBusNetwork *_net;
+
   gchar *_name;
   gchar *_host;
   gchar *_address;
   int    _port;
+  gchar *_busname;
+
+  cDBusConnection *_connection;
+  cDBusSignal     *_signal_timer_change;
 
 public:
-  cDBusNetworkClient(const char *Name, const char *Host, const char *Address, int Port);
+  cDBusNetworkClient(cDBusNetwork *Net, const char *Name, const char *Host, const char *Address, int Port, const char *Busname);
   virtual ~cDBusNetworkClient(void);
 
   const char  *Name() const { return _name; }
   const char  *Host() const { return _host; }
   const char  *Address() const { return _address; }
   int          Port() const { return _port; }
+  const char  *Busname() const { return _busname; }
 
   virtual int Compare(const cListObject &ListObject) const;
 };
@@ -77,6 +90,7 @@ public:
 
   const char *Name(void) const { return "NetworkHandler"; }
   const char *AvahiBrowserId(void) const { return *_avahi_browser_id; }
+  GMainContext *Context() const { return _context; }
 
   // "Start" is async
   void  Start(void);

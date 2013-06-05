@@ -1,5 +1,6 @@
 #include "network.h"
 
+#include "common.h"
 #include "recording.h"
 #include "status.h"
 #include "timer.h"
@@ -55,7 +56,7 @@ gboolean  cDBusNetwork::do_connect(gpointer user_data)
         if (net->_connection != NULL)
            delete net->_connection;
         net->_connection = new cDBusConnection(net->_busname, net->Name(), net->_address->Address(), net->_context);
-        net->_connection->SetCallbacks(on_name_acquired, on_name_lost, net);
+        net->_connection->SetNameCallbacks(on_name_acquired, on_name_lost, net);
         net->_connection->AddObject(new cDBusRecordingsConst);
         net->_connection->AddObject(new cDBusStatus(true));
         net->_connection->AddObject(new cDBusTimersConst);
@@ -138,7 +139,7 @@ void cDBusNetwork::on_name_acquired(cDBusConnection *Connection, gpointer UserDa
   dsyslog("dbus2vdr: %s: on_name_acquired", net->Name());
   if ((net->_address != NULL) && (net->_avahi4vdr != NULL)) {
      int replyCode = 0;
-     cString parameter = cString::sprintf("caller=dbus2vdr,name=%s,type=_dbus._tcp,port=%d,subtype=_vdr_dbus2vdr._sub._dbus._tcp", *net->_avahi_name, net->_address->Port);
+     cString parameter = cString::sprintf("caller=dbus2vdr,name=%s,type=_dbus._tcp,port=%d,subtype=_vdr_dbus2vdr._sub._dbus._tcp,txt=busname=%s", *net->_avahi_name, net->_address->Port, net->_busname);
      net->_avahi_id = net->_avahi4vdr->SVDRPCommand("CreateService", *parameter, replyCode);
      dsyslog("dbus2vdr: %s: avahi service created (id %s)", net->Name(), *net->_avahi_id);
      }
@@ -328,18 +329,67 @@ const char *cDBusNetworkAddress::Address(void)
 }
 
 
-cDBusNetworkClient::cDBusNetworkClient(const char *Name, const char *Host, const char *Address, int Port)
+void  cDBusNetworkClient::OnConnect(cDBusConnection *Connection, gpointer UserData)
 {
+  if (UserData == NULL)
+     return;
+
+  cDBusNetworkClient *client = (cDBusNetworkClient*)UserData;
+  dsyslog("dbus2vdr: %s: OnConnect %s", client->_net->Name(), client->Name());
+  if (client->_signal_timer_change == NULL) {
+     client->_signal_timer_change = new cDBusSignal(client->_busname, "/Status", DBUS_VDR_STATUS_INTERFACE, "TimerChange", NULL, OnTimerChange, UserData);
+     client->_connection->Subscribe(client->_signal_timer_change);
+     }
+}
+
+void  cDBusNetworkClient::OnDisconnect(cDBusConnection *Connection, gpointer UserData)
+{
+  if (UserData == NULL)
+     return;
+
+  cDBusNetworkClient *client = (cDBusNetworkClient*)UserData;
+  dsyslog("dbus2vdr: %s: OnDisconnect %s", client->_net->Name(), client->Name());
+  if ((client->_signal_timer_change != NULL) && (client->_connection != NULL)) {
+     client->_connection->Unsubscribe(client->_signal_timer_change);
+     client->_signal_timer_change = NULL;
+     }
+}
+
+void  cDBusNetworkClient::OnTimerChange(const gchar *SenderName, const gchar *ObjectPath, const gchar *Interface, const gchar *Signal, GVariant *Parameters, gpointer UserData)
+{
+  if (UserData == NULL)
+     return;
+
+  cDBusNetworkClient *client = (cDBusNetworkClient*)UserData;
+  dsyslog("dbus2vdr: %s: timer changed on %s", client->_net->Name(), client->Name());
+}
+
+cDBusNetworkClient::cDBusNetworkClient(cDBusNetwork *Net, const char *Name, const char *Host, const char *Address, int Port, const char *Busname)
+{
+  _net = Net;
+
   _name = g_strdup(Name);
   _host = g_strdup(Host);
   _address = g_strdup(Address);
   _port = Port;
-  isyslog("dbus2vdr: new network client for '%s' ['%s'] with address '%s' on port %d", _name, _host, _address, _port);
+  _busname = g_strdup(Busname);
+  _signal_timer_change = NULL;
+
+  cDBusNetworkAddress address(_address, _port);
+  _connection = new cDBusConnection(NULL, _net->Name(), address.Address(), _net->Context());
+  _connection->SetConnectCallbacks(OnConnect, OnDisconnect, this);
+  _connection->Connect(FALSE);
+
+  isyslog("dbus2vdr: new network client for '%s' ['%s'] with address '%s' on port %d with busname %s", _name, _host, _address, _port, _busname);
 }
 
 cDBusNetworkClient::~cDBusNetworkClient(void)
 {
   isyslog("dbus2vdr: remove network client '%s'", _name);
+  if (_busname != NULL) {
+     g_free(_busname);
+     _busname = NULL;
+     }
   if (_name != NULL) {
      g_free(_name);
      _name = NULL;

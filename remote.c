@@ -19,7 +19,7 @@ private:
     if ((cDBusRemote::MainMenuAction != this) || (_object == NULL))
        return;
 
-    _object->Connection()->EmitSignal( new cDBusConnection::cDBusSignal(NULL, "/Remote", DBUS_VDR_REMOTE_INTERFACE, "AskUserSelect", g_variant_new("(si)", *_title, item)));
+    _object->Connection()->EmitSignal( new cDBusSignal(NULL, "/Remote", DBUS_VDR_REMOTE_INTERFACE, "AskUserSelect", g_variant_new("(si)", *_title, item), NULL, NULL));
   }
 
 public:
