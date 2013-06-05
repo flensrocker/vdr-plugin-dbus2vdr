@@ -317,6 +317,12 @@ void cPluginDbus2vdr::Stop(void)
      }
   cDBusObject::FreeThreadPool();
   if (_main_loop != NULL) {
+     // stop avahi4vdr before dbus2vdr if it uses the mainloop
+     // if not, it doesn't hurt either
+     cPlugin *avahi4vdr = cPluginManager::GetPlugin("avahi4vdr");
+     if (avahi4vdr != NULL)
+        avahi4vdr->Stop();
+
      delete _main_loop;
      _main_loop = NULL;
      }
