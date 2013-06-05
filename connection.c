@@ -9,8 +9,15 @@ cDBusConnection::cDBusConnection(const char *Busname, GBusType  Type, GMainConte
   _bus_type = Type;
   _bus_address = NULL;
   _name = NULL;
+
   _on_name_acquired = NULL;
   _on_name_lost = NULL;
+  _on_name_user_data = NULL;
+
+  _on_connect = NULL;
+  _on_disconnect = NULL;
+  _on_connect_user_data = NULL;
+
   _context = Context;
   _connection = NULL;
   _owner_id = 0;
@@ -31,8 +38,15 @@ cDBusConnection::cDBusConnection(const char *Busname, const char *Name, const ch
   _bus_type = G_BUS_TYPE_NONE;
   _bus_address = g_strdup(Address);
   _name = g_strdup(Name);
+
   _on_name_acquired = NULL;
   _on_name_lost = NULL;
+  _on_name_user_data = NULL;
+
+  _on_connect = NULL;
+  _on_disconnect = NULL;
+  _on_connect_user_data = NULL;
+
   _context = Context;
   _connection = NULL;
   _owner_id = 0;
