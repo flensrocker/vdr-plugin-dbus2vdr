@@ -17,6 +17,7 @@
 #include "channel.h"
 #include "epg.h"
 #include "helper.h"
+#include "mainloop.h"
 #include "network.h"
 #include "plugin.h"
 #include "osd.h"
@@ -44,19 +45,19 @@ static const char *MAINMENUENTRY  = NULL;
 class cPluginDbus2vdr : public cPlugin {
 private:
   // Add any member variables or functions you may need here.
-  bool enable_mainloop;
-  bool enable_osd;
-  int  send_upstart_signals;
-  bool enable_systemd;
-  bool enable_system;
-  bool enable_session;
-  bool enable_network;
-  bool first_main_thread;
+  bool _enable_mainloop;
+  bool _enable_osd;
+  int  _send_upstart_signals;
+  bool _enable_systemd;
+  bool _enable_system;
+  bool _enable_session;
+  bool _enable_network;
+  bool _first_main_thread;
 
-  cDBusMainLoop   *main_loop;
-  cDBusConnection *system_bus;
-  cDBusConnection *session_bus;
-  cDBusNetwork    *network_handler;
+  cDBusMainLoop   *_main_loop;
+  cDBusConnection *_system_bus;
+  cDBusConnection *_session_bus;
+  cDBusNetwork    *_network_bus;
 
 public:
   cPluginDbus2vdr(void);
@@ -86,19 +87,20 @@ cPluginDbus2vdr::cPluginDbus2vdr(void)
   // Initialize any member variables here.
   // DON'T DO ANYTHING ELSE THAT MAY HAVE SIDE EFFECTS, REQUIRE GLOBAL
   // VDR OBJECTS TO EXIST OR PRODUCE ANY OUTPUT!
-  enable_mainloop = true;
-  enable_osd = false;
-  send_upstart_signals = -1;
-  enable_systemd = false;
-  enable_system = true;
-  enable_session = false;
-  enable_network = false;
-  first_main_thread = true;
+  _enable_mainloop = true;
+  _enable_osd = false;
+  _send_upstart_signals = -1;
+  _enable_systemd = false;
+  _enable_system = true;
+  _enable_session = false;
+  _enable_network = false;
+  _first_main_thread = true;
+  _main_loop = NULL;
+  _system_bus = NULL;
+  _session_bus = NULL;
+  _network_bus = NULL;
+
   g_type_init();
-  main_loop = NULL;
-  system_bus = NULL;
-  session_bus = NULL;
-  network_handler = NULL;
 }
 
 cPluginDbus2vdr::~cPluginDbus2vdr()
@@ -155,7 +157,7 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
         switch (c) {
           case 'o':
            {
-             enable_osd = true;
+             _enable_osd = true;
              isyslog("dbus2vdr: enable osd");
              break;
            }
@@ -169,26 +171,26 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
            }
           case 's' | 0x100:
            {
-             enable_session = true;
+             _enable_session = true;
              isyslog("dbus2vdr: enable session-bus");
              break;
            }
           case 's' | 0x200:
            {
-             enable_system = false;
+             _enable_system = false;
              isyslog("dbus2vdr: disable system-bus support");
              break;
            }
           case 's' | 0x400:
            {
-             enable_systemd = true;
+             _enable_systemd = true;
              isyslog("dbus2vdr: enable systemd notify support");
              break;
            }
           case 'u':
            {
              isyslog("dbus2vdr: enable Upstart support");
-             send_upstart_signals = 0;
+             _send_upstart_signals = 0;
              break;
            }
           case 'w':
@@ -201,13 +203,13 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
            }
           case 'n':
            {
-             enable_network = true;
+             _enable_network = true;
              isyslog("dbus2vdr: enable network support");
              break;
            }
           case 'n' | 0x100:
            {
-             enable_mainloop = false;
+             _enable_mainloop = false;
              isyslog("dbus2vdr: disable mainloop");
              break;
            }
@@ -247,8 +249,8 @@ bool cPluginDbus2vdr::Start(void)
 {
   cDBusHelper::SetConfigDirectory(cPlugin::ConfigDirectory("dbus2vdr"));
   // Start any background activities the plugin shall perform.
-  if (enable_mainloop)
-     main_loop = new cDBusMainLoop(NULL);
+  if (_enable_mainloop)
+     _main_loop = new cDBusMainLoop(NULL);
 
   cString busname;
 #if VDRVERSNUM < 10704
@@ -259,27 +261,27 @@ bool cPluginDbus2vdr::Start(void)
   else
      busname = cString::sprintf("%s", DBUS_VDR_BUSNAME);
 #endif
-  if (enable_system) {
-     system_bus = new cDBusConnection(*busname, G_BUS_TYPE_SYSTEM, NULL);
-     AddAllObjects(system_bus, enable_osd);
-     system_bus->Connect(TRUE);
+  if (_enable_system) {
+     _system_bus = new cDBusConnection(*busname, G_BUS_TYPE_SYSTEM, NULL);
+     AddAllObjects(_system_bus, _enable_osd);
+     _system_bus->Connect(TRUE);
      }
 
-  if (enable_session) {
-     session_bus = new cDBusConnection(*busname, G_BUS_TYPE_SESSION, NULL);
-     AddAllObjects(session_bus, enable_osd);
-     session_bus->Connect(TRUE);
+  if (_enable_session) {
+     _session_bus = new cDBusConnection(*busname, G_BUS_TYPE_SESSION, NULL);
+     AddAllObjects(_session_bus, _enable_osd);
+     _session_bus->Connect(TRUE);
      }
 
-  if (enable_network) {
+  if (_enable_network) {
      cString filename = cString::sprintf("%s/network-address.conf", cPlugin::ConfigDirectory(Name()));
-     network_handler = new cDBusNetwork(*busname, *filename, NULL);
-     network_handler->Start();
+     _network_bus = new cDBusNetwork(*busname, *filename, NULL);
+     _network_bus->Start();
      }
 
   // emit status "Start" on the various notification channels
   cDBusVdr::SetStatus(cDBusVdr::statusStart);
-  if (enable_systemd)
+  if (_enable_systemd)
      sd_notify(0, "STATUS=Start\n");
 
   return true;
@@ -290,30 +292,30 @@ void cPluginDbus2vdr::Stop(void)
   cDBusRemote::MainMenuAction = NULL;
 
   // emit status "Stop" on the various notification channels
-  if (enable_systemd)
+  if (_enable_systemd)
      sd_notify(0, "STATUS=Stop\n");
-  if (send_upstart_signals == 1) {
-     send_upstart_signals++;
-     cDBusUpstart::EmitPluginEvent(system_bus, "stopped");
+  if (_send_upstart_signals == 1) {
+     _send_upstart_signals++;
+     cDBusUpstart::EmitPluginEvent(_system_bus, "stopped");
      }
   cDBusVdr::SetStatus(cDBusVdr::statusStop);
 
-  if (network_handler != NULL) {
-     delete network_handler;
-     network_handler = NULL;
+  if (_network_bus != NULL) {
+     delete _network_bus;
+     _network_bus = NULL;
      }
-  if (session_bus != NULL) {
-     delete session_bus;
-     session_bus = NULL;
+  if (_session_bus != NULL) {
+     delete _session_bus;
+     _session_bus = NULL;
      }
-  if (system_bus != NULL) {
-     delete system_bus;
-     system_bus = NULL;
+  if (_system_bus != NULL) {
+     delete _system_bus;
+     _system_bus = NULL;
      }
   cDBusObject::FreeThreadPool();
-  if (main_loop != NULL) {
-     delete main_loop;
-     main_loop = NULL;
+  if (_main_loop != NULL) {
+     delete _main_loop;
+     _main_loop = NULL;
      }
 }
 
@@ -326,18 +328,18 @@ void cPluginDbus2vdr::MainThreadHook(void)
 {
   // Perform actions in the context of the main program thread.
   // WARNING: Use with great care - see PLUGINS.html!
-  if (first_main_thread) {
-     first_main_thread = false;
+  if (_first_main_thread) {
+     _first_main_thread = false;
 
      // emit status "Ready" on the various notification channels
      cDBusVdr::SetStatus(cDBusVdr::statusReady);
-     if (enable_systemd)
+     if (_enable_systemd)
         sd_notify(0, "READY=1\nSTATUS=Ready\n");
-     if (send_upstart_signals == 0) {
-        send_upstart_signals++;
+     if (_send_upstart_signals == 0) {
+        _send_upstart_signals++;
         isyslog("dbus2vdr: raise SIGSTOP for Upstart");
         raise(SIGSTOP);
-        cDBusUpstart::EmitPluginEvent(system_bus, "started");
+        cDBusUpstart::EmitPluginEvent(_system_bus, "started");
         }
      }
 }
@@ -382,9 +384,9 @@ bool cPluginDbus2vdr::Service(const char *Id, void *Data)
 
      if ((event != NULL)
       && (browser_id != NULL)
-      && (network_handler != NULL)
-      && (network_handler->AvahiBrowserId() != NULL)
-      && (strcmp(network_handler->AvahiBrowserId(), browser_id) == 0)) {
+      && (_network_bus != NULL)
+      && (_network_bus->AvahiBrowserId() != NULL)
+      && (strcmp(_network_bus->AvahiBrowserId(), browser_id) == 0)) {
         if (strcmp(event, "browser-service-resolved") == 0) {
            const char *name = options.Get("name");
            const char *host = options.Get("host");
@@ -412,7 +414,7 @@ bool cPluginDbus2vdr::Service(const char *Id, void *Data)
             && (port != NULL)
             && isnumber(port)
             && (busname != NULL))
-              network_handler->AddClient(new cDBusNetworkClient(network_handler, name, host, address, atoi(port), busname));
+              _network_bus->AddClient(new cDBusNetworkClient(_network_bus, name, host, address, atoi(port), busname));
            }
         else if (strcmp(event, "browser-service-removed") == 0) {
            const char *name = options.Get("name");
@@ -422,7 +424,7 @@ bool cPluginDbus2vdr::Service(const char *Id, void *Data)
             && (name != NULL)
             && (protocol != NULL)
             && (strcasecmp(protocol, "ipv4") == 0))
-              network_handler->RemoveClient(name);
+              _network_bus->RemoveClient(name);
            }
         }
      return true;
@@ -443,7 +445,7 @@ cString cPluginDbus2vdr::SVDRPCommand(const char *Command, const char *Option, i
 
   // Process SVDRP commands this plugin implements
   if (strcmp(Command, "RunsMainLoop") == 0) {
-     if (enable_mainloop) {
+     if (_enable_mainloop) {
         ReplyCode = 900;
         return "dbus2vdr runs the default GMainLoop";
         }

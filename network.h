@@ -6,6 +6,7 @@
 #include <vdr/plugin.h>
 
 #include "connection.h"
+#include "mainloop.h"
 
 class cDBusNetwork;
 
