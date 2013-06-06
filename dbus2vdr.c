@@ -38,7 +38,7 @@
 #include "avahi-helper.h"
 
 
-static const char *VERSION        = "12a";
+static const char *VERSION        = "12b";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -249,8 +249,10 @@ bool cPluginDbus2vdr::Start(void)
 {
   cDBusHelper::SetConfigDirectory(cPlugin::ConfigDirectory("dbus2vdr"));
   // Start any background activities the plugin shall perform.
-  if (_enable_mainloop)
+  if (_enable_mainloop) {
      _main_loop = new cDBusMainLoop(NULL);
+     cPluginManager::CallAllServices("dbus2vdr-MainLoopStarted", NULL);
+     }
 
   cString busname;
 #if VDRVERSNUM < 10704
@@ -317,12 +319,7 @@ void cPluginDbus2vdr::Stop(void)
      }
   cDBusObject::FreeThreadPool();
   if (_main_loop != NULL) {
-     // stop avahi4vdr before dbus2vdr if it uses the mainloop
-     // if not, it doesn't hurt either
-     cPlugin *avahi4vdr = cPluginManager::GetPlugin("avahi4vdr");
-     if (avahi4vdr != NULL)
-        avahi4vdr->Stop();
-
+     cPluginManager::CallAllServices("dbus2vdr-MainLoopStopped", NULL);
      delete _main_loop;
      _main_loop = NULL;
      }

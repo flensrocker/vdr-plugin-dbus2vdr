@@ -35,7 +35,7 @@ you can call:
 Dependencies
 ------------
 Debian/Ubuntu packages:
-libdbus-1-dev, pkg-config, libjpeg-dev, libpng++-dev
+libdbus-1-dev, libglib2.0-dev, pkg-config, libjpeg-dev, libpng++-dev
 
 Restrictions
 ------------
@@ -409,6 +409,13 @@ Interface "vdr"
   "Start": is sent when cPlugin::Start is called
   "Ready": is sent when cPlugin::MainThreadHook is called the first time
   "Stop" : is sent when cPlugin::Stop is called
+
+Plugin-Service calls
+--------------------
+Right after the start of the default GMainLoop all plugins are called with
+"dbus2vdr-MainLoopStarted"
+Just before the main loop quits, all plugins are called with
+"dbus2vdr-MainLoopStopped"
 
 Network
 -------
