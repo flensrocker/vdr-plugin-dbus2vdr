@@ -415,7 +415,7 @@ bool  cDBusNetworkClient::StartClients(GMainContext *Context)
 void  cDBusNetworkClient::StopClients(void)
 {
   if (_avahi4vdr != NULL) {
-     if (strlen(*_avahi_browser_id) > 0) {
+     if ((*_avahi_browser_id != NULL) && (strlen(*_avahi_browser_id) > 0)) {
         int replyCode = 0;
         _avahi4vdr->SVDRPCommand("DeleteBrowser", *_avahi_browser_id, replyCode);
         }
