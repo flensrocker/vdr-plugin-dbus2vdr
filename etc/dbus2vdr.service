@@ -9,7 +9,7 @@ Type=simple
 User=vdr
 Restart=always
 Environment=confdir=/var/lib/vdr/plugins/dbus2vdr
-ExecStartPre=/usr/bin/logger -t dbus2vdr dbus2vdr-daemon on %H starting, conf = $confdir
+ExecStartPre=/usr/bin/logger -t dbus2vdr dbus2vdr-daemon starting, conf = $confdir
 ExecStart=/usr/bin/bash -c '/usr/bin/dbus-daemon --config-file=${confdir}/network.conf --address="tcp:host=%H,bind=*,port=0" --print-address | tee ${confdir}/network-address.conf'
 ExecStopPost=/usr/bin/rm -f $confdir/network-address.conf
 ExecStopPost=/usr/bin/logger -t dbus2vdr dbus2vdr-daemon stopped
