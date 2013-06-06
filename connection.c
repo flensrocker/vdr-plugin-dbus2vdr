@@ -256,7 +256,8 @@ void  cDBusConnection::on_name_lost(GDBusConnection *connection, const gchar *na
      conn->_owner_id = 0;
      }
 
-  g_object_unref(conn->_connection);
+  if (conn->_bus_address != NULL)
+     g_object_unref(conn->_connection);
   conn->_connection = NULL;
   if (conn->_connect_status == 4)
      conn->_connect_status = 0;
@@ -393,7 +394,8 @@ gboolean  cDBusConnection::do_disconnect(gpointer user_data)
      }
 
   if (conn->_connection != NULL) {
-     g_object_unref(conn->_connection);
+     if (conn->_bus_address != NULL)
+        g_object_unref(conn->_connection);
      conn->_connection = NULL;
      conn->_connect_status = 0;
      }
