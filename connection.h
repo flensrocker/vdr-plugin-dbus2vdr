@@ -74,6 +74,9 @@ private:
   static void      on_name_lost(GDBusConnection *connection,
                                 const gchar     *name,
                                 gpointer         user_data);
+  static void      on_close(GObject *source_object,
+                            GAsyncResult *res,
+                            gpointer user_data);
   static void      on_bus_get(GObject *source_object,
                               GAsyncResult *res,
                               gpointer user_data);
