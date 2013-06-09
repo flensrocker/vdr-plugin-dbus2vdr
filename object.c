@@ -75,7 +75,7 @@ void  cDBusObject::handle_method_call(GDBusConnection *connection, const gchar *
         if (cWorkerData::_thread_pool != NULL)
            g_thread_pool_free(cWorkerData::_thread_pool, TRUE, FALSE);
         cWorkerData::_thread_pool = NULL;
-        do_work(workerData, invocation);
+        do_work(workerData, NULL);
         return;
         }
      isyslog("dbus2vdr: thread-pool for handling method-calls started");
