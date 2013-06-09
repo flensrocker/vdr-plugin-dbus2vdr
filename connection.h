@@ -87,10 +87,10 @@ private:
                                        GAsyncResult *res,
                                        gpointer user_data);
 
+  static gboolean  do_flush(gpointer user_data);
   static void      on_flush(GObject *source_object,
                             GAsyncResult *res,
                             gpointer user_data);
-  static gboolean  do_flush(gpointer user_data);
 
   static gboolean  do_emit_signal(gpointer user_data);
   static gboolean  do_call_method(gpointer user_data);

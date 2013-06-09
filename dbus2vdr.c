@@ -318,6 +318,7 @@ void cPluginDbus2vdr::Stop(void)
      _system_bus = NULL;
      }
   cDBusObject::FreeThreadPool();
+  cDBusConnection::FreeThreadPool();
   if (_main_loop != NULL) {
      cPluginManager::CallAllServices("dbus2vdr-MainLoopStopped", NULL);
      delete _main_loop;

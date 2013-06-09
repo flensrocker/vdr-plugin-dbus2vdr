@@ -197,6 +197,7 @@ void  cDBusNetwork::Start(void)
 
   isyslog("dbus2vdr: %s: starting", Name());
   _monitor_context = g_main_context_new();
+  _monitor_loop = new cDBusMainLoop(_monitor_context);
 
   if (g_file_test(_filename, G_FILE_TEST_EXISTS)) {
      GSource *source = g_idle_source_new();
@@ -211,8 +212,6 @@ void  cDBusNetwork::Start(void)
      _signal_handler_id = g_signal_connect(_monitor, "changed", G_CALLBACK(on_file_changed), this);
   g_object_unref(file);
 
-  _monitor_loop = new cDBusMainLoop(_monitor_context);
-
   isyslog("dbus2vdr: %s: started", Name());
 }
 
@@ -223,6 +222,14 @@ void  cDBusNetwork::Stop(void)
 
   isyslog("dbus2vdr: %s: stopping", Name());
 
+  if (_signal_handler_id > 0) {
+     g_signal_handler_disconnect(_monitor, _signal_handler_id);
+     _signal_handler_id = 0;
+     }
+  if (_monitor != NULL) {
+     g_object_unref(_monitor);
+     _monitor = NULL;
+     }
   if (_monitor_loop != NULL) {
      delete _monitor_loop;
      _monitor_loop = NULL;
@@ -234,14 +241,6 @@ void  cDBusNetwork::Stop(void)
   if (_address != NULL) {
      delete _address;
      _address = NULL;
-     }
-  if (_signal_handler_id > 0) {
-     g_signal_handler_disconnect(_monitor, _signal_handler_id);
-     _signal_handler_id = 0;
-     }
-  if (_monitor != NULL) {
-     g_object_unref(_monitor);
-     _monitor = NULL;
      }
   if (_monitor_context != NULL) {
      g_main_context_unref(_monitor_context);
