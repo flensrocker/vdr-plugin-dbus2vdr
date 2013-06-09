@@ -74,15 +74,18 @@ private:
   static void      on_name_lost(GDBusConnection *connection,
                                 const gchar     *name,
                                 gpointer         user_data);
-  static void      on_close(GObject *source_object,
-                            GAsyncResult *res,
-                            gpointer user_data);
+  static void      on_name_lost_close(GObject *source_object,
+                                      GAsyncResult *res,
+                                      gpointer user_data);
   static void      on_bus_get(GObject *source_object,
                               GAsyncResult *res,
                               gpointer user_data);
   static gboolean  do_reconnect(gpointer user_data);
   static gboolean  do_connect(gpointer user_data);
   static gboolean  do_disconnect(gpointer user_data);
+  static void      on_disconnect_close(GObject *source_object,
+                                       GAsyncResult *res,
+                                       gpointer user_data);
 
   static void      on_flush(GObject *source_object,
                             GAsyncResult *res,

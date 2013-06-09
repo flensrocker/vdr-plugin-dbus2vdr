@@ -257,18 +257,18 @@ void  cDBusConnection::on_name_lost(GDBusConnection *connection, const gchar *na
      }
 
   if (conn->_bus_address != NULL)
-     g_dbus_connection_close(conn->_connection, NULL, on_close, user_data);
+     g_dbus_connection_close(conn->_connection, NULL, on_name_lost_close, user_data);
   else
-     on_close(NULL, NULL, user_data);
+     on_name_lost_close(NULL, NULL, user_data);
 }
 
-void  cDBusConnection::on_close(GObject *source_object, GAsyncResult *res, gpointer user_data)
+void  cDBusConnection::on_name_lost_close(GObject *source_object, GAsyncResult *res, gpointer user_data)
 {
   if (user_data == NULL)
      return;
 
   cDBusConnection *conn = (cDBusConnection*)user_data;
-  dsyslog("dbus2vdr: %s: on_close", conn->Name());
+  dsyslog("dbus2vdr: %s: on_name_lost_close", conn->Name());
   if (conn->_connection != NULL) {
      if ((res != NULL) && (conn->_bus_address != NULL))
         g_dbus_connection_close_finish(conn->_connection, res, NULL);
@@ -410,9 +410,24 @@ gboolean  cDBusConnection::do_disconnect(gpointer user_data)
      conn->_owner_id = 0;
      }
 
+  if (conn->_bus_address != NULL)
+     g_dbus_connection_close(conn->_connection, NULL, on_disconnect_close, user_data);
+  else
+     on_disconnect_close(NULL, NULL, user_data);
+
+  return FALSE;
+}
+
+void  cDBusConnection::on_disconnect_close(GObject *source_object, GAsyncResult *res, gpointer user_data)
+{
+  if (user_data == NULL)
+     return;
+
+  cDBusConnection *conn = (cDBusConnection*)user_data;
+  dsyslog("dbus2vdr: %s: on_disconnect_close", conn->Name());
   if (conn->_connection != NULL) {
-     if (conn->_bus_address != NULL)
-        g_dbus_connection_close_sync(conn->_connection, NULL, NULL);
+     if ((res != NULL) && (conn->_bus_address != NULL))
+        g_dbus_connection_close_finish(conn->_connection, res, NULL);
      g_object_unref(conn->_connection);
      conn->_connection = NULL;
      conn->_connect_status = 0;
@@ -422,8 +437,6 @@ gboolean  cDBusConnection::do_disconnect(gpointer user_data)
   conn->_disconnect_status = 2;
   g_cond_signal(&conn->_disconnect_cond);
   g_mutex_unlock(&conn->_disconnect_mutex);
-
-  return FALSE;
 }
 
 void  cDBusConnection::on_flush(GObject *source_object, GAsyncResult *res, gpointer user_data)
