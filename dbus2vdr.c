@@ -38,7 +38,7 @@
 #include "avahi-helper.h"
 
 
-static const char *VERSION        = "12e";
+static const char *VERSION        = "13";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -264,15 +264,23 @@ bool cPluginDbus2vdr::Start(void)
      busname = cString::sprintf("%s", DBUS_VDR_BUSNAME);
 #endif
   if (_enable_system) {
-     _system_bus = new cDBusConnection(*busname, G_BUS_TYPE_SYSTEM, NULL);
-     AddAllObjects(_system_bus, _enable_osd);
-     _system_bus->Connect(TRUE);
+     gchar *system_address = g_dbus_address_get_for_bus_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
+     if (system_address != NULL) {
+        _system_bus = new cDBusConnection(*busname, "System", system_address, NULL);
+        AddAllObjects(_system_bus, _enable_osd);
+        _system_bus->Connect(TRUE);
+        g_free(system_address);
+        }
      }
 
   if (_enable_session) {
-     _session_bus = new cDBusConnection(*busname, G_BUS_TYPE_SESSION, NULL);
-     AddAllObjects(_session_bus, _enable_osd);
-     _session_bus->Connect(TRUE);
+     gchar *session_address = g_dbus_address_get_for_bus_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+     if (session_address != NULL) {
+        _session_bus = new cDBusConnection(*busname, "Session", session_address, NULL);
+        AddAllObjects(_session_bus, _enable_osd);
+        _session_bus->Connect(TRUE);
+        g_free(session_address);
+        }
      }
 
   if (_enable_network) {
