@@ -38,7 +38,7 @@ namespace cDBusPluginsHelper
     "    <method name=\"Service\">\n"
     "      <arg name=\"id\"           type=\"s\" direction=\"in\"/>\n"
     "      <arg name=\"data\"         type=\"s\" direction=\"in\"/>\n"
-    "      <arg name=\"return\"       type=\"b\" direction=\"out\"/>\n"
+    "      <arg name=\"handled\"      type=\"b\" direction=\"out\"/>\n"
     "    </method>\n"
     "  </interface>\n"
     "</node>\n";
