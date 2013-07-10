@@ -372,6 +372,11 @@ See <vdr/status.h> for more information about the parameters.
     string Timer
     string Change (may be "tcMod", "tcAdd" or "tcDel")
 
+And there are the following methods on the status interface.
+- is vdr replaying a recording
+  vdr-dbus-send.sh /Status status.IsReplaying
+  It returns the name, filename and a boolean value like the signal "Replaying".
+
 Interface "timer"
 -----------------
 - list all timers

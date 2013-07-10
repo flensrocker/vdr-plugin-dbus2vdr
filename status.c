@@ -33,6 +33,11 @@ namespace cDBusStatusHelper
     "      <arg name=\"FileName\"        type=\"s\" direction=\"out\"/>\n"
     "      <arg name=\"On\"              type=\"b\" direction=\"out\"/>\n"
     "    </signal>\n"
+    "    <method name=\"IsReplaying\">\n"
+    "      <arg name=\"Name\"            type=\"s\" direction=\"out\"/>\n"
+    "      <arg name=\"FileName\"        type=\"s\" direction=\"out\"/>\n"
+    "      <arg name=\"On\"              type=\"b\" direction=\"out\"/>\n"
+    "    </method>\n"
     "    <signal name=\"SetVolume\">\n"
     "      <arg name=\"Volume\"          type=\"i\" direction=\"out\"/>\n"
     "      <arg name=\"Absolute\"        type=\"b\" direction=\"out\"/>\n"
@@ -59,9 +64,29 @@ namespace cDBusStatusHelper
     cDBusStatus *_status;
     bool         _network;
 
+    GMutex     _replay_mutex;
+    gboolean   _replay_on;
+    gchar     *_replay_name;
+    gchar     *_replay_filename;
+
     void EmitSignal(const char *Signal, GVariant *Parameters)
     {
       _status->Connection()->EmitSignal( new cDBusSignal(NULL, "/Status", DBUS_VDR_STATUS_INTERFACE, Signal, Parameters, NULL, NULL));
+    };
+
+    void SetReplay(const char *Name, const char *Filename)
+    {
+      if (_replay_name != NULL) {
+         g_free(_replay_name);
+         _replay_name = NULL;
+         }
+      _replay_name = g_strdup(Name);
+
+      if (_replay_filename != NULL) {
+         g_free(_replay_filename);
+         _replay_filename = NULL;
+         }
+      _replay_filename = g_strdup(Filename);
     };
 
   public:
@@ -69,10 +94,19 @@ namespace cDBusStatusHelper
     {
       _status = Status;
       _network = Network;
+
+      g_mutex_init(&_replay_mutex);
+      _replay_on = FALSE;
+      _replay_name = NULL;
+      _replay_filename = NULL;
     };
 
     virtual ~cVdrStatus(void)
     {
+      g_mutex_lock(&_replay_mutex);
+      SetReplay(NULL, NULL);
+      g_mutex_unlock(&_replay_mutex);
+      g_mutex_clear(&_replay_mutex);
     };
 
     virtual void TimerChange(const cTimer *Timer, eTimerChange Change)
@@ -130,8 +164,32 @@ namespace cDBusStatusHelper
       if (_network)
          return;
 
-      gboolean on = (On ? TRUE : FALSE);
-      EmitSignal("Replaying", g_variant_new("(ssb)", EMPTY(Name), EMPTY(FileName), on));
+      g_mutex_lock(&_replay_mutex);
+      _replay_on = (On ? TRUE : FALSE);
+      if (On)
+         SetReplay(Name, FileName);
+      else
+         SetReplay(NULL, NULL);
+      EmitSignal("Replaying", g_variant_new("(ssb)", EMPTY(Name), EMPTY(FileName), _replay_on));
+      g_mutex_unlock(&_replay_mutex);
+    };
+
+    static void IsReplaying(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
+    {
+      cDBusStatus *status = dynamic_cast<cDBusStatus*>(Object);
+      if ((status == NULL) || (status->_status == NULL)) {
+         g_dbus_method_invocation_return_error(Invocation, G_IO_ERROR, G_IO_ERROR_FAILED_HANDLED, "can't get status object");
+         return;
+         }
+
+      g_mutex_lock(&status->_status->_replay_mutex);
+      GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("(ssb)"));
+      g_variant_builder_add(builder, "s", EMPTY(status->_status->_replay_name));
+      g_variant_builder_add(builder, "s", EMPTY(status->_status->_replay_filename));
+      g_variant_builder_add(builder, "b", status->_status->_replay_on);
+      g_dbus_method_invocation_return_value(Invocation, g_variant_builder_end(builder));
+      g_variant_builder_unref(builder);
+      g_mutex_unlock(&status->_status->_replay_mutex);
     };
 
     virtual void SetVolume(int Volume, bool Absolute)
@@ -245,6 +303,8 @@ cDBusStatus::cDBusStatus(bool Network)
 :cDBusObject("/Status", cDBusStatusHelper::_xmlNodeInfo)
 {
   _status = new cDBusStatusHelper::cVdrStatus(this, Network);
+  if (!Network)
+     AddMethod("IsReplaying", cDBusStatusHelper::cVdrStatus::IsReplaying);
 }
 
 cDBusStatus::~cDBusStatus(void)

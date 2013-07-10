@@ -14,6 +14,8 @@ namespace cDBusStatusHelper
 
 class cDBusStatus : public cDBusObject
 {
+friend class cDBusStatusHelper::cVdrStatus;
+
 private:
   cDBusStatusHelper::cVdrStatus *_status;
 
