@@ -38,7 +38,7 @@
 #include "avahi-helper.h"
 
 
-static const char *VERSION        = "14";
+static const char *VERSION        = "15";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -466,6 +466,72 @@ cString cPluginDbus2vdr::SVDRPCommand(const char *Command, const char *Option, i
         }
      ReplyCode = 901;
      return "dbus2vdr does not run the default GMainLoop";
+     }
+  if (strcmp(Command, "WatchBusname") == 0) {
+     cAvahiHelper options(Option);
+     const char *caller = options.Get("caller");   // the name of the calling plugin
+     const char *watch = options.Get("watch");     // the name to watch
+     const char *busname = options.Get("busname"); // system or session
+
+     if (caller == NULL) {
+        ReplyCode = 501;
+        return "error=missing caller";
+        }
+     if (watch == NULL) {
+        ReplyCode = 501;
+        return "error=missing watch";
+        }
+     if (busname == NULL) {
+        ReplyCode = 501;
+        return "error=missing busname";
+        }
+
+     cDBusConnection *conn = NULL;
+     if (strcmp(busname, "system") == 0)
+        conn = _system_bus;
+     else if (strcmp(busname, "session") == 0)
+        conn = _session_bus;
+     if (conn == NULL) {
+        ReplyCode = 501;
+        return "error=unknown busname";
+        }
+
+     ReplyCode = 900;
+     guint id = conn->Watch(new cDBusWatcher(caller, watch));
+     return cString::sprintf("id=%d", id);
+     }
+  else if (strcmp(Command, "UnwatchBusname") == 0) {
+     cAvahiHelper options(Option);
+     const char *id_str = options.Get("id");           // id returned by WatchBusname
+     const char *busname = options.Get("busname"); // system or session
+
+     if (id_str == NULL) {
+        ReplyCode = 501;
+        return "error=missing id";
+        }
+     else if (!isnumber(id_str)) {
+        ReplyCode = 501;
+        return "error=id is not a number";
+        }
+     if (busname == NULL) {
+        ReplyCode = 501;
+        return "error=missing busname";
+        }
+
+     cDBusConnection *conn = NULL;
+     if (strcmp(busname, "system") == 0)
+        conn = _system_bus;
+     else if (strcmp(busname, "session") == 0)
+        conn = _session_bus;
+     if (conn == NULL) {
+        ReplyCode = 501;
+        return "error=unknown busname";
+        }
+
+     ReplyCode = 900;
+     guint id = strtol(id_str, NULL, 10);
+     conn->Unwatch(id);
+     return cString::sprintf("message=unwatch id %d", id);
      }
   return NULL;
 }

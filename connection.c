@@ -2,6 +2,8 @@
 #include "helper.h"
 #include "object.h"
 
+#include <vdr/plugin.h>
+
 
 class cConnectionWorkerData
 {
@@ -188,6 +190,30 @@ void  cDBusConnection::Unsubscribe(cDBusSignal *Signal)
   if (Signal->_subscription_id != 0)
      g_dbus_connection_signal_unsubscribe(_connection, Signal->_subscription_id);
   _subscriptions.Del(Signal);
+  g_mutex_unlock(&_flush_mutex);
+}
+
+guint cDBusConnection::Watch(cDBusWatcher *Watcher)
+{
+  g_mutex_lock(&_flush_mutex);
+  Watcher->_connection = this;
+  Watcher->_real_watch_id = g_bus_watch_name_on_connection(_connection, Watcher->Name(), G_BUS_NAME_WATCHER_FLAGS_NONE, on_busname_appeared, on_busname_vanished, Watcher, NULL);
+  _watchers.Add(Watcher);
+  guint id = Watcher->Id();
+  g_mutex_unlock(&_flush_mutex);
+  return id;
+}
+
+void  cDBusConnection::Unwatch(guint Id)
+{
+  g_mutex_lock(&_flush_mutex);
+  for (cDBusWatcher *w = _watchers.First(); w ; w = _watchers.Next(w)) {
+      if (w->Id() == Id) {
+         g_bus_unwatch_name(w->RealId());
+         _watchers.Del( w, true);
+         break;
+         }
+      }
   g_mutex_unlock(&_flush_mutex);
 }
 
@@ -659,6 +685,38 @@ void  cDBusConnection::do_work(gpointer data, gpointer user_data)
   delete workerData;
 }
 
+static void  sNotifyCaller(const char *caller, const char *event, guint id, const char *data)
+{
+  if ((caller == NULL) || (event == NULL))
+     return;
+  cPlugin *plugin = cPluginManager::GetPlugin(caller);
+  if (plugin == NULL)
+     return;
+  cString call = cString::sprintf("event=%s,id=%d%s%s", event, id, (data != NULL ? "," : ""), (data != NULL ? data : ""));
+  plugin->Service("dbus2vdr-event", (void*)(*call));
+  isyslog("dbus2vdr: notify %s on event %s", caller, *call);
+}
+
+void  cDBusConnection::on_busname_appeared(GDBusConnection *connection, const gchar *name, const gchar *name_owner, gpointer user_data)
+{
+  if (user_data == NULL)
+     return;
+
+  cDBusWatcher *watcher = (cDBusWatcher*)user_data;
+  cString esc_name = strescape(name_owner, "\\,");
+  cString data = cString::sprintf("owner=%s", *esc_name);
+  sNotifyCaller(watcher->Caller(), "watched-name-appeared", watcher->Id(), *data);
+}
+
+void  cDBusConnection::on_busname_vanished(GDBusConnection *connection, const gchar *name, gpointer user_data)
+{
+  if (user_data == NULL)
+     return;
+
+  cDBusWatcher *watcher = (cDBusWatcher*)user_data;
+  sNotifyCaller(watcher->Caller(), "watched-name-vanished", watcher->Id(), NULL);
+}
+
 
 cDBusSignal::cDBusSignal(const char *Busname, const char *ObjectPath, const char *Interface, const char *Signal, GVariant *Parameters, cDBusOnSignalFunc OnSignal, gpointer UserData)
 {
@@ -708,4 +766,25 @@ cDBusMethodCall::~cDBusMethodCall(void)
   g_free(_method);
   if (_parameters != NULL)
      g_variant_unref(_parameters);
+}
+
+
+cDBusWatcher::cDBusWatcher(const char *Caller, const char *Name)
+{
+  static guint watch_ids = 0;
+  _connection = NULL;
+  _caller = g_strdup(Caller);
+  _name = g_strdup(Name);
+  _watch_id = ++watch_ids;
+  _real_watch_id = 0;
+}
+
+cDBusWatcher::~cDBusWatcher(void)
+{
+  if (_real_watch_id > 0) {
+     g_bus_unwatch_name(_real_watch_id);
+     _real_watch_id = 0;
+     }
+  g_free(_caller);
+  g_free(_name);
 }

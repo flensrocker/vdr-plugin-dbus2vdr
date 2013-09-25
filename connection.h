@@ -64,6 +64,27 @@ public:
   virtual ~cDBusMethodCall(void);
 };
 
+class cDBusWatcher : public cListObject
+{
+friend class cDBusConnection;
+
+private:
+  cDBusConnection *_connection;
+  gchar           *_caller;
+  gchar           *_name;
+  guint            _watch_id;
+  guint            _real_watch_id;
+
+public:
+  cDBusWatcher(const char *Caller, const char *Name);
+  virtual ~cDBusWatcher(void);
+
+  const char  *Caller(void) const { return _caller; }
+  const char  *Name(void) const { return _name; }
+  guint        Id(void) const { return _watch_id; };
+  guint        RealId(void) const { return _real_watch_id; };
+};
+
 class cDBusConnection
 {
 private:
@@ -106,6 +127,14 @@ private:
                              gpointer user_data);
   static void      do_work(gpointer data, gpointer user_data);
 
+  static void      on_busname_appeared(GDBusConnection *connection,
+                                       const gchar *name,
+                                       const gchar *name_owner,
+                                       gpointer user_data);
+  static void      on_busname_vanished(GDBusConnection *connection,
+                                       const gchar *name,
+                                       gpointer user_data);
+
   gchar           *_busname;
   GBusType         _bus_type;
   gchar           *_bus_address;
@@ -137,6 +166,7 @@ private:
   cList<cDBusSignal>     _signals;
   cList<cDBusMethodCall> _method_calls;
   cList<cDBusSignal>     _subscriptions;
+  cList<cDBusWatcher>    _watchers;
 
   void  RegisterObjects(void);
   void  UnregisterObjects(void);
@@ -176,6 +206,8 @@ public:
   void  CallMethod(cDBusMethodCall *Call);
   void  Subscribe(cDBusSignal *Signal);
   void  Unsubscribe(cDBusSignal *Signal);
+  guint Watch(cDBusWatcher *Watcher);
+  void  Unwatch(guint Id);
   // "Flush" blocks
   bool  Flush(void);
 };
