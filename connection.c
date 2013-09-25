@@ -145,6 +145,14 @@ void  cDBusConnection::AddObject(cDBusObject *Object)
      }
 }
 
+void  cDBusConnection::AddWatcher(cDBusWatcher *Watcher)
+{
+  if (Watcher != NULL) {
+     Watcher->_connection = this;
+     _watchers.Add(Watcher);
+     }
+}
+
 void  cDBusConnection::EmitSignal(cDBusSignal *Signal)
 {
   g_mutex_lock(&_flush_mutex);

@@ -184,10 +184,12 @@ public:
   virtual ~cDBusConnection(void);
 
   GDBusConnection *GetConnection(void) const { return _connection; };
+  guint            GetConnectStatus(void) { return _connect_status; };
   const char      *Name(void) const;
 
   // must be called before "Connect"
   void  AddObject(cDBusObject *Object);
+  void  AddWatcher(cDBusWatcher *Watcher);
   void  SetNameCallbacks(cDBusNameAcquiredFunc OnNameAcquired, cDBusNameLostFunc OnNameLost, gpointer OnNameUserData)
   {
     _on_name_acquired = OnNameAcquired;

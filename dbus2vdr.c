@@ -59,6 +59,9 @@ private:
   cDBusConnection *_session_bus;
   cDBusNetwork    *_network_bus;
 
+  cList<cDBusWatcher> _system_watchers;
+  cList<cDBusWatcher> _session_watchers;
+
 public:
   cPluginDbus2vdr(void);
   virtual ~cPluginDbus2vdr();
@@ -245,6 +248,15 @@ static void AddAllObjects(cDBusConnection *Connection, bool EnableOSD)
   Connection->AddObject(new cDBusVdr);
 }
 
+static void AddAllWatchers(cDBusConnection *Connection, cList<cDBusWatcher> *Watchers)
+{
+  cDBusWatcher *w;
+  while ((w = Watchers->First()) != NULL) {
+        Connection->AddWatcher(w);
+        Watchers->Del(w, false);
+        }
+}
+
 bool cPluginDbus2vdr::Start(void)
 {
   cDBusHelper::SetConfigDirectory(cPlugin::ConfigDirectory("dbus2vdr"));
@@ -268,6 +280,7 @@ bool cPluginDbus2vdr::Start(void)
      if (system_address != NULL) {
         _system_bus = new cDBusConnection(*busname, "System", system_address, NULL);
         AddAllObjects(_system_bus, _enable_osd);
+        AddAllWatchers(_system_bus, &_system_watchers);
         _system_bus->Connect(TRUE);
         g_free(system_address);
         }
@@ -278,6 +291,7 @@ bool cPluginDbus2vdr::Start(void)
      if (session_address != NULL) {
         _session_bus = new cDBusConnection(*busname, "Session", session_address, NULL);
         AddAllObjects(_session_bus, _enable_osd);
+        AddAllWatchers(_session_bus, &_session_watchers);
         _session_bus->Connect(TRUE);
         g_free(session_address);
         }
@@ -486,19 +500,33 @@ cString cPluginDbus2vdr::SVDRPCommand(const char *Command, const char *Option, i
         return "error=missing busname";
         }
 
-     cDBusConnection *conn = NULL;
-     if (strcmp(busname, "system") == 0)
-        conn = _system_bus;
-     else if (strcmp(busname, "session") == 0)
-        conn = _session_bus;
-     if (conn == NULL) {
-        ReplyCode = 501;
-        return "error=unknown busname";
+     if (strcmp(busname, "system") == 0) {
+        cDBusWatcher *watcher = new cDBusWatcher(caller, watch);
+        guint id = watcher->Id();
+        if (_system_bus == NULL)
+           _system_watchers.Add(watcher);
+        else if (_system_bus->GetConnectStatus() < 3)
+           _system_bus->AddWatcher(watcher);
+        else
+           _system_bus->Watch(watcher);
+        ReplyCode = 900;
+        return cString::sprintf("id=%d", id);
+        }
+     else if (strcmp(busname, "session") == 0) {
+        cDBusWatcher *watcher = new cDBusWatcher(caller, watch);
+        guint id = watcher->Id();
+        if (_session_bus == NULL)
+           _session_watchers.Add(watcher);
+        else if (_session_bus->GetConnectStatus() < 3)
+           _session_bus->AddWatcher(watcher);
+        else
+           _session_bus->Watch(watcher);
+        ReplyCode = 900;
+        return cString::sprintf("id=%d", id);
         }
 
-     ReplyCode = 900;
-     guint id = conn->Watch(new cDBusWatcher(caller, watch));
-     return cString::sprintf("id=%d", id);
+     ReplyCode = 501;
+     return "error=unknown busname";
      }
   else if (strcmp(Command, "UnwatchBusname") == 0) {
      cAvahiHelper options(Option);
