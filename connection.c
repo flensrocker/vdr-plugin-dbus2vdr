@@ -694,7 +694,7 @@ static void  sNotifyCaller(const char *caller, const char *event, guint id, cons
      return;
   cString call = cString::sprintf("event=%s,id=%d%s%s", event, id, (data != NULL ? "," : ""), (data != NULL ? data : ""));
   plugin->Service("dbus2vdr-event", (void*)(*call));
-  isyslog("dbus2vdr: notify %s on event %s", caller, *call);
+  isyslog("dbus2vdr: notified %s on event %s", caller, *call);
 }
 
 void  cDBusConnection::on_busname_appeared(GDBusConnection *connection, const gchar *name, const gchar *name_owner, gpointer user_data)
