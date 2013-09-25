@@ -69,11 +69,22 @@ class cDBusWatcher : public cListObject
 friend class cDBusConnection;
 
 private:
+  static void      on_busname_appeared(GDBusConnection *connection,
+                                       const gchar *name,
+                                       const gchar *name_owner,
+                                       gpointer user_data);
+  static void      on_busname_vanished(GDBusConnection *connection,
+                                       const gchar *name,
+                                       gpointer user_data);
+
   cDBusConnection *_connection;
   gchar           *_caller;
   gchar           *_name;
+  guint            _id;
   guint            _watch_id;
-  guint            _real_watch_id;
+
+  guint        Watch(cDBusConnection *Connection);
+  void         Unwatch(void);
 
 public:
   cDBusWatcher(const char *Caller, const char *Name);
@@ -81,8 +92,8 @@ public:
 
   const char  *Caller(void) const { return _caller; }
   const char  *Name(void) const { return _name; }
-  guint        Id(void) const { return _watch_id; };
-  guint        RealId(void) const { return _real_watch_id; };
+  guint        Id(void) const { return _id; };
+  guint        RealId(void) const { return _watch_id; };
 };
 
 class cDBusConnection
@@ -127,14 +138,6 @@ private:
                              gpointer user_data);
   static void      do_work(gpointer data, gpointer user_data);
 
-  static void      on_busname_appeared(GDBusConnection *connection,
-                                       const gchar *name,
-                                       const gchar *name_owner,
-                                       gpointer user_data);
-  static void      on_busname_vanished(GDBusConnection *connection,
-                                       const gchar *name,
-                                       gpointer user_data);
-
   gchar           *_busname;
   GBusType         _bus_type;
   gchar           *_bus_address;
@@ -170,6 +173,8 @@ private:
 
   void  RegisterObjects(void);
   void  UnregisterObjects(void);
+  void  RegisterWatchers(void);
+  void  UnregisterWatchers(void);
 
 public:
   static void  FreeThreadPool(void);
