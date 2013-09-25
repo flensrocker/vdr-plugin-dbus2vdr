@@ -1,3 +1,9 @@
+Description: Add several video directories to vdr
+ and display all recordings in one list
+Origin: https://github.com/flensrocker/vdr-plugin-dbus2vdr
+Forwarded: no
+Author: Lars Hanisch <dvb@flensrocker.de>
+
 diff --git a/menu.c b/menu.c
 index f43dec5..67cfb60 100644
 --- a/menu.c
