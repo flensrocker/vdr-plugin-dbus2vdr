@@ -207,7 +207,7 @@ void  cDBusConnection::Unwatch(guint Id)
   g_mutex_lock(&_flush_mutex);
   for (cDBusWatcher *w = _watchers.First(); w ; w = _watchers.Next(w)) {
       if (w->Id() == Id) {
-         w->Unwatch();
+         w->Unwatch(false);
          _watchers.Del( w, true);
          break;
          }
@@ -301,7 +301,7 @@ void  cDBusConnection::UnregisterWatchers(void)
 
   dsyslog("dbus2vdr: %s: UnregisterWatchers", Name());
   for (cDBusWatcher *w = _watchers.First(); w; w = _watchers.Next(w))
-      w->Unwatch();
+      w->Unwatch(true);
 }
 
 void  cDBusConnection::on_name_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data)
@@ -821,8 +821,11 @@ guint cDBusWatcher::Watch(cDBusConnection *Connection)
   return _id;
 }
 
-void  cDBusWatcher::Unwatch(void)
+void  cDBusWatcher::Unwatch(bool CallVanished)
 {
+  if (CallVanished)
+     on_busname_vanished(NULL, _name, this);
+
   if (_watch_id > 0) {
      g_bus_unwatch_name(_watch_id);
      _watch_id = 0;

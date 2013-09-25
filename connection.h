@@ -84,7 +84,7 @@ private:
   guint            _watch_id;
 
   guint        Watch(cDBusConnection *Connection);
-  void         Unwatch(void);
+  void         Unwatch(bool CallVanished);
 
 public:
   cDBusWatcher(const char *Caller, const char *Name);
