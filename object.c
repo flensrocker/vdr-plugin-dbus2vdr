@@ -1,4 +1,5 @@
 #include "object.h"
+#include "common.h"
 #include "connection.h"
 
 
@@ -42,7 +43,7 @@ void  cDBusObject::do_work(gpointer data, gpointer user_data)
 
   cWorkerData *workerData = (cWorkerData*)data;
   const gchar *method_name = g_dbus_method_invocation_get_method_name(workerData->_invocation);
-  dsyslog("dbus2vdr: do_work on %s.%s", workerData->_object->Path(), method_name);
+  d4syslog("dbus2vdr: do_work on %s.%s", workerData->_object->Path(), method_name);
   bool err = true;
   for (cDBusMethod *m = workerData->_object->_methods.First(); m; m = workerData->_object->_methods.Next(m)) {
       if (g_strcmp0(m->_name, method_name) == 0) {
@@ -64,7 +65,7 @@ void  cDBusObject::handle_method_call(GDBusConnection *connection, const gchar *
   if (user_data == NULL)
      return;
 
-  dsyslog("dbus2vdr: handle_method_call: sender '%s', object '%s', interface '%s', method '%s'", sender, object_path, interface_name, method_name);
+  d4syslog("dbus2vdr: handle_method_call: sender '%s', object '%s', interface '%s', method '%s'", sender, object_path, interface_name, method_name);
   cWorkerData *workerData = new cWorkerData((cDBusObject*)user_data, invocation);
   if (cWorkerData::_thread_pool == NULL) {
      GError *err = NULL;
@@ -130,7 +131,7 @@ void  cDBusObject::Register(void)
   for (int i = 0; i < len; i++) {
       guint id = g_dbus_connection_register_object(_connection->GetConnection(), Path(), _introspection_data->interfaces[i], &_interface_vtable, this, NULL, NULL);
       g_array_append_val(_registration_ids, id);
-      dsyslog("dbus2vdr: %s: register object %s with interface %s on id %d", _connection->Name(), Path(), _introspection_data->interfaces[i]->name, id);
+      d4syslog("dbus2vdr: %s: register object %s with interface %s on id %d", _connection->Name(), Path(), _introspection_data->interfaces[i]->name, id);
       }
 }
 
@@ -141,7 +142,7 @@ void  cDBusObject::Unregister(void)
         for (guint i = 0; i < _registration_ids->len; i++) {
             guint id = g_array_index(_registration_ids, guint, i);
             if (id != 0) {
-               dsyslog("dbus2vdr: %s: unregister object %s with interface %s on id %d", _connection->Name(), Path(), _introspection_data->interfaces[i]->name, id);
+               d4syslog("dbus2vdr: %s: unregister object %s with interface %s on id %d", _connection->Name(), Path(), _introspection_data->interfaces[i]->name, id);
                g_dbus_connection_unregister_object(_connection->GetConnection(), id);
                }
             }

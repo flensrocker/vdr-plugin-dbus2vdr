@@ -38,9 +38,46 @@
 #include "avahi-helper.h"
 
 
-static const char *VERSION        = "15";
+static const char *VERSION        = "16";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
+
+int dbus2vdr_SysLogLevel = 1;
+int dbus2vdr_SysLogTarget = LOG_USER;
+
+static bool ParseSysLogLevel(const char *Arg)
+{
+  if (Arg == NULL)
+     return false;
+  char *arg = strdup(Arg);
+  char *p = strchr(arg, '.');
+  if (p)
+     *p = 0;
+  if (isnumber(arg)) {
+     int l = atoi(arg);
+     if (0 <= l && l <= 4) {
+        dbus2vdr_SysLogLevel = l;
+        if (!p) {
+           free(arg);
+           return true;
+           }
+        if (isnumber(p + 1)) {
+           l = atoi(p + 1);
+           if (0 <= l && l <= 7) {
+              int targets[] = { LOG_LOCAL0, LOG_LOCAL1, LOG_LOCAL2, LOG_LOCAL3, LOG_LOCAL4, LOG_LOCAL5, LOG_LOCAL6, LOG_LOCAL7 };
+              dbus2vdr_SysLogTarget = targets[l];
+              free(arg);
+              return true;
+              }
+           }
+        }
+     }
+  if (p)
+     *p = '.';
+  esyslog("dbus2vdr: invalid log level: %s", Arg);
+  free(arg);
+  return false;
+}
 
 class cPluginDbus2vdr : public cPlugin {
 private:
@@ -133,7 +170,9 @@ const char *cPluginDbus2vdr::CommandLineHelp(void)
          "  --network\n"
          "    enable network support for peer2peer communication\n"
          "    a local dbus-daemon has to be started manually\n"
-         "    it has to store its address at $PLUGINDIR/network-address.conf\n";
+         "    it has to store its address at $PLUGINDIR/network-address.conf\n"
+         "  --log=n\n"
+         "    set plugin's loglevel\n";
 }
 
 bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
@@ -149,15 +188,21 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
     {"systemd", no_argument, 0, 's' | 0x400},
     {"network", no_argument, 0, 'n'},
     {"no-mainloop", no_argument, 0, 'n' | 0x100},
+    {"log", required_argument, 0, 'l'},
     {0, 0, 0, 0}
   };
 
   while (true) {
         int option_index = 0;
-        int c = getopt_long(argc, argv, "nop:s:uw:", options, &option_index);
+        int c = getopt_long(argc, argv, "l:nop:s:uw:", options, &option_index);
         if (c == -1)
            break;
         switch (c) {
+          case 'l':
+           {
+             ParseSysLogLevel(optarg);
+             break;
+           }
           case 'o':
            {
              _enable_osd = true;
@@ -480,6 +525,14 @@ cString cPluginDbus2vdr::SVDRPCommand(const char *Command, const char *Option, i
         }
      ReplyCode = 901;
      return "dbus2vdr does not run the default GMainLoop";
+     }
+  if (strcmp(Command, "SetSysLogLevel") == 0) {
+     if (ParseSysLogLevel(Option)) {
+        ReplyCode = 900;
+        return cString::sprintf("SysLogLevel set to %s", Option);
+        }
+     ReplyCode = 501;
+     return cString::sprintf("unknown SysLogLevel %s", Option);
      }
   if (strcmp(Command, "WatchBusname") == 0) {
      cAvahiHelper options(Option);

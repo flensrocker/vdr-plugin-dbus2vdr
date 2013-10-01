@@ -182,12 +182,12 @@ namespace cDBusEpgHelper
     cPUTEhandler *handler = new cPUTEhandler();
     if (handler->Status() == 354) {
        for (gsize i = 0; i < len; i++) {
-           dsyslog("dbus2vdr: %s.PutEntry: item = %s", DBUS_VDR_EPG_INTERFACE, line[i]);
-           dsyslog("dbus2vdr: %s.PutEntry: status = %d, message = %s", DBUS_VDR_EPG_INTERFACE, handler->Status(), handler->Message());
+           d4syslog("dbus2vdr: %s.PutEntry: item = %s", DBUS_VDR_EPG_INTERFACE, line[i]);
+           d4syslog("dbus2vdr: %s.PutEntry: status = %d, message = %s", DBUS_VDR_EPG_INTERFACE, handler->Status(), handler->Message());
            if (!handler->Process(line[i]))
               break;
            }
-       dsyslog("dbus2vdr: %s.PutEntry: status = %d, message = %s", DBUS_VDR_EPG_INTERFACE, handler->Status(), handler->Message());
+       d4syslog("dbus2vdr: %s.PutEntry: status = %d, message = %s", DBUS_VDR_EPG_INTERFACE, handler->Status(), handler->Message());
        if (handler->Status() == 354)
           handler->Process(".");
        }

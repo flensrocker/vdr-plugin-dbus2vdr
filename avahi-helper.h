@@ -18,7 +18,7 @@ public:
        char *s = strdup(Options);
        size_t len = strlen(Options);
        size_t pos1 = 0;
-       dsyslog("avahi4vdr-helper: options = '%s'", s);
+       //dsyslog("avahi4vdr-helper: options = '%s'", s);
        // skip initial commas
        while ((pos1 < len) && (s[pos1] == ','))
              pos1++;
@@ -34,14 +34,14 @@ public:
                 }
              if ((s[pos2] == ',') && (s[pos2 - 1] != '\\')) {
                 s[pos2] = 0;
-                dsyslog("avahi4vdr-helper: add '%s'", s + pos1);
+                //dsyslog("avahi4vdr-helper: add '%s'", s + pos1);
                 _list.Append(strdup(s + pos1));
                 pos1 = pos2 + 1;
                 }
              pos2++;
              }
        if (pos2 > pos1) {
-          dsyslog("avahi4vdr-helper: add '%s'", s + pos1);
+          //dsyslog("avahi4vdr-helper: add '%s'", s + pos1);
           _list.Append(strdup(s + pos1));
           }
        free(s);
@@ -66,7 +66,7 @@ public:
            if ((strncmp(text, Name, name_len) == 0) && (text[name_len] == '=')) {
               Number--;
               if (Number < 0) {
-                 dsyslog("avahi4vdr-helper: found parameter '%s'", text);
+                 //dsyslog("avahi4vdr-helper: found parameter '%s'", text);
                  return text + name_len + 1;
                  }
               }

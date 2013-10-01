@@ -1,4 +1,5 @@
 #include "connection.h"
+#include "common.h"
 #include "helper.h"
 #include "object.h"
 
@@ -118,7 +119,7 @@ cDBusConnection::~cDBusConnection(void)
   g_cond_clear(&_disconnect_cond);
   g_mutex_clear(&_flush_mutex);
   g_cond_clear(&_flush_cond);
-  dsyslog("dbus2vdr: %s: ~cDBusConnection", Name());
+  d4syslog("dbus2vdr: %s: ~cDBusConnection", Name());
 
   if (_name != NULL) {
      g_free(_name);
@@ -225,7 +226,7 @@ void  cDBusConnection::Unwatch(guint Id)
 
 bool  cDBusConnection::Flush(void)
 {
-  dsyslog("dbus2vdr: %s: Flush", Name());
+  d4syslog("dbus2vdr: %s: Flush", Name());
   if (_connect_status == 0)
      return false;
   g_mutex_lock(&_flush_mutex);
@@ -237,7 +238,7 @@ bool  cDBusConnection::Flush(void)
 
 void  cDBusConnection::Connect(gboolean AutoReconnect)
 {
-  dsyslog("dbus2vdr: %s: Connect", Name());
+  d4syslog("dbus2vdr: %s: Connect", Name());
   _reconnect = AutoReconnect;
   _connect_status = 0;
 
@@ -249,7 +250,7 @@ void  cDBusConnection::Connect(gboolean AutoReconnect)
 
 void  cDBusConnection::Disconnect(void)
 {
-  dsyslog("dbus2vdr: %s: Disconnect", Name());
+  d4syslog("dbus2vdr: %s: Disconnect", Name());
   if (_connect_status == 0)
      return;
   g_mutex_lock(&_disconnect_mutex);
@@ -277,7 +278,7 @@ void  cDBusConnection::RegisterObjects(void)
   if (_connection == NULL)
      return;
 
-  dsyslog("dbus2vdr: %s: RegisterObjects", Name());
+  d4syslog("dbus2vdr: %s: RegisterObjects", Name());
   for (cDBusObject *obj = _objects.First(); obj; obj = _objects.Next(obj))
       obj->Register();
 }
@@ -287,7 +288,7 @@ void  cDBusConnection::UnregisterObjects(void)
   if (_connection == NULL)
      return;
 
-  dsyslog("dbus2vdr: %s: UnregisterObjects", Name());
+  d4syslog("dbus2vdr: %s: UnregisterObjects", Name());
   for (cDBusObject *obj = _objects.First(); obj; obj = _objects.Next(obj))
       obj->Unregister();
 }
@@ -297,7 +298,7 @@ void  cDBusConnection::RegisterWatchers(void)
   if (_connection == NULL)
      return;
 
-  dsyslog("dbus2vdr: %s: RegisterWatchers", Name());
+  d4syslog("dbus2vdr: %s: RegisterWatchers", Name());
   for (cDBusWatcher *w = _watchers.First(); w; w = _watchers.Next(w))
       w->Watch(this);
 }
@@ -307,7 +308,7 @@ void  cDBusConnection::UnregisterWatchers(void)
   if (_connection == NULL)
      return;
 
-  dsyslog("dbus2vdr: %s: UnregisterWatchers", Name());
+  d4syslog("dbus2vdr: %s: UnregisterWatchers", Name());
   for (cDBusWatcher *w = _watchers.First(); w; w = _watchers.Next(w))
       w->Unwatch(true);
 }
@@ -318,7 +319,7 @@ void  cDBusConnection::on_name_acquired(GDBusConnection *connection, const gchar
      return;
 
   cDBusConnection *conn = (cDBusConnection*)user_data;
-  dsyslog("dbus2vdr: %s: on_name_acquired %s", conn->Name(), name);
+  d4syslog("dbus2vdr: %s: on_name_acquired %s", conn->Name(), name);
   if (conn->_on_name_acquired != NULL)
      conn->_on_name_acquired(conn, conn->_on_name_user_data);
 }
@@ -329,7 +330,7 @@ void  cDBusConnection::on_name_lost(GDBusConnection *connection, const gchar *na
      return;
 
   cDBusConnection *conn = (cDBusConnection*)user_data;
-  dsyslog("dbus2vdr: %s: on_name_lost %s", conn->Name(), name);
+  d4syslog("dbus2vdr: %s: on_name_lost %s", conn->Name(), name);
   if (conn->_on_disconnect != NULL)
      conn->_on_disconnect(conn, conn->_on_connect_user_data);
 
@@ -355,7 +356,7 @@ void  cDBusConnection::on_name_lost_close(GObject *source_object, GAsyncResult *
      return;
 
   cDBusConnection *conn = (cDBusConnection*)user_data;
-  dsyslog("dbus2vdr: %s: on_name_lost_close", conn->Name());
+  d4syslog("dbus2vdr: %s: on_name_lost_close", conn->Name());
   if (conn->_connection != NULL) {
      if ((res != NULL) && (conn->_bus_address != NULL))
         g_dbus_connection_close_finish(conn->_connection, res, NULL);
@@ -381,7 +382,7 @@ void  cDBusConnection::on_bus_get(GObject *source_object, GAsyncResult *res, gpo
      return;
 
   cDBusConnection *conn = (cDBusConnection*)user_data;
-  dsyslog("dbus2vdr: %s: on_bus_get", conn->Name());
+  d4syslog("dbus2vdr: %s: on_bus_get", conn->Name());
   if (conn->_bus_type != G_BUS_TYPE_NONE)
      conn->_connection = g_bus_get_finish(res, NULL);
   else if (conn->_bus_address != NULL) {
@@ -437,7 +438,7 @@ gboolean  cDBusConnection::do_reconnect(gpointer user_data)
      return FALSE;
      }
 
-  dsyslog("dbus2vdr: %s: do_reconnect", conn->Name());
+  d4syslog("dbus2vdr: %s: do_reconnect", conn->Name());
   if (conn->_connect_status == 1) {
      conn->_connect_status = 2;
      if (conn->_bus_type != G_BUS_TYPE_NONE) {
@@ -463,7 +464,7 @@ gboolean  cDBusConnection::do_connect(gpointer user_data)
      return FALSE;
 
   cDBusConnection *conn = (cDBusConnection*)user_data;
-  dsyslog("dbus2vdr: %s: do_connect", conn->Name());
+  d4syslog("dbus2vdr: %s: do_connect", conn->Name());
   if (conn->_connect_status == 0) {
      conn->_connect_status = 2;
      if (conn->_bus_type != G_BUS_TYPE_NONE)
@@ -489,7 +490,7 @@ gboolean  cDBusConnection::do_disconnect(gpointer user_data)
      return FALSE;
 
   cDBusConnection *conn = (cDBusConnection*)user_data;
-  dsyslog("dbus2vdr: %s: do_disconnect", conn->Name());
+  d4syslog("dbus2vdr: %s: do_disconnect", conn->Name());
 
   conn->UnregisterWatchers();
 
@@ -515,7 +516,7 @@ void  cDBusConnection::on_disconnect_close(GObject *source_object, GAsyncResult 
      return;
 
   cDBusConnection *conn = (cDBusConnection*)user_data;
-  dsyslog("dbus2vdr: %s: on_disconnect_close", conn->Name());
+  d4syslog("dbus2vdr: %s: on_disconnect_close", conn->Name());
   if (conn->_connection != NULL) {
      if ((res != NULL) && (conn->_bus_address != NULL))
         g_dbus_connection_close_finish(conn->_connection, res, NULL);
@@ -536,7 +537,7 @@ gboolean  cDBusConnection::do_flush(gpointer user_data)
      return FALSE;
 
   cDBusConnection *conn = (cDBusConnection*)user_data;
-  dsyslog("dbus2vdr: %s: do_flush", conn->Name());
+  d4syslog("dbus2vdr: %s: do_flush", conn->Name());
   g_dbus_connection_flush(conn->_connection, NULL, on_flush, user_data);
 
   return FALSE;
@@ -548,7 +549,7 @@ void  cDBusConnection::on_flush(GObject *source_object, GAsyncResult *res, gpoin
      return;
 
   cDBusConnection *conn = (cDBusConnection*)user_data;
-  dsyslog("dbus2vdr: %s: on_flush", conn->Name());
+  d4syslog("dbus2vdr: %s: on_flush", conn->Name());
   g_dbus_connection_flush_finish(conn->_connection, res, NULL);
 
   g_mutex_lock(&conn->_disconnect_mutex);
@@ -646,7 +647,7 @@ gboolean  cDBusConnection::do_call_method(gpointer user_data)
            gchar *p = NULL;
            if (c->_parameters != NULL)
               p = g_variant_print(c->_parameters, TRUE);
-           dsyslog("dbus2vdr: %s: call method %s %s %s %s", conn->Name(), c->_object_path, c->_interface, c->_method, p);
+           d4syslog("dbus2vdr: %s: call method %s %s %s %s", conn->Name(), c->_object_path, c->_interface, c->_method, p);
            g_free(p);
            }
         g_dbus_connection_call(conn->_connection, c->_busname, c->_object_path, c->_interface, c->_method, c->_parameters, NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, (c->_on_reply == NULL ? NULL : do_call_reply), c);
@@ -704,7 +705,7 @@ void  cDBusConnection::do_work(gpointer data, gpointer user_data)
          gchar *p = NULL;
          if (s->_parameters != NULL)
             p = g_variant_print(s->_parameters, TRUE);
-         dsyslog("dbus2vdr: %s: emit signal %s %s %s %s", s->_connection->Name(), s->_object_path, s->_interface, s->_signal, p);
+         d4syslog("dbus2vdr: %s: emit signal %s %s %s %s", s->_connection->Name(), s->_object_path, s->_interface, s->_signal, p);
          g_free(p);
          }
       g_dbus_connection_emit_signal(s->_connection->_connection, s->_busname, s->_object_path, s->_interface, s->_signal, s->_parameters, &err);

@@ -45,7 +45,7 @@ gboolean  cDBusNetwork::do_connect(gpointer user_data)
      return FALSE;
 
   cDBusNetwork *net = (cDBusNetwork*)user_data;
-  dsyslog("dbus2vdr: %s: do_connect", net->Name());
+  d4syslog("dbus2vdr: %s: do_connect", net->Name());
 
   if (g_file_test(net->_filename, G_FILE_TEST_EXISTS)) {
      if (net->_address != NULL)
@@ -74,7 +74,7 @@ gboolean  cDBusNetwork::do_disconnect(gpointer user_data)
      return FALSE;
 
   cDBusNetwork *net = (cDBusNetwork*)user_data;
-  dsyslog("dbus2vdr: %s: do_disconnect", net->Name());
+  d4syslog("dbus2vdr: %s: do_disconnect", net->Name());
 
   if (net->_connection != NULL) {
      delete net->_connection;
@@ -98,14 +98,14 @@ void cDBusNetwork::on_file_changed(GFileMonitor *monitor, GFile *first, GFile *s
      return;
 
 #define fn(x) ((x) ? g_file_get_basename (x) : "--")
-  dsyslog("dbus2vdr: %s: on_file_changed %s", net->Name(), fn(first));
+  d4syslog("dbus2vdr: %s: on_file_changed %s", net->Name(), fn(first));
 #undef fn
 
   char *event_name = decode_event(event);
   switch (event) {
     case G_FILE_MONITOR_EVENT_CHANGES_DONE_HINT:
      {
-      dsyslog("dbus2vdr: %s: on_file_changed got event %s", net->Name(), event_name);
+      d4syslog("dbus2vdr: %s: on_file_changed got event %s", net->Name(), event_name);
       GSource *source = g_idle_source_new();
       g_source_set_priority(source, G_PRIORITY_DEFAULT);
       g_source_set_callback(source, do_connect, user_data, NULL);
@@ -114,7 +114,7 @@ void cDBusNetwork::on_file_changed(GFileMonitor *monitor, GFile *first, GFile *s
      }
     case G_FILE_MONITOR_EVENT_DELETED:
      {
-      dsyslog("dbus2vdr: %s: on_file_changed got event %s", net->Name(), event_name);
+      d4syslog("dbus2vdr: %s: on_file_changed got event %s", net->Name(), event_name);
       GSource *source = g_idle_source_new();
       g_source_set_priority(source, G_PRIORITY_DEFAULT);
       g_source_set_callback(source, do_disconnect, user_data, NULL);
@@ -123,7 +123,7 @@ void cDBusNetwork::on_file_changed(GFileMonitor *monitor, GFile *first, GFile *s
      }
     default:
      {
-      dsyslog("dbus2vdr: %s: on_file_changed got event %s", net->Name(), event_name);
+      d4syslog("dbus2vdr: %s: on_file_changed got event %s", net->Name(), event_name);
       break;
      }
     }
@@ -136,12 +136,12 @@ void cDBusNetwork::on_name_acquired(cDBusConnection *Connection, gpointer UserDa
      return;
 
   cDBusNetwork *net = (cDBusNetwork*)UserData;
-  dsyslog("dbus2vdr: %s: on_name_acquired", net->Name());
+  d4syslog("dbus2vdr: %s: on_name_acquired", net->Name());
   if ((net->_address != NULL) && (net->_avahi4vdr != NULL)) {
      int replyCode = 0;
      cString parameter = cString::sprintf("caller=dbus2vdr,name=%s,type=_dbus._tcp,port=%d,subtype=_vdr_dbus2vdr._sub._dbus._tcp,txt=busname=%s", *net->_avahi_name, net->_address->Port, net->_busname);
      net->_avahi_id = net->_avahi4vdr->SVDRPCommand("CreateService", *parameter, replyCode);
-     dsyslog("dbus2vdr: %s: avahi service created (id %s)", net->Name(), *net->_avahi_id);
+     d4syslog("dbus2vdr: %s: avahi service created (id %s)", net->Name(), *net->_avahi_id);
      }
 }
 
@@ -151,11 +151,11 @@ void cDBusNetwork::on_name_lost(cDBusConnection *Connection, gpointer UserData)
      return;
 
   cDBusNetwork *net = (cDBusNetwork*)UserData;
-  dsyslog("dbus2vdr: %s: on_name_lost", net->Name());
+  d4syslog("dbus2vdr: %s: on_name_lost", net->Name());
   if ((net->_avahi4vdr != NULL) && (*net->_avahi_id != NULL)) {
      int replyCode = 0;
      net->_avahi4vdr->SVDRPCommand("DeleteService", *net->_avahi_id, replyCode);
-     dsyslog("dbus2vdr: %s: avahi service deleted (id %s)", net->Name(), *net->_avahi_id);
+     d4syslog("dbus2vdr: %s: avahi service deleted (id %s)", net->Name(), *net->_avahi_id);
      net->_avahi_id = NULL;
      }
 }
@@ -187,7 +187,7 @@ cDBusNetwork::~cDBusNetwork(void)
      _busname = NULL;
      }
 
-  dsyslog("dbus2vdr: %s: ~cDBusNetwork", Name());
+  d4syslog("dbus2vdr: %s: ~cDBusNetwork", Name());
 }
 
 void  cDBusNetwork::Start(void)
@@ -253,7 +253,7 @@ void  cDBusNetwork::Stop(void)
 
 cDBusNetworkAddress *cDBusNetworkAddress::LoadFromFile(const char *Filename)
 {
-  dsyslog("dbus2vdr: loading network address from file %s", Filename);
+  d4syslog("dbus2vdr: loading network address from file %s", Filename);
   FILE *f = fopen(Filename, "r");
   if (f == NULL)
      return NULL;
@@ -310,7 +310,7 @@ void  cDBusNetworkClient::OnConnect(cDBusConnection *Connection, gpointer UserDa
      return;
 
   cDBusNetworkClient *client = (cDBusNetworkClient*)UserData;
-  dsyslog("dbus2vdr: NetworkClient: OnConnect %s", client->Name());
+  d4syslog("dbus2vdr: NetworkClient: OnConnect %s", client->Name());
   if (client->_signal_timer_change == NULL) {
      client->_signal_timer_change = new cDBusSignal(client->_busname, "/Status", DBUS_VDR_STATUS_INTERFACE, "TimerChange", NULL, OnTimerChange, UserData);
      client->_connection->Subscribe(client->_signal_timer_change);
@@ -323,7 +323,7 @@ void  cDBusNetworkClient::OnDisconnect(cDBusConnection *Connection, gpointer Use
      return;
 
   cDBusNetworkClient *client = (cDBusNetworkClient*)UserData;
-  dsyslog("dbus2vdr: NetworkClient: OnDisconnect %s", client->Name());
+  d4syslog("dbus2vdr: NetworkClient: OnDisconnect %s", client->Name());
   if ((client->_signal_timer_change != NULL) && (client->_connection != NULL)) {
      client->_connection->Unsubscribe(client->_signal_timer_change);
      client->_signal_timer_change = NULL;
@@ -336,7 +336,7 @@ void  cDBusNetworkClient::OnTimerChange(const gchar *SenderName, const gchar *Ob
      return;
 
   cDBusNetworkClient *client = (cDBusNetworkClient*)UserData;
-  dsyslog("dbus2vdr: NetworkClient: timer changed on %s", client->Name());
+  d4syslog("dbus2vdr: NetworkClient: timer changed on %s", client->Name());
   if (client->_connection != NULL)
      client->_connection->CallMethod(new cDBusMethodCall(client->_busname, "/Timers", DBUS_VDR_TIMER_INTERFACE, "List", NULL, OnTimerList, client));
 }
@@ -347,7 +347,7 @@ void  cDBusNetworkClient::OnTimerList(GVariant *Reply, gpointer UserData)
      return;
 
   cDBusNetworkClient *client = (cDBusNetworkClient*)UserData;
-  dsyslog("dbus2vdr: NetworkClient: get timer from %s", client->Name());
+  d4syslog("dbus2vdr: NetworkClient: get timer from %s", client->Name());
 }
 
 cDBusNetworkClient::cDBusNetworkClient(const char *Name, const char *Host, const char *Address, int Port, const char *Busname)

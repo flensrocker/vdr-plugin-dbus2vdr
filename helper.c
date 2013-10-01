@@ -1,4 +1,5 @@
 #include "helper.h"
+#include "common.h"
 
 #include <dbus/dbus.h>
 #include <vdr/plugin.h>
@@ -45,7 +46,7 @@ void cDBusHelper::ToUtf8(cString &text)
         static const char *charSetOverride = getenv("VDR_CHARSET_OVERRIDE");
         if (charSetOverride)
            fromCharSet = charSetOverride;
-        dsyslog("dbus2vdr: ToUtf8: create charset converter from %s to UTF-8", fromCharSet);
+        d4syslog("dbus2vdr: ToUtf8: create charset converter from %s to UTF-8", fromCharSet);
         static cCharSetConv converter(fromCharSet);
         static cMutex mutex;
         mutex.Lock();
@@ -54,7 +55,7 @@ void cDBusHelper::ToUtf8(cString &text)
         }
      }
   else {
-     dsyslog("dbus2vdr: ToUtf8: create charset converter to UTF-8");
+     d4syslog("dbus2vdr: ToUtf8: create charset converter to UTF-8");
      static cCharSetConv converter(NULL, "UTF-8");
      static cMutex mutex;
      mutex.Lock();

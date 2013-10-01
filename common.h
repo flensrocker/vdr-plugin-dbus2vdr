@@ -18,4 +18,8 @@
 
 enum eBusType { busSystem = 0, busNetwork = 1};
 
+extern int dbus2vdr_SysLogLevel;
+extern int dbus2vdr_SysLogTarget;
+#define d4syslog(a...) void( (dbus2vdr_SysLogLevel > 2) ? dsyslog(a) : void() )
+
 #endif
