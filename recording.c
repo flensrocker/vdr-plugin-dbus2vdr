@@ -187,9 +187,9 @@ public:
     if (g_variant_is_of_type(first, G_VARIANT_TYPE_VARIANT))
        refFirst = g_variant_get_child_value(first, 0);
     GVariant *second = g_variant_get_child_value(Parameters, 1);
-    GVariant *refSecond = first;
-    if (g_variant_is_of_type(first, G_VARIANT_TYPE_VARIANT))
-       refSecond = g_variant_get_child_value(first, 0);
+    GVariant *refSecond = second;
+    if (g_variant_is_of_type(second, G_VARIANT_TYPE_VARIANT))
+       refSecond = g_variant_get_child_value(second, 0);
 
     if (g_variant_is_of_type(refFirst, G_VARIANT_TYPE_STRING)) {
        const char *path = NULL;
