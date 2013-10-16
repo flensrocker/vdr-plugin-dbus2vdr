@@ -487,14 +487,7 @@ You have to use "Type=notify" at the service definition file.
 Upstart
 -------
 When all plugins are started and dbus2vdr enters the first time the "MainThreadHook"
-it raises SIGSTOP and after SIGCONT raised by Upstart it emits a signal like:
-initctl emit --no-wait vdr-plugin softhddevice=started dbus2vdr=started ...
-
-When the plugin reaches its "Stop" function another signal is sent:
-initctl emit --no-wait vdr-plugin softhddevice=stopped dbus2vdr=stopped ...
-
-You can configure various upstart jobs to respond to this signal like starting
-the vdr frontend etc.
+it raises SIGSTOP so Upstart knows vdr has been fully initialized.
 
 If you want to start vdr whenever a client tries to access de.tvdr.vdr on DBus
 you can create a DBus service file like

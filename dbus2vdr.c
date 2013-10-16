@@ -29,7 +29,6 @@
 #include "skin.h"
 #include "status.h"
 #include "timer.h"
-#include "upstart.h"
 #include "vdr.h"
 
 #include <vdr/osdbase.h>
@@ -38,7 +37,7 @@
 #include "avahi-helper.h"
 
 
-static const char *VERSION        = "17";
+static const char *VERSION        = "18";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -84,7 +83,7 @@ private:
   // Add any member variables or functions you may need here.
   bool _enable_mainloop;
   bool _enable_osd;
-  int  _send_upstart_signals;
+  int  _enable_upstart;
   bool _enable_systemd;
   bool _enable_system;
   bool _enable_session;
@@ -129,7 +128,7 @@ cPluginDbus2vdr::cPluginDbus2vdr(void)
   // VDR OBJECTS TO EXIST OR PRODUCE ANY OUTPUT!
   _enable_mainloop = true;
   _enable_osd = false;
-  _send_upstart_signals = -1;
+  _enable_upstart = 0;
   _enable_systemd = false;
   _enable_system = true;
   _enable_session = false;
@@ -238,7 +237,7 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
           case 'u':
            {
              isyslog("dbus2vdr: enable Upstart support");
-             _send_upstart_signals = 0;
+             _enable_upstart = 1;
              break;
            }
           case 'w':
@@ -365,10 +364,6 @@ void cPluginDbus2vdr::Stop(void)
   // emit status "Stop" on the various notification channels
   if (_enable_systemd)
      sd_notify(0, "STATUS=Stop\n");
-  if (_send_upstart_signals == 1) {
-     _send_upstart_signals++;
-     cDBusUpstart::EmitPluginEvent(_system_bus, "stopped");
-     }
   cDBusVdr::SetStatus(cDBusVdr::statusStop);
 
   cDBusNetworkClient::StopClients();
@@ -409,11 +404,9 @@ void cPluginDbus2vdr::MainThreadHook(void)
      cDBusVdr::SetStatus(cDBusVdr::statusReady);
      if (_enable_systemd)
         sd_notify(0, "READY=1\nSTATUS=Ready\n");
-     if (_send_upstart_signals == 0) {
-        _send_upstart_signals++;
+     if (_enable_upstart) {
         isyslog("dbus2vdr: raise SIGSTOP for Upstart");
         raise(SIGSTOP);
-        cDBusUpstart::EmitPluginEvent(_system_bus, "started");
         }
      }
 }
