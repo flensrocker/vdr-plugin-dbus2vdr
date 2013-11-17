@@ -115,9 +115,9 @@ install-lib: $(SOFILE)
 	install -D $^ $(DESTDIR)$(LIBDIR)/$^.$(APIVERSION)
 
 install-cfg: shutdown-wrapper
-	install -D etc/dbus2vdr.conf $(DESTDIR)/etc/init/dbus2vdr.conf
-	install -D etc/de.tvdr.vdr.conf $(DESTDIR)/etc/dbus-1/system.d/de.tvdr.vdr.conf
-	install -D etc/network.conf $(DESTDIR)$(PLGCONFDIR)/network.conf
+	cp -pn etc/dbus2vdr.conf $(DESTDIR)/etc/init/dbus2vdr.conf
+	cp -pn etc/de.tvdr.vdr.conf $(DESTDIR)/etc/dbus-1/system.d/de.tvdr.vdr.conf
+	cp -pn etc/network.conf $(DESTDIR)$(PLGCONFDIR)/network.conf
 	install -D bin/vdr-dbus-send.sh $(DESTDIR)/usr/share/vdr-plugin-dbus2vdr/vdr-dbus-send.sh
 	install -D shutdown-wrapper $(DESTDIR)/usr/share/vdr-plugin-dbus2vdr/shutdown-wrapper
 
