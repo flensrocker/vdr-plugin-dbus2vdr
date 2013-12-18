@@ -39,7 +39,11 @@ public:
        return;
        }
 
+#if APIVERSNUM > 20101
+    if (RecordingsHandler.Active()) {
+#else
     if (cCutter::Active()) {
+#endif
        SendReply(Invocation, 902, "cutter is active", 0, "");
        return;
        }
