@@ -115,6 +115,9 @@ install-lib: $(SOFILE)
 	install -D $^ $(DESTDIR)$(LIBDIR)/$^.$(APIVERSION)
 
 install-cfg: shutdown-wrapper
+	mkdir -p $(DESTDIR)/etc/init
+	mkdir -p $(DESTDIR)/etc/dbus-1/system.d
+	mkdir -p $(DESTDIR)$(PLGCONFDIR)
 	cp -pn etc/dbus2vdr.conf $(DESTDIR)/etc/init/dbus2vdr.conf
 	cp -pn etc/de.tvdr.vdr.conf $(DESTDIR)/etc/dbus-1/system.d/de.tvdr.vdr.conf
 	cp -pn etc/network.conf $(DESTDIR)$(PLGCONFDIR)/network.conf
