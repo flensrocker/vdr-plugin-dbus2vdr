@@ -1,6 +1,8 @@
 #ifndef __DBUS2VDR_COMMON_H
 #define __DBUS2VDR_COMMON_H
 
+#include <vdr/tools.h>
+
 #define DBUS_VDR_BUSNAME                  "de.tvdr.vdr"
 #define DBUS_VDR_CHANNEL_INTERFACE        DBUS_VDR_BUSNAME".channel"
 #define DBUS_VDR_EPG_INTERFACE            DBUS_VDR_BUSNAME".epg"
@@ -21,5 +23,8 @@ enum eBusType { busSystem = 0, busNetwork = 1};
 extern int dbus2vdr_SysLogLevel;
 extern int dbus2vdr_SysLogTarget;
 #define d4syslog(a...) void( (dbus2vdr_SysLogLevel > 2) ? dsyslog(a) : void() )
+
+extern cString dbus2vdr_DBusSessionBusAddress;
+extern cString dbus2vdr_UpstartSession;
 
 #endif

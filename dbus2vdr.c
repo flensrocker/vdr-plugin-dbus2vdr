@@ -37,12 +37,15 @@
 #include "avahi-helper.h"
 
 
-static const char *VERSION        = "19";
+static const char *VERSION        = "20";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
 int dbus2vdr_SysLogLevel = 1;
 int dbus2vdr_SysLogTarget = LOG_USER;
+
+cString dbus2vdr_DBusSessionBusAddress = "";
+cString dbus2vdr_UpstartSession = "";
 
 static bool ParseSysLogLevel(const char *Arg)
 {
@@ -76,6 +79,34 @@ static bool ParseSysLogLevel(const char *Arg)
   esyslog("dbus2vdr: invalid log level: %s", Arg);
   free(arg);
   return false;
+}
+
+static cString SetSessionEnv(const char *Name, cString &Store, const char *Option, int &ReplyCode)
+{
+  if (Option && *Option) {
+     if (setenv(Name, Option, 1) < 0) {
+        ReplyCode = 550;
+        cString ret = cString::sprintf("can't set %s to %s", Name, Option);
+        esyslog("dbus2vdr: %s", *ret);
+        return ret;
+        }
+     Store = Option;
+     ReplyCode = 900;
+     cString ret = cString::sprintf("set %s to %s", Name, Option);
+     isyslog("dbus2vdr: %s", *ret);
+     return ret;
+     }
+  if (unsetenv(Name) < 0) {
+     ReplyCode = 550;
+     cString ret = cString::sprintf("can't unset %s", Name);
+     esyslog("dbus2vdr: %s", *ret);
+     return ret;
+     }
+  Store = "";
+  ReplyCode = 900;
+  cString ret = cString::sprintf("unset %s ok", Name);
+  isyslog("dbus2vdr: %s", *ret);
+  return ret;
 }
 
 class cPluginDbus2vdr : public cPlugin {
@@ -138,6 +169,13 @@ cPluginDbus2vdr::cPluginDbus2vdr(void)
   _system_bus = NULL;
   _session_bus = NULL;
   _network_bus = NULL;
+
+  const char *tmp = getenv("DBUS_SESSION_BUS_ADDRESS");
+  if (tmp)
+     dbus2vdr_DBusSessionBusAddress = tmp;
+  tmp = getenv("UPSTART_SESSION");
+  if (tmp)
+     dbus2vdr_UpstartSession = tmp;
 
   g_type_init();
 }
@@ -519,7 +557,7 @@ cString cPluginDbus2vdr::SVDRPCommand(const char *Command, const char *Option, i
      ReplyCode = 901;
      return "dbus2vdr does not run the default GMainLoop";
      }
-  if (strcmp(Command, "SetSysLogLevel") == 0) {
+  else if (strcmp(Command, "SetSysLogLevel") == 0) {
      if (ParseSysLogLevel(Option)) {
         ReplyCode = 900;
         return cString::sprintf("SysLogLevel set to %s", Option);
@@ -527,7 +565,13 @@ cString cPluginDbus2vdr::SVDRPCommand(const char *Command, const char *Option, i
      ReplyCode = 501;
      return cString::sprintf("unknown SysLogLevel %s", Option);
      }
-  if (strcmp(Command, "WatchBusname") == 0) {
+  else if (strcmp(Command, "SetDBusSessionBusAddress") == 0) {
+     return SetSessionEnv("DBUS_SESSION_BUS_ADDRESS", dbus2vdr_DBusSessionBusAddress, Option, ReplyCode);
+     }
+  else if (strcmp(Command, "SetUpstartSession") == 0) {
+     return SetSessionEnv("UPSTART_SESSION", dbus2vdr_UpstartSession, Option, ReplyCode);
+     }
+  else if (strcmp(Command, "WatchBusname") == 0) {
      cAvahiHelper options(Option);
      const char *caller = options.Get("caller");   // the name of the calling plugin
      const char *watch = options.Get("watch");     // the name to watch
