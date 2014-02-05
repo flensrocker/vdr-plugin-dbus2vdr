@@ -13,6 +13,9 @@ namespace cDBusStatusHelper
     "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
     "<node>\n"
     "  <interface name=\""DBUS_VDR_STATUS_INTERFACE"\">\n"
+    "    <signal name=\"ChannelChange\">\n"
+    "      <arg name=\"Channel\"         type=\"s\" direction=\"out\"/>\n"
+    "    </signal>\n"
     "    <signal name=\"TimerChange\">\n"
     "      <arg name=\"Timer\"           type=\"s\" direction=\"out\"/>\n"
     "      <arg name=\"Change\"          type=\"s\" direction=\"out\"/>\n"
@@ -108,6 +111,20 @@ namespace cDBusStatusHelper
       g_mutex_unlock(&_replay_mutex);
       g_mutex_clear(&_replay_mutex);
     };
+
+    virtual void ChannelChange(const cChannel *Channel)
+    {
+      cString channel;
+
+      if (Channel) {
+         channel = Channel->ToText();
+         int len = strlen(*channel);
+         if ((len > 0) && ((*channel)[len - 1] == '\n'))
+            channel.Truncate(len - 1);
+         }
+
+      EmitSignal("ChannelChange", g_variant_new("(s)", EMPTY(*channel)));
+    }
 
     virtual void TimerChange(const cTimer *Timer, eTimerChange Change)
     {
