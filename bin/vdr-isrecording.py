@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from datetime import datetime
 import dbus
 bus = dbus.SystemBus()
 Timers = bus.get_object('de.tvdr.vdr', '/Timers')
