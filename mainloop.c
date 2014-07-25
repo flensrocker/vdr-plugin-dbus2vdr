@@ -25,7 +25,6 @@ cDBusMainLoop::~cDBusMainLoop(void)
      g_main_loop_quit(_loop);
   if (_thread != NULL) {
      g_thread_join(_thread);
-     g_thread_unref(_thread);
      _thread = NULL;
      }
 }
