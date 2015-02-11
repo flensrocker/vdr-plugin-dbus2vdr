@@ -62,7 +62,7 @@ void cDBusOsd::Flush(void)
     int x, y;
     const uint8_t *pixel;
     png::image<png::rgba_pixel> *pngfile;
-    while (cPixmapMemory *pm = RenderPixmaps()) {
+    while (cPixmapMemory *pm = dynamic_cast<cPixmapMemory*>(RenderPixmaps())) {
           /*write = true;*/
           vp = &pm->ViewPort();
           vx = vp->X();
@@ -83,7 +83,7 @@ void cDBusOsd::Flush(void)
 
           counter++;
           delete pngfile;
-          delete pm;
+          DestroyPixmap(pm);
           }
   }
 #endif
