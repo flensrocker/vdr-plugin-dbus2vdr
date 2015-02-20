@@ -83,7 +83,11 @@ void cDBusOsd::Flush(void)
 
           counter++;
           delete pngfile;
+#if APIVERSNUM >= 20110
           DestroyPixmap(pm);
+#else
+          delete pm;
+#endif
           }
   }
 #endif
