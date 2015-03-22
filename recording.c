@@ -39,6 +39,12 @@ public:
        c = recording->Name();
        if (c != NULL)
           cDBusHelper::AddKeyValue(array, "Name", "s", (void**)&c);
+#ifdef HIDE_FIRST_RECORDING_LEVEL_PATCH
+       s = recording->FullName();
+       c = *s;
+       if (c != NULL)
+          cDBusHelper::AddKeyValue(array, "FullName", "s", (void**)&c);
+#endif
        c = recording->Title();
        if (c != NULL)
           cDBusHelper::AddKeyValue(array, "Title", "s", (void**)&c);
@@ -273,6 +279,84 @@ public:
     g_variant_unref(second);
   };
 
+  static void ChangeName(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
+  {
+    int replyCode = 501;
+    cString replyMessage;
+    cRecording *recording = NULL;
+
+    GVariant *first = g_variant_get_child_value(Parameters, 0);
+    GVariant *refFirst = first;
+    if (g_variant_is_of_type(first, G_VARIANT_TYPE_VARIANT))
+       refFirst = g_variant_get_child_value(first, 0);
+
+    const char *newName = NULL;
+    g_variant_get_child(Parameters, 1, "&s", &newName);
+    if ((newName == NULL) || (newName[0] == 0))
+       replyMessage = "Missing new recording name";
+
+    if (g_variant_is_of_type(refFirst, G_VARIANT_TYPE_STRING)) {
+       const char *path = NULL;
+       g_variant_get(refFirst, "&s", &path);
+       if ((path != NULL) && *path) {
+          recording = recordings.GetByName(path);
+          if (recording == NULL) {
+             recordings.Update(true);
+             recording = recordings.GetByName(path);
+             if (recording == NULL)
+                replyMessage = cString::sprintf("recording \"%s\" not found", path);
+             }
+          }
+       }
+    else if (g_variant_is_of_type(refFirst, G_VARIANT_TYPE_INT32)) {
+       int number = 0;
+       g_variant_get(refFirst, "i", &number);
+       if (number > 0) {
+          recording = recordings.Get(number - 1);
+          if (recording == NULL) {
+             recordings.Update(true);
+             recording = recordings.Get(number - 1);
+             if (recording == NULL)
+                replyMessage = cString::sprintf("recording \"%d\" not found", number);
+             }
+          }
+       }
+
+    if ((recording != NULL) && (newName != NULL) && (newName[0] != 0)) {
+       if (int RecordingInUse = recording->IsInUse()) {
+          replyCode = 550;
+          replyMessage = cString::sprintf("recording is in use, reason %d", RecordingInUse);
+          }
+       else {
+#ifdef HIDE_FIRST_RECORDING_LEVEL_PATCH
+          cString oldName = recording->FullName();
+#else
+          cString oldName = recording->Name();
+#endif
+          if (recording->ChangeName(newName)) {
+             // update list of vdr
+             Recordings.Update(false);
+             replyCode = 250;
+#ifdef HIDE_FIRST_RECORDING_LEVEL_PATCH
+             cString name = recording->FullName();
+#else
+             cString name = recording->Name();
+#endif
+             replyMessage = cString::sprintf("Recording \"%s\" moved to \"%s\"", *oldName, *name);
+             }
+          else {
+             replyCode = 554;
+             replyMessage = cString::sprintf("Error while moving recording \"%s\" to \"%s\"!", *oldName, newName);
+             }
+          }
+       }
+
+    cDBusHelper::SendReply(Invocation, replyCode, *replyMessage);
+    if (refFirst != first)
+       g_variant_unref(refFirst);
+    g_variant_unref(first);
+  };
+
   static void ListExtraVideoDirectories(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
     int replyCode = 500;
@@ -399,11 +483,13 @@ const char *cDBusRecordingsHelper::_xmlNodeInfoConst =
   "    <method name=\"List\">\n"
   "      <arg name=\"recordings\"   type=\"a(ia(sv))\" direction=\"out\"/>\n"
   "    </method>\n"
+#ifdef EXTRA_VIDEO_DIRECTORIES_PATCH
   "    <method name=\"ListExtraVideoDirectories\">\n"
   "      <arg name=\"replycode\"      type=\"i\"  direction=\"out\"/>\n"
   "      <arg name=\"replymessage\"   type=\"s\"  direction=\"out\"/>\n"
   "      <arg name=\"extravideodirs\" type=\"as\" direction=\"out\"/>\n"
   "    </method>\n"
+#endif
   "  </interface>\n"
   "</node>\n";
 
@@ -429,6 +515,13 @@ const char *cDBusRecordingsHelper::_xmlNodeInfo =
   "      <arg name=\"replycode\"      type=\"i\" direction=\"out\"/>\n"
   "      <arg name=\"replymessage\"   type=\"s\" direction=\"out\"/>\n"
   "    </method>\n"
+  "    <method name=\"ChangeName\">\n"
+  "      <arg name=\"number_or_path\" type=\"v\" direction=\"in\"/>\n"
+  "      <arg name=\"newname\"        type=\"s\" direction=\"in\"/>\n"
+  "      <arg name=\"replycode\"      type=\"i\" direction=\"out\"/>\n"
+  "      <arg name=\"replymessage\"   type=\"s\" direction=\"out\"/>\n"
+  "    </method>\n"
+#ifdef EXTRA_VIDEO_DIRECTORIES_PATCH
   "    <method name=\"AddExtraVideoDirectory\">\n"
   "      <arg name=\"option\"       type=\"s\" direction=\"in\"/>\n"
   "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
@@ -448,6 +541,7 @@ const char *cDBusRecordingsHelper::_xmlNodeInfo =
   "      <arg name=\"replymessage\"   type=\"s\"  direction=\"out\"/>\n"
   "      <arg name=\"extravideodirs\" type=\"as\" direction=\"out\"/>\n"
   "    </method>\n"
+#endif
   "  </interface>\n"
   "</node>\n";
 
@@ -457,7 +551,9 @@ cDBusRecordingsConst::cDBusRecordingsConst(const char *NodeInfo)
 {
   AddMethod("Get", cDBusRecordingsHelper::Get);
   AddMethod("List", cDBusRecordingsHelper::List);
+#ifdef EXTRA_VIDEO_DIRECTORIES_PATCH
   AddMethod("ListExtraVideoDirectories", cDBusRecordingsHelper::ListExtraVideoDirectories);
+#endif
 }
 
 cDBusRecordingsConst::cDBusRecordingsConst(void)
@@ -465,7 +561,9 @@ cDBusRecordingsConst::cDBusRecordingsConst(void)
 {
   AddMethod("Get", cDBusRecordingsHelper::Get);
   AddMethod("List", cDBusRecordingsHelper::List);
+#ifdef EXTRA_VIDEO_DIRECTORIES_PATCH
   AddMethod("ListExtraVideoDirectories", cDBusRecordingsHelper::ListExtraVideoDirectories);
+#endif
 }
 
 cDBusRecordingsConst::~cDBusRecordingsConst(void)
@@ -477,9 +575,11 @@ cDBusRecordings::cDBusRecordings(void)
 {
   AddMethod("Update", cDBusRecordingsHelper::Update);
   AddMethod("Play", cDBusRecordingsHelper::Play);
+#ifdef EXTRA_VIDEO_DIRECTORIES_PATCH
   AddMethod("AddExtraVideoDirectory", cDBusRecordingsHelper::AddExtraVideoDirectory);
   AddMethod("ClearExtraVideoDirectories", cDBusRecordingsHelper::ClearExtraVideoDirectories);
   AddMethod("DeleteExtraVideoDirectory", cDBusRecordingsHelper::DeleteExtraVideoDirectory);
+#endif
 }
 
 cDBusRecordings::~cDBusRecordings(void)
