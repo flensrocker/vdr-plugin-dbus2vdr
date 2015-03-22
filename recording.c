@@ -575,6 +575,7 @@ cDBusRecordings::cDBusRecordings(void)
 {
   AddMethod("Update", cDBusRecordingsHelper::Update);
   AddMethod("Play", cDBusRecordingsHelper::Play);
+  AddMethod("ChangeName", cDBusRecordingsHelper::ChangeName);
 #ifdef EXTRA_VIDEO_DIRECTORIES_PATCH
   AddMethod("AddExtraVideoDirectory", cDBusRecordingsHelper::AddExtraVideoDirectory);
   AddMethod("ClearExtraVideoDirectories", cDBusRecordingsHelper::ClearExtraVideoDirectories);
