@@ -53,9 +53,11 @@ void  cDBusObject::do_work(gpointer data, gpointer user_data)
          }
       }
   if (err) {
-     gchar *message = g_strdup_printf("method '%s.%s' on object '%s' is not implemented yet", g_dbus_method_invocation_get_interface_name(workerData->_invocation), g_dbus_method_invocation_get_method_name(workerData->_invocation), g_dbus_method_invocation_get_object_path(workerData->_invocation));
-     g_dbus_method_invocation_return_error(workerData->_invocation, G_IO_ERROR, G_IO_ERROR_FAILED_HANDLED, message);
-     g_free(message);
+     g_dbus_method_invocation_return_error(workerData->_invocation, G_IO_ERROR, G_IO_ERROR_FAILED_HANDLED,
+                                           "method '%s.%s' on object '%s' is not implemented yet",
+                                           g_dbus_method_invocation_get_interface_name(workerData->_invocation),
+                                           g_dbus_method_invocation_get_method_name(workerData->_invocation),
+                                           g_dbus_method_invocation_get_object_path(workerData->_invocation));
      }
   delete workerData;
 }

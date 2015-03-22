@@ -273,7 +273,7 @@ namespace cDBusRemoteHelper
     cString replyMessage;
     char *option = NULL;
     g_variant_get(Parameters, "(&s)", &option);
-    if ((option != NULL) && (*option != NULL)) {
+    if ((option != NULL) && (option[0] != 0)) {
        int n = -1;
        int d = 0;
        if (isnumber(option)) {
