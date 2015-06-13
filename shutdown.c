@@ -186,6 +186,29 @@ public:
     g_dbus_method_invocation_return_value(Invocation, g_variant_new("(b)", manual));
   };
 
+  static void NextWakeupTime(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
+  {
+    time_t  nextWakeupTime = 0;
+    cString info = "";
+    
+    time_t Now = time(NULL);
+    cTimer *timer = Timers.GetNextActiveTimer();
+    time_t Next = timer ? timer->StartTime() : 0;
+    cPlugin *Plugin = cPluginManager::GetNextWakeupPlugin();
+    time_t NextPlugin = Plugin ? Plugin->WakeupTime() : 0;
+    if (Next > Now) {
+       nextWakeupTime = Next;
+       info = "timer";
+       }
+    if (NextPlugin > Now) {
+       if (NextPlugin < nextWakeupTime) {
+          nextWakeupTime = NextPlugin;
+          info = cString::sprintf("plugin:%s", Plugin->Name());
+          }
+       }
+    g_dbus_method_invocation_return_value(Invocation, g_variant_new("(xs)", (gint64)nextWakeupTime, *info));
+  };
+
   static void SetUserInactive(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
     ShutdownHandler.SetUserInactive();
@@ -207,6 +230,10 @@ const char *cDBusShutdownHelper::_xmlNodeInfo =
     "    </method>\n"
     "    <method name=\"ManualStart\">\n"
     "      <arg name=\"manual\"       type=\"b\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "    <method name=\"NextWakeupTime\">\n"
+    "      <arg name=\"timestamp\"    type=\"x\" direction=\"out\"/>\n"
+    "      <arg name=\"info\"         type=\"s\" direction=\"out\"/>\n"
     "    </method>\n"
     "    <method name=\"SetUserInactive\">\n"
     "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
@@ -235,6 +262,7 @@ cDBusShutdown::cDBusShutdown(void)
 {
   AddMethod("ConfirmShutdown" , cDBusShutdownHelper::ConfirmShutdown);
   AddMethod("ManualStart" , cDBusShutdownHelper::ManualStart);
+  AddMethod("NextWakeupTime" , cDBusShutdownHelper::NextWakeupTime);
   AddMethod("SetUserInactive" , cDBusShutdownHelper::SetUserInactive);
 }
 

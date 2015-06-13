@@ -313,6 +313,11 @@ Interface "shutdown"
   If the startup time is around the NextWakeupTime (600 seconds) "true" will be returned.
   Remember that NextWakeupTime may change while vdr is running.
 
+- get timestamp of next wakeup
+  vdr-dbus-send.sh /Shutdown shutdown.NextWakeupTime
+  Returns the starttime of the next timer or the next plugin.
+  Remember that NextWakeupTime may change while vdr is running.
+
 - set vdr to non-interactive mode
   vdr-dbus-send.sh /Shutdown shutdown.SetUserInactive
 
