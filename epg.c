@@ -111,12 +111,11 @@ namespace cDBusEpgHelper
        tChannelID ChannelID = tChannelID::InvalidID;
        if (isnumber(channel)) {
           int o = strtol(channel, NULL, 10);
-          const cChannels *channels = NULL;
 #if VDRVERSNUM > 20300
           LOCK_CHANNELS_READ;
-          channels = Channels;
+          const cChannels *channels = Channels;
 #else
-          channels = &Channels;
+          cChannels *channels = &Channels;
 #endif
           if (o >= 1 && o <= channels->MaxNumber())
              ChannelID = channels->GetByNumber(o)->GetChannelID();
@@ -319,7 +318,11 @@ namespace cDBusEpgHelper
     g_variant_builder_unref(arr);
   }
 
+#if VDRVERSNUM > 20300
   static bool sGetChannel(GVariant *Arg, const char **Input, const cChannels* Channels, const cChannel **Channel)
+#else
+  static bool sGetChannel(GVariant *Arg, const char **Input, cChannels* Channels, const cChannel **Channel)
+#endif
   {
     *Channel = NULL;
     *Input = NULL;
@@ -354,12 +357,11 @@ namespace cDBusEpgHelper
   
   static void sGetEntries(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation, eMode mode)
   {
-    const cChannels *channels = NULL;
 #if VDRVERSNUM > 20300
     LOCK_CHANNELS_READ;
-    channels = Channels;
+    const cChannels *channels = Channels;
 #else
-    channels = &Channels;
+    cChannels *channels = &Channels;
 #endif
     const cChannel *channel = NULL;
     guint64 atTime = 0;

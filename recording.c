@@ -134,16 +134,15 @@ public:
 
   static void Get(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
-    const cRecordings *recs = NULL;
 #if VDRVERSNUM > 20300
     LOCK_RECORDINGS_READ;
-    recs = Recordings;
+    const cRecordings *recs = Recordings;
 #else
     // only update recordings list if empty
     // so we don't mess around with the index values returned by List
     if (recordings.Count() == 0)
        recordings.Update(true);
-    recs = &recordings;
+    cRecordings *recs = &recordings;
 #endif
 
     const cRecording *recording = NULL;
@@ -211,13 +210,12 @@ public:
     int position = -1; // default: resume
     const char *hmsf = NULL;
 
-    const cRecordings *recs = NULL;
 #if VDRVERSNUM > 20300
     LOCK_RECORDINGS_READ;
-    recs = Recordings;
+    const cRecordings *recs = Recordings;
 #else
     recordings.Update(true);
-    recs = &recordings;
+    cRecordings *recs = &recordings;
 #endif
 
     GVariant *first = g_variant_get_child_value(Parameters, 0);

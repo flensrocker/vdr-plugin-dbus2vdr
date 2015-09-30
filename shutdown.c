@@ -49,12 +49,11 @@ public:
        }
 
     time_t Now = time(NULL);
-    const cTimers *timers = NULL;
 #if VDRVERSNUM > 20300
     LOCK_TIMERS_READ;
-    timers = Timers;
+    const cTimers *timers = Timers;
 #else
-    timers = &Timers;
+    cTimers *timers = &Timers;
 #endif
     const cTimer *timer = timers->GetNextActiveTimer();
     time_t Next = timer ? timer->StartTime() : 0;
@@ -199,12 +198,11 @@ public:
     cString info = "";
     
     time_t Now = time(NULL);
-    const cTimers *timers = NULL;
 #if VDRVERSNUM > 20300
     LOCK_TIMERS_READ;
-    timers = Timers;
+    const cTimers *timers = Timers;
 #else
-    timers = &Timers;
+    cTimers *timers = &Timers;
 #endif
     const cTimer *timer = timers->GetNextActiveTimer();
     time_t Next = timer ? timer->StartTime() : 0;

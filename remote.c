@@ -274,12 +274,11 @@ namespace cDBusRemoteHelper
     char *option = NULL;
     g_variant_get(Parameters, "(&s)", &option);
     const cChannel *channel = NULL;
-    const cChannels *channels = NULL;
 #if VDRVERSNUM > 20300
     LOCK_CHANNELS_READ;
-    channels = Channels;
+    const cChannels *channels = Channels;
 #else
-    channels = &Channels;
+    cChannels *channels = &Channels;
 #endif
     if ((option != NULL) && (option[0] != 0)) {
        int n = -1;

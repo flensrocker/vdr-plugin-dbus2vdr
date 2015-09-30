@@ -160,12 +160,11 @@ namespace cDBusTimersHelper
     time_t start = 0;
     time_t stop = 0;
     const char *title = "";
-    const cTimers *timers = NULL;
 #if VDRVERSNUM > 20300
     LOCK_TIMERS_READ;
-    timers = Timers;
+    const cTimers *timers = Timers;
 #else
-    timers = &Timers;
+    cTimers *timers = &Timers;
 #endif
     const cTimer *t = timers->GetNextActiveTimer();
     const cEvent *e;

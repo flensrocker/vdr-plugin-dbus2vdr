@@ -99,12 +99,11 @@ namespace cDBusChannelsHelper
     
     GVariantBuilder *array = g_variant_builder_new(G_VARIANT_TYPE("a(is)"));
 
-    const cChannels *channels = NULL;
 #if VDRVERSNUM > 20300
     LOCK_CHANNELS_READ;
-    channels = Channels;
+    const cChannels *channels = Channels;
 #else
-    channels = &Channels;
+    cChannels *channels = &Channels;
 #endif
     if ((option != NULL) && *option && !withGroupSeps) {
        if (isnumber(option)) {
