@@ -197,6 +197,69 @@ namespace cDBusEpgHelper
        }
   };
 
+#if VDRVERSNUM > 20300
+// copied from svdrp.c, maybe it will be available in future versions?
+// --- cPUTEhandler ----------------------------------------------------------
+
+class cPUTEhandler {
+private:
+  FILE *f;
+  int status;
+  const char *message;
+public:
+  cPUTEhandler(void);
+  ~cPUTEhandler();
+  bool Process(const char *s);
+  int Status(void) { return status; }
+  const char *Message(void) { return message; }
+  };
+
+cPUTEhandler::cPUTEhandler(void)
+{
+  if ((f = tmpfile()) != NULL) {
+     status = 354;
+     message = "Enter EPG data, end with \".\" on a line by itself";
+     }
+  else {
+     LOG_ERROR;
+     status = 554;
+     message = "Error while opening temporary file";
+     }
+}
+
+cPUTEhandler::~cPUTEhandler()
+{
+  if (f)
+     fclose(f);
+}
+
+bool cPUTEhandler::Process(const char *s)
+{
+  if (f) {
+     if (strcmp(s, ".") != 0) {
+        fputs(s, f);
+        fputc('\n', f);
+        return true;
+        }
+     else {
+        rewind(f);
+        if (cSchedules::Read(f)) {
+           cSchedules::Cleanup(true);
+           status = 250;
+           message = "EPG data processed";
+           }
+        else {
+           status = 451;
+           message = "Error while processing EPG data";
+           }
+        fclose(f);
+        f = NULL;
+        }
+     }
+  return false;
+}
+#endif
+
   static void PutEntry(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
     gsize len = 0;
@@ -208,9 +271,6 @@ namespace cDBusEpgHelper
        return;
        }
 
-#if VDRVERSNUM > 20300
-    cDBusHelper::SendReply(Invocation, 554, "cPUTEHandler not available in vdr 2.3.1");
-#else
     cPUTEhandler *handler = new cPUTEhandler();
     if (handler->Status() == 354) {
        for (gsize i = 0; i < len; i++) {
@@ -225,7 +285,6 @@ namespace cDBusEpgHelper
        }
     cDBusHelper::SendReply(Invocation, handler->Status(), handler->Message());
     delete handler;
-#endif
     g_free(line);
   };
 
