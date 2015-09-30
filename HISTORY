@@ -233,3 +233,6 @@ VDR Plugin 'dbus2vdr' Revision History
 
 2013-07-10: Version 14
 - add method "IsReplaying" to status interface
+
+2015-09-30: Version 26
+- make compatible with vdr 2.3.1

@@ -86,11 +86,11 @@ private:
       return b;
     }
 
-    static cSetupBinding* Find(const cList<cSetupBinding>& bindings, const char *name)
+    static const cSetupBinding* Find(const cList<cSetupBinding>& bindings, const char *name)
     {
       if (name == NULL)
          return NULL;
-      cSetupBinding *sb = bindings.First();
+      const cSetupBinding *sb = bindings.First();
       while ((sb != NULL) && (strcasecmp(sb->Name, name) != 0))
             sb = bindings.Next(sb);
       return sb;
@@ -283,7 +283,7 @@ public:
     gint32 replyCode = 501;
     cString replyMessage = "missing arguments";
     if (name != NULL) {
-       cSetupBinding *b = cSetupBinding::Find(_bindings, name);
+       const cSetupBinding *b = cSetupBinding::Find(_bindings, name);
        if (b == NULL) {
           char *point = (char*)strchr(name, '.');
           char *plugin = NULL;
@@ -398,7 +398,7 @@ public:
     gint32 replyCode = 501;
     cString replyMessage = "missing arguments";
     if (name != NULL) {
-       cSetupBinding *b = cSetupBinding::Find(_bindings, name);
+       const cSetupBinding *b = cSetupBinding::Find(_bindings, name);
        if (b == NULL) {
           const char *value = NULL;
           if (!g_variant_is_of_type(child, G_VARIANT_TYPE_STRING))

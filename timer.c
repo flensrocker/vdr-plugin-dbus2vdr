@@ -62,8 +62,18 @@ namespace cDBusTimersHelper
     if (*option) {
        cTimer *timer = new cTimer;
        if (timer->Parse(option)) {
-          Timers.Add(timer);
-          Timers.SetModified();
+          cTimers *timers = NULL;
+#if VDRVERSNUM > 20300
+          LOCK_TIMERS_WRITE;
+          timers = Timers;
+#else
+          timers = &Timers;
+#endif
+          timer->ClrFlags(tfRecording);
+          timers->Add(timer);
+#if VDRVERSNUM < 20300
+          timers->SetModified();
+#endif
           isyslog("timer %s added", *timer->ToDescr());
           cDBusHelper::SendReply(Invocation, 250, *cString::sprintf("%d %s", timer->Index() + 1, *timer->ToText()));
           return;
@@ -80,6 +90,19 @@ namespace cDBusTimersHelper
   {
     int number = 0;
     g_variant_get(Parameters, "(i)", &number);
+#if VDRVERSNUM > 20300
+    LOCK_TIMERS_WRITE;
+    Timers->SetExplicitModify();
+    if (cTimer *timer = Timers->GetById(number)) {
+       if (timer->Recording())
+          timer->Skip();
+       Timers->Del(timer);
+       Timers->SetModified();
+       cDBusHelper::SendReply(Invocation, 250, *cString::sprintf("Timer \"%d\" deleted", number));
+       }
+    else
+       cDBusHelper::SendReply(Invocation, 501, *cString::sprintf("Timer \"%d\" not defined", number));
+#else
     if (!Timers.BeingEdited()) {
        cTimer *timer = Timers.Get(number - 1);
        if (timer) {
@@ -97,6 +120,7 @@ namespace cDBusTimersHelper
        }
     else
        cDBusHelper::SendReply(Invocation, 550, "Timers are being edited - try again later");
+#endif
   }
 
   static void List(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
@@ -106,8 +130,15 @@ namespace cDBusTimersHelper
 
     cString text;
     const char *tmp;
-    for (int i = 0; i < Timers.Count(); i++) {
-        cTimer *timer = Timers.Get(i);
+    const cTimers *timers = NULL;
+#if VDRVERSNUM > 20300
+    LOCK_TIMERS_READ;
+    timers = Timers;
+#else
+    timers = &Timers;
+#endif
+    for (int i = 0; i < timers->Count(); i++) {
+        const cTimer *timer = timers->Get(i);
         if (timer) {
            text = timer->ToText(true);
            tmp = stripspace((char*)*text);
@@ -129,7 +160,14 @@ namespace cDBusTimersHelper
     time_t start = 0;
     time_t stop = 0;
     const char *title = "";
-    cTimer *t = Timers.GetNextActiveTimer();
+    const cTimers *timers = NULL;
+#if VDRVERSNUM > 20300
+    LOCK_TIMERS_READ;
+    timers = Timers;
+#else
+    timers = &Timers;
+#endif
+    const cTimer *t = timers->GetNextActiveTimer();
     const cEvent *e;
     if (t) {
        start = t->StartTime();

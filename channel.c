@@ -29,7 +29,7 @@ namespace cDBusChannelsHelper
     "  </interface>\n"
     "</node>\n";
 
-  static void AddChannel(GVariantBuilder *Array, cChannel *Channel)
+  static void AddChannel(GVariantBuilder *Array, const cChannel *Channel)
   {
     if (Channel == NULL)
        return;
@@ -46,7 +46,14 @@ namespace cDBusChannelsHelper
 
   static void Count(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
-    g_dbus_method_invocation_return_value(Invocation, g_variant_new("(i)", Channels.Count()));
+    const cChannels *channels = NULL;
+#if VDRVERSNUM > 20300
+    LOCK_CHANNELS_READ;
+    channels = Channels;
+#else
+    channels = &Channels;
+#endif
+    g_dbus_method_invocation_return_value(Invocation, g_variant_new("(i)", channels->Count()));
   }
 
   static void GetFromTo(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
@@ -60,10 +67,17 @@ namespace cDBusChannelsHelper
 
     GVariantBuilder *array = g_variant_builder_new(G_VARIANT_TYPE("a(is)"));
 
-    cChannel *c = Channels.Get(from_index);
+    const cChannels *channels = NULL;
+#if VDRVERSNUM > 20300
+    LOCK_CHANNELS_READ;
+    channels = Channels;
+#else
+    channels = &Channels;
+#endif
+    const cChannel *c = channels->Get(from_index);
     while ((c != NULL) && (to_index >= from_index)) {
        cDBusChannelsHelper::AddChannel(array, c);
-       c = Channels.Next(c);
+       c = channels->Next(c);
        to_index--;
        }
 
@@ -85,9 +99,16 @@ namespace cDBusChannelsHelper
     
     GVariantBuilder *array = g_variant_builder_new(G_VARIANT_TYPE("a(is)"));
 
+    const cChannels *channels = NULL;
+#if VDRVERSNUM > 20300
+    LOCK_CHANNELS_READ;
+    channels = Channels;
+#else
+    channels = &Channels;
+#endif
     if ((option != NULL) && *option && !withGroupSeps) {
        if (isnumber(option)) {
-          cChannel *channel = Channels.GetByNumber(strtol(option, NULL, 10));
+          const cChannel *channel = channels->GetByNumber(strtol(option, NULL, 10));
           if (channel)
              cDBusChannelsHelper::AddChannel(array, channel);
           else {
@@ -96,9 +117,9 @@ namespace cDBusChannelsHelper
              }
           }
        else {
-          cChannel *next = Channels.GetByChannelID(tChannelID::FromString(option));
+          const cChannel *next = channels->GetByChannelID(tChannelID::FromString(option));
           if (!next) {
-             for (cChannel *channel = Channels.First(); channel; channel = Channels.Next(channel)) {
+             for (const cChannel *channel = channels->First(); channel; channel = channels->Next(channel)) {
                 if (!channel->GroupSep()) {
                    if (strcasestr(channel->Name(), option)) {
                       if (next)
@@ -116,8 +137,8 @@ namespace cDBusChannelsHelper
              }
           }
        }
-    else if (Channels.MaxNumber() >= 1) {
-            for (cChannel *channel = Channels.First(); channel; channel = Channels.Next(channel)) {
+    else if (channels->MaxNumber() >= 1) {
+            for (const cChannel *channel = channels->First(); channel; channel = channels->Next(channel)) {
                 if (withGroupSeps || !channel->GroupSep())
                    cDBusChannelsHelper::AddChannel(array, channel);
                 }

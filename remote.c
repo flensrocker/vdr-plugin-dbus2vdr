@@ -273,12 +273,20 @@ namespace cDBusRemoteHelper
     cString replyMessage;
     char *option = NULL;
     g_variant_get(Parameters, "(&s)", &option);
+    const cChannel *channel = NULL;
+    const cChannels *channels = NULL;
+#if VDRVERSNUM > 20300
+    LOCK_CHANNELS_READ;
+    channels = Channels;
+#else
+    channels = &Channels;
+#endif
     if ((option != NULL) && (option[0] != 0)) {
        int n = -1;
        int d = 0;
        if (isnumber(option)) {
           int o = strtol(option, NULL, 10);
-          if (o >= 1 && o <= Channels.MaxNumber())
+          if (o >= 1 && o <= channels->MaxNumber())
              n = o;
           }
        else if (strcmp(option, "-") == 0) {
@@ -290,17 +298,17 @@ namespace cDBusRemoteHelper
           }
        else if (strcmp(option, "+") == 0) {
           n = cDevice::CurrentChannel();
-          if (n < Channels.MaxNumber()) {
+          if (n < channels->MaxNumber()) {
              n++;
              d = 1;
              }
           }
        else {
-          cChannel *channel = Channels.GetByChannelID(tChannelID::FromString(option));
+          channel = channels->GetByChannelID(tChannelID::FromString(option));
           if (channel)
              n = channel->Number();
           else {
-             for (cChannel *channel = Channels.First(); channel; channel = Channels.Next(channel)) {
+             for (channel = channels->First(); channel; channel = channels->Next(channel)) {
                  if (!channel->GroupSep()) {
                     if (strcasecmp(channel->Name(), option) == 0) {
                        n = channel->Number();
@@ -317,7 +325,7 @@ namespace cDBusRemoteHelper
           return;
           }
        if (!d) {
-          cChannel *channel = Channels.GetByNumber(n);
+          channel = channels->GetByNumber(n);
           if (channel) {
              if (!cDevice::PrimaryDevice()->SwitchChannel(channel, true)) {
                 replyCode = 554;
@@ -336,7 +344,7 @@ namespace cDBusRemoteHelper
        else
           cDevice::SwitchChannel(d);
        }
-    cChannel *channel = Channels.GetByNumber(cDevice::CurrentChannel());
+    channel = channels->GetByNumber(cDevice::CurrentChannel());
     if (channel) {
        replyCode = 250;
        replyMessage = cString::sprintf("%d %s", channel->Number(), channel->Name());

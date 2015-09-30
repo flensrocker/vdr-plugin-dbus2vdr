@@ -10,9 +10,11 @@
 class cDBusRecordingsHelper
 {
 private:
+#if VDRVERSNUM < 20300
   // own recordings list like in SVDRP
   // so Play has the right numbers
   static cRecordings recordings;
+#endif
 
 public:
   static const char *_xmlNodeInfoConst;
@@ -132,12 +134,19 @@ public:
 
   static void Get(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
+    const cRecordings *recs = NULL;
+#if VDRVERSNUM > 20300
+    LOCK_RECORDINGS_READ;
+    recs = Recordings;
+#else
     // only update recordings list if empty
     // so we don't mess around with the index values returned by List
     if (recordings.Count() == 0)
        recordings.Update(true);
+    recs = &recordings;
+#endif
 
-    cRecording *recording = NULL;
+    const cRecording *recording = NULL;
     GVariant *first = g_variant_get_child_value(Parameters, 0);
     GVariant *refValue = first;
     if (g_variant_is_of_type(first, G_VARIANT_TYPE_VARIANT))
@@ -146,13 +155,13 @@ public:
        const char *path = NULL;
        g_variant_get(refValue, "&s", &path);
        if ((path != NULL) && *path)
-          recording = recordings.GetByName(path);
+          recording = recs->GetByName(path);
        }
     else if (g_variant_is_of_type(refValue, G_VARIANT_TYPE_INT32)) {
        int number = 0;
        g_variant_get(refValue, "i", &number);
-       if ((number > 0) && (number <= recordings.Count()))
-          recording = recordings.Get(number - 1);
+       if ((number > 0) && (number <= recs->Count()))
+          recording = recs->Get(number - 1);
        }
     if (refValue != first)
        g_variant_unref(refValue);
@@ -164,10 +173,17 @@ public:
 
   static void List(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
+    const cRecordings *recs = NULL;
+#if VDRVERSNUM > 20300
+    LOCK_RECORDINGS_READ;
+    recs = Recordings;
+#else
     recordings.Update(true);
+    recs = &recordings;
+#endif
 
     GVariantBuilder *array = g_variant_builder_new(G_VARIANT_TYPE("a(ia(sv))"));
-    for (cRecording *r = recordings.First(); r; r = recordings.Next(r))
+    for (const cRecording *r = recs->First(); r; r = recs->Next(r))
         g_variant_builder_add_value(array, BuildRecording(r));
     GVariant *a = g_variant_builder_end(array);
     g_dbus_method_invocation_return_value(Invocation, g_variant_new_tuple(&a, 1));
@@ -176,7 +192,14 @@ public:
 
   static void Update(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
-    Recordings.Update(false);
+    cRecordings *recs = NULL;
+#if VDRVERSNUM > 20300
+    LOCK_RECORDINGS_WRITE;
+    recs = Recordings;
+#else
+    recs = &Recordings;
+#endif
+    recs->Update(false);
     cDBusHelper::SendReply(Invocation, 250, "update of recordings triggered");
   };
 
@@ -184,9 +207,18 @@ public:
   {
     int replyCode = 501;
     cString replyMessage;
-    cRecording *recording = NULL;
+    const cRecording *recording = NULL;
     int position = -1; // default: resume
     const char *hmsf = NULL;
+
+    const cRecordings *recs = NULL;
+#if VDRVERSNUM > 20300
+    LOCK_RECORDINGS_READ;
+    recs = Recordings;
+#else
+    recordings.Update(true);
+    recs = &recordings;
+#endif
 
     GVariant *first = g_variant_get_child_value(Parameters, 0);
     GVariant *refFirst = first;
@@ -201,10 +233,12 @@ public:
        const char *path = NULL;
        g_variant_get(refFirst, "&s", &path);
        if ((path != NULL) && *path) {
-          recording = recordings.GetByName(path);
+          recording = recs->GetByName(path);
           if (recording == NULL) {
-             recordings.Update(true);
-             recording = recordings.GetByName(path);
+#if VDRVERSNUM < 20300
+             recs->Update(true);
+             recording = recs->GetByName(path);
+#endif
              if (recording == NULL)
                 replyMessage = cString::sprintf("recording \"%s\" not found", path);
              }
@@ -214,10 +248,12 @@ public:
        int number = 0;
        g_variant_get(refFirst, "i", &number);
        if (number > 0) {
-          recording = recordings.Get(number - 1);
+          recording = recs->Get(number - 1);
           if (recording == NULL) {
-             recordings.Update(true);
-             recording = recordings.Get(number - 1);
+#if VDRVERSNUM < 20300
+             recs->Update(true);
+             recording = recs->Get(number - 1);
+#endif
              if (recording == NULL)
                 replyMessage = cString::sprintf("recording \"%d\" not found", number);
              }
@@ -284,6 +320,16 @@ public:
     int replyCode = 501;
     cString replyMessage;
     cRecording *recording = NULL;
+    cRecordings *recs = NULL;
+    cRecordings *globalRecs = NULL;
+#if VDRVERSNUM > 20300
+    LOCK_RECORDINGS_WRITE;
+    recs = Recordings;
+    globalRecs = Recordings;
+#else
+    recs = &recordings;
+    globalRecs = &Recordings;
+#endif
 
     GVariant *first = g_variant_get_child_value(Parameters, 0);
     GVariant *refFirst = first;
@@ -299,10 +345,12 @@ public:
        const char *path = NULL;
        g_variant_get(refFirst, "&s", &path);
        if ((path != NULL) && *path) {
-          recording = recordings.GetByName(path);
+          recording = recs->GetByName(path);
           if (recording == NULL) {
+#if VDRVERSNUM < 20300
              recordings.Update(true);
-             recording = recordings.GetByName(path);
+             recording = recs->GetByName(path);
+#endif
              if (recording == NULL)
                 replyMessage = cString::sprintf("recording \"%s\" not found", path);
              }
@@ -312,10 +360,12 @@ public:
        int number = 0;
        g_variant_get(refFirst, "i", &number);
        if (number > 0) {
-          recording = recordings.Get(number - 1);
+          recording = recs->Get(number - 1);
           if (recording == NULL) {
-             recordings.Update(true);
-             recording = recordings.Get(number - 1);
+#if VDRVERSNUM < 20300
+             recs->Update(true);
+             recording = recs->Get(number - 1);
+#endif
              if (recording == NULL)
                 replyMessage = cString::sprintf("recording \"%d\" not found", number);
              }
@@ -335,7 +385,7 @@ public:
 #endif
           if (recording->ChangeName(newName)) {
              // update list of vdr
-             Recordings.Update(false);
+             globalRecs->Update(false);
              replyCode = 250;
 #ifdef HIDE_FIRST_RECORDING_LEVEL_PATCH
              cString name = recording->FullName();
@@ -469,7 +519,9 @@ public:
   };
 };
 
+#if VDRVERSNUM < 20300
 cRecordings cDBusRecordingsHelper::recordings;
+#endif
 
 const char *cDBusRecordingsHelper::_xmlNodeInfoConst = 
   "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
