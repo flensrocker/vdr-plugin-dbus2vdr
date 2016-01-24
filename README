@@ -83,6 +83,9 @@ Interface "channel"
 - get count of channels
   vdr-dbus-send.sh /Channels channel.Count
 
+- get current channel
+  vdr-dbus-send.sh /Channels channel.Current
+
 - get channels between from_index and to_index
   vdr-dbus-send.sh /Channels channel.GetFromTo int32:from_index int32:to_index
 

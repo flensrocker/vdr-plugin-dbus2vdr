@@ -3,6 +3,7 @@
 #include "helper.h"
 
 #include <vdr/channels.h>
+#include <vdr/device.h>
 
 
 namespace cDBusChannelsHelper
@@ -14,6 +15,10 @@ namespace cDBusChannelsHelper
     "  <interface name=\""DBUS_VDR_CHANNEL_INTERFACE"\">\n"
     "    <method name=\"Count\">\n"
     "      <arg name=\"count\"        type=\"i\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "    <method name=\"Current\">\n"
+    "      <arg name=\"number\"       type=\"i\" direction=\"out\"/>\n"
+    "      <arg name=\"text\"         type=\"s\" direction=\"out\"/>\n"
     "    </method>\n"
     "    <method name=\"GetFromTo\">\n"
     "      <arg name=\"from_index\"   type=\"i\" direction=\"in\"/>\n"
@@ -54,6 +59,34 @@ namespace cDBusChannelsHelper
     channels = &Channels;
 #endif
     g_dbus_method_invocation_return_value(Invocation, g_variant_new("(i)", channels->Count()));
+  }
+
+  static void Current(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
+  {
+    int number = cDevice::CurrentChannel();
+    cString text = "";
+    const cChannel* currentChannel = NULL;
+#if VDRVERSNUM > 20300
+    LOCK_CHANNELS_READ;
+    const cChannels *channels = Channels;
+    currentChannel = channels->GetByNumber(number);
+#else
+    currentChannel = Channels.GetByNumber(number);
+#endif
+    if (currentChannel != NULL) {
+       text = currentChannel->ToText();
+       int len = strlen(*text);
+       if ((len > 0) && ((*text)[len - 1] == '\n'))
+          text.Truncate(-1);
+       cDBusHelper::ToUtf8(text);
+       }
+
+    GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("(is)"));
+    g_variant_builder_add(builder, "i", number);
+    g_variant_builder_add(builder, "s", *text);
+
+    g_dbus_method_invocation_return_value(Invocation, g_variant_builder_end(builder));
+    g_variant_builder_unref(builder);
   }
 
   static void GetFromTo(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
@@ -163,6 +196,7 @@ cDBusChannels::cDBusChannels(void)
 :cDBusObject("/Channels", cDBusChannelsHelper::_xmlNodeInfo)
 {
   AddMethod("Count", cDBusChannelsHelper::Count);
+  AddMethod("Current", cDBusChannelsHelper::Current);
   AddMethod("GetFromTo", cDBusChannelsHelper::GetFromTo);
   AddMethod("List", cDBusChannelsHelper::List);
 }
