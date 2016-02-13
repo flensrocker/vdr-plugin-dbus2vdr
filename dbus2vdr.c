@@ -15,6 +15,7 @@
 #include "common.h"
 #include "connection.h"
 #include "channel.h"
+#include "device.h"
 #include "epg.h"
 #include "helper.h"
 #include "mainloop.h"
@@ -37,7 +38,7 @@
 #include "avahi-helper.h"
 
 
-static const char *VERSION        = "27";
+static const char *VERSION        = "28";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -117,6 +118,7 @@ static cString SetSessionEnv(const char *Name, cString &Store, const char *Optio
 static void AddAllObjects(cDBusConnection *Connection, bool EnableOSD)
 {
   Connection->AddObject(new cDBusChannels);
+  Connection->AddObject(new cDBusDevices);
   Connection->AddObject(new cDBusEpg);
   if (EnableOSD)
      Connection->AddObject(new cDBusOsdObject);
@@ -466,6 +468,12 @@ void cPluginDbus2vdr::MainThreadHook(void)
         isyslog("dbus2vdr: raise SIGSTOP for Upstart");
         raise(SIGSTOP);
         }
+     }
+
+  int requestPrimaryDevice = cDBusDevices::RequestedPrimaryDevice(true);
+  if (requestPrimaryDevice >= 0) {
+     cControl::Shutdown();
+     cDevice::SetPrimaryDevice(requestPrimaryDevice + 1);
      }
 }
 

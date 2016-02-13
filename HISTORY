@@ -236,3 +236,7 @@ VDR Plugin 'dbus2vdr' Revision History
 
 2015-09-30: Version 26
 - make compatible with vdr 2.3.1
+
+2016-02-13: Version 28
+- add device interface
+

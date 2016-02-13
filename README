@@ -94,6 +94,20 @@ Interface "channel"
 
   The returned array contains the channel number and the string from the channels.conf.
 
+Interface "device"
+-------------------
+- get current primary device
+  vdr-dbus-send.sh /Devices device.GetPrimary
+
+- request switch to primary device
+  vdr-dbus-send.sh /Devices device.RequestPrimary int32:index
+
+- list devices
+  vdr-dbus-send.sh /Devices device.List
+
+  The returned array contains the device index, number, a boolean value "hasDecoder",
+  a boolean value "isPrimary" and the name of the device.
+
 Interface "epg"
 ---------------
 - disable EIT scanner with timeout (default: 3600)
