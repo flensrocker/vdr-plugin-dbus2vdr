@@ -213,8 +213,9 @@ cPluginDbus2vdr::cPluginDbus2vdr(void)
   tmp = getenv("UPSTART_SESSION");
   if (tmp)
      dbus2vdr_UpstartSession = tmp;
-
+#if (GLIB_MAJOR_VERSION < 2) || ((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 36))
   g_type_init();
+#endif
 }
 
 cPluginDbus2vdr::~cPluginDbus2vdr()
