@@ -33,6 +33,11 @@ static char *decode_event(GFileMonitorEvent ev)
     dc(PRE_UNMOUNT);
     dc(UNMOUNTED);
     dc(MOVED);
+    default:
+      strcat(fmt, "UNKNOWN");
+      caret += strlen("UNKNOWN");
+      fmt[caret] = ':';
+      break;
   }
 #undef dc
 
