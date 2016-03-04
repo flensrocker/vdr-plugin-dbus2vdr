@@ -34,8 +34,14 @@ class cNullOsdProvider : public cOsdProvider {
     virtual void DropImageData(int ImageHandle) {}
 
   public:
-    cNullOsdProvider() : cOsdProvider() {}
-    virtual ~cNullOsdProvider() {}
+    cNullOsdProvider() : cOsdProvider()
+    {
+      isyslog("dbus2vdr: Null-Osd-Provider created");
+    }
+    virtual ~cNullOsdProvider()
+    {
+      isyslog("dbus2vdr: Null-Osd-Provider destroyed");
+    }
 };
 
 
@@ -47,11 +53,13 @@ public:
 
 cNullPlayer::cNullPlayer(void)
 {
+  isyslog("dbus2vdr: Null-Player created");
 }
 
-cNullPlayer::~cNullPlayer()
+cNullPlayer::~cNullPlayer(void)
 {
   Detach();
+  isyslog("dbus2vdr: Null-Player destroyed");
 }
 
 
@@ -66,17 +74,19 @@ public:
   virtual ~cNullControl(void);
 };
 
-cNullPlayer *cNullControl::Player;
+cNullPlayer *cNullControl::Player = NULL;
 
 cNullControl::cNullControl(void)
  :cControl(Player = new cNullPlayer)
 {
+  isyslog("dbus2vdr: Null-Control created");
 }
 
-cNullControl::~cNullControl()
+cNullControl::~cNullControl(void)
 {
   delete Player;
   Player = NULL;
+  isyslog("dbus2vdr: Null-Control destroyed");
 }
 
 
@@ -85,7 +95,7 @@ void cNullDevice::MakePrimaryDevice(bool On)
   cDevice::MakePrimaryDevice(On);
   if (On) {
      new cNullOsdProvider();
-     if (cNullControl::Player != NULL) {
+     if (cNullControl::Player == NULL) {
         cControl::Launch(new cNullControl());
         cControl::Attach();
         }
