@@ -89,7 +89,7 @@ namespace cDBusDevicesHelper
   static void GetNullDevice(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
     GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("(i)"));
-    g_variant_builder_add(Variant, "i", cDBusDevices::_nulldeviceIndex);
+    g_variant_builder_add(builder, "i", cDBusDevices::_nulldeviceIndex);
     g_dbus_method_invocation_return_value(Invocation, g_variant_builder_end(builder));
     g_variant_builder_unref(builder);
   }
