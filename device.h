@@ -11,6 +11,7 @@ private:
   static int _requestedPrimaryDevice;
 
 public:
+  static int _nulldeviceIndex;
   static void SetPrimaryDeviceRequest(int index);
   static int RequestedPrimaryDevice(bool clear);
 

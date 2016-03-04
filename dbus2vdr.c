@@ -20,6 +20,7 @@
 #include "helper.h"
 #include "mainloop.h"
 #include "network.h"
+#include "nulldevice.h"
 #include "plugin.h"
 #include "osd.h"
 #include "recording.h"
@@ -38,7 +39,7 @@
 #include "avahi-helper.h"
 
 
-static const char *VERSION        = "28";
+static const char *VERSION        = "29";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 
@@ -153,6 +154,8 @@ private:
   bool _enable_system;
   bool _enable_session;
   bool _enable_network;
+  bool _enable_nulldevice;
+  bool _force_nulldevice;
   bool _first_main_thread;
 
   cDBusMainLoop   *_main_loop;
@@ -201,6 +204,8 @@ cPluginDbus2vdr::cPluginDbus2vdr(void)
   _enable_system = true;
   _enable_session = false;
   _enable_network = false;
+  _enable_nulldevice = false;
+  _force_nulldevice = false;
   _first_main_thread = true;
   _main_loop = NULL;
   _system_bus = NULL;
@@ -271,6 +276,10 @@ const char *cPluginDbus2vdr::CommandLineHelp(void)
          "    enable network support for peer2peer communication\n"
          "    a local dbus-daemon has to be started manually\n"
          "    it has to store its address at $PLUGINDIR/network-address.conf\n"
+         "  --nulldevice[=force]\n"
+         "    create a primary device which does nothing\n"
+         "    useful to suspend in- and output\n"
+         "    may force vdr to set this device as primary device on startup\n"
          "  --log=n\n"
          "    set plugin's loglevel\n";
 }
@@ -288,13 +297,14 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
     {"systemd", no_argument, 0, 's' | 0x400},
     {"network", no_argument, 0, 'n'},
     {"no-mainloop", no_argument, 0, 'n' | 0x100},
+    {"nulldevice", optional_argument, 0, 'd'},
     {"log", required_argument, 0, 'l'},
     {0, 0, 0, 0}
   };
 
   while (true) {
         int option_index = 0;
-        int c = getopt_long(argc, argv, "l:nop:s:uw:", options, &option_index);
+        int c = getopt_long(argc, argv, "d:l:nop:s:uw:", options, &option_index);
         if (c == -1)
            break;
         switch (c) {
@@ -361,6 +371,14 @@ bool cPluginDbus2vdr::ProcessArgs(int argc, char *argv[])
              isyslog("dbus2vdr: disable mainloop");
              break;
            }
+          case 'd':
+           {
+             _enable_nulldevice = true;
+             if (optarg)
+                _force_nulldevice = true;
+             isyslog("dbus2vdr: enable %snulldevice", _force_nulldevice ? "and force " : "");
+             break;
+           }
           }
         }
   return true;
@@ -380,6 +398,12 @@ bool cPluginDbus2vdr::Initialize(void)
   else
      dbus2vdr_Busname = cString::sprintf("%s", DBUS_VDR_BUSNAME);
 #endif
+  if (_enable_nulldevice) {
+     cNullDevice *nulldev = new cNullDevice();
+     cDBusDevices::_nulldeviceIndex = nulldev->CardIndex();
+     if (_force_nulldevice)
+        cDBusDevices::SetPrimaryDeviceRequest(cDBusDevices::_nulldeviceIndex);
+     }
   return true;
 }
 

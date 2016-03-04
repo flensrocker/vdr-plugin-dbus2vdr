@@ -77,6 +77,10 @@ Commandline Arguments
 --no-mainloop
         don't start GMainLoop
         (don't use this option if you don't understand)
+--nulldevice[=force]
+        creates an output device, which does nothing
+        can be activated to suspend in/output of DVB streams
+        if "force" dbus2vdr will set this device as primary device on startup
 
 Interface "channel"
 -------------------
@@ -98,6 +102,9 @@ Interface "device"
 -------------------
 - get current primary device
   vdr-dbus-send.sh /Devices device.GetPrimary
+
+- get index of the nulldevice (-1 if not created)
+  vdr-dbus-send.sh /Devices device.GetNullDevice
 
 - request switch to primary device
   vdr-dbus-send.sh /Devices device.RequestPrimary int32:index

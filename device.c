@@ -7,6 +7,7 @@
 
 int cDBusDevices::_requestedPrimaryDevice = -1;
 cMutex cDBusDevices::_requestedPrimaryDeviceMutex;
+int cDBusDevices::_nulldeviceIndex = -1;
 
 void cDBusDevices::SetPrimaryDeviceRequest(int index)
 {
@@ -36,6 +37,9 @@ namespace cDBusDevicesHelper
     "      <arg name=\"hasDecoder\"   type=\"b\" direction=\"out\"/>\n"
     "      <arg name=\"isPrimary\"    type=\"b\" direction=\"out\"/>\n"
     "      <arg name=\"name\"         type=\"s\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "    <method name=\"GetNullDevice\">\n"
+    "      <arg name=\"index\"        type=\"i\" direction=\"out\"/>\n"
     "    </method>\n"
     "    <method name=\"RequestPrimary\">\n"
     "      <arg name=\"index\"        type=\"i\" direction=\"in\"/>\n"
@@ -82,6 +86,14 @@ namespace cDBusDevicesHelper
     g_variant_builder_unref(builder);
   }
 
+  static void GetNullDevice(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
+  {
+    GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("(i)"));
+    g_variant_builder_add(Variant, "i", cDBusDevices::_nulldeviceIndex);
+    g_dbus_method_invocation_return_value(Invocation, g_variant_builder_end(builder));
+    g_variant_builder_unref(builder);
+  }
+
   static void RequestPrimary(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
     gint32 index = -1;
@@ -113,6 +125,7 @@ cDBusDevices::cDBusDevices(void)
 :cDBusObject("/Devices", cDBusDevicesHelper::_xmlNodeInfo)
 {
   AddMethod("GetPrimary", cDBusDevicesHelper::GetPrimary);
+  AddMethod("GetNullDevice", cDBusDevicesHelper::GetNullDevice);
   AddMethod("RequestPrimary", cDBusDevicesHelper::RequestPrimary);
   AddMethod("List", cDBusDevicesHelper::List);
 }

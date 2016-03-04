@@ -240,3 +240,5 @@ VDR Plugin 'dbus2vdr' Revision History
 2016-02-13: Version 28
 - add device interface
 
+2016-03-04: Version 29
+- add nulldevice as no-op primary device
