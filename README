@@ -408,8 +408,28 @@ And there are the following methods on the status interface.
 
 Interface "timer"
 -----------------
-- list all timers
+- list all timers as an array of strings like SVDRP command LSTT
   vdr-dbus-send.sh /Timers timer.List
+
+- list all timers as an array of structs
+  vdr-dbus-send.sh /Timers timer.ListDetailed
+
+  The following fields are returned:
+    int32   id
+    string  remote (with vdr >= 2.3.1)
+    uint32  flags
+    string  channel-id
+    string  day/weekdays
+    int32   start
+    int32   stop
+    int32   priority
+    int32   lifetime
+    string  filename
+    string  aux
+    uint32  event-id
+    boolean recording
+    boolean pending
+    boolean in vps margin
 
 - get infos about the next timer
   vdr-dbus-send.sh /Timers timer.Next
@@ -425,8 +445,16 @@ Interface "timer"
 - add new timer
   vdr-dbus-send.sh /Timers timer.New string:'timer'
 
+  The following is returned:
+    int32   reply code (250 for success, 501 on error)
+    string  reply message
+
 - delete a timer
   vdr-dbus-send.sh /Timers timer.Delete int32:number
+
+  The following is returned:
+    int32   reply code (250 for success, 501 on error, 550 on recording/editing)
+    string  reply message
 
 Interface "vdr"
 -----------------

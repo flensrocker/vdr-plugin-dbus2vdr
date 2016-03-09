@@ -4,6 +4,22 @@
 
 #include <vdr/timers.h>
 
+// Id
+// Remote
+// Flags
+// Channel-ID
+// Day/Weekdays
+// Start
+// Stop
+// Priority
+// Lifetime
+// File
+// Aux
+// Event-ID
+// Recording
+// Pending
+// InVpsMargin  
+#define TimerDBusStruct "isussiiiissubbb"
 
 namespace cDBusTimersHelper
 {
@@ -14,6 +30,9 @@ namespace cDBusTimersHelper
     "  <interface name=\""DBUS_VDR_TIMER_INTERFACE"\">\n"
     "    <method name=\"List\">\n"
     "      <arg name=\"timer\"     type=\"as\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "    <method name=\"ListDetailed\">\n"
+    "      <arg name=\"timer\"     type=\"a("TimerDBusStruct")\" direction=\"out\"/>\n"
     "    </method>\n"
     "    <method name=\"Next\">\n"
     "      <arg name=\"replycode\" type=\"i\" direction=\"out\"/>\n"
@@ -44,6 +63,9 @@ namespace cDBusTimersHelper
     "    <method name=\"List\">\n"
     "      <arg name=\"timer\"     type=\"as\" direction=\"out\"/>\n"
     "    </method>\n"
+    "    <method name=\"ListDetailed\">\n"
+    "      <arg name=\"timer\"     type=\"a("TimerDBusStruct")\" direction=\"out\"/>\n"
+    "    </method>\n"
     "    <method name=\"Next\">\n"
     "      <arg name=\"replycode\" type=\"i\" direction=\"out\"/>\n"
     "      <arg name=\"number\"    type=\"i\" direction=\"out\"/>\n"
@@ -54,6 +76,30 @@ namespace cDBusTimersHelper
     "    </method>\n"
     "  </interface>\n"
     "</node>\n";
+
+  static void AddTimer(GVariantBuilder *Array, const cTimer *Timer)
+  {
+    if (Timer == NULL)
+       return;
+
+    gint32 id = Timer->Index() + 1;
+    cString remote = "";
+    #if VDRVERSNUM > 20300
+    id = Timer->Id();
+    remote = Timer->Remote();
+    #endif
+    cString channel = Timer->Channel()->GetChannelID().ToString();
+    cString day = cTimer::PrintDay(Timer->Day(), Timer->WeekDays(), true);
+    const char *aux = Timer->Aux() ? Timer->Aux() : "";
+    guint32 eventId = 0;
+    if (Timer->Event() != NULL)
+       eventId = Timer->Event()->EventID();
+
+    g_variant_builder_add(Array, "("TimerDBusStruct")",
+     id, *remote, Timer->Flags(), *channel, *day, Timer->Start(), Timer->Stop(),
+     Timer->Priority(), Timer->Lifetime(), Timer->File(), aux, eventId,
+     Timer->Recording(), Timer->Pending(), Timer->InVpsMargin());
+  }
 
   static void New(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
@@ -152,6 +198,27 @@ namespace cDBusTimersHelper
     g_variant_builder_unref(builder);
   };
 
+  static void ListDetailed(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
+  {
+    GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("(a("TimerDBusStruct"))"));
+    GVariantBuilder *array = g_variant_builder_new(G_VARIANT_TYPE("a("TimerDBusStruct")"));
+
+    const cTimers *timers = NULL;
+#if VDRVERSNUM > 20300
+    LOCK_TIMERS_READ;
+    timers = Timers;
+#else
+    timers = &Timers;
+#endif
+    for (int i = 0; i < timers->Count(); i++)
+        AddTimer(array, timers->Get(i));
+    
+    g_variant_builder_add_value(builder, g_variant_builder_end(array));
+    g_dbus_method_invocation_return_value(Invocation, g_variant_builder_end(builder));
+    g_variant_builder_unref(array);
+    g_variant_builder_unref(builder);
+  };
+
   static void Next(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
     int returncode = 250;
@@ -197,6 +264,7 @@ cDBusTimersConst::cDBusTimersConst(const char *NodeInfo)
 :cDBusObject("/Timers", NodeInfo)
 {
   AddMethod("List", cDBusTimersHelper::List);
+  AddMethod("ListDetailed", cDBusTimersHelper::ListDetailed);
   AddMethod("Next", cDBusTimersHelper::Next);
 }
 
@@ -204,6 +272,7 @@ cDBusTimersConst::cDBusTimersConst(void)
 :cDBusObject("/Timers", cDBusTimersHelper::_xmlNodeInfoConst)
 {
   AddMethod("List", cDBusTimersHelper::List);
+  AddMethod("ListDetailed", cDBusTimersHelper::ListDetailed);
   AddMethod("Next", cDBusTimersHelper::Next);
 }
 

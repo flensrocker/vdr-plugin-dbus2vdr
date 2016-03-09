@@ -242,3 +242,6 @@ VDR Plugin 'dbus2vdr' Revision History
 
 2016-03-04: Version 29
 - add nulldevice as no-op primary device
+
+2016-03-09: Version 30
+- add timer.ListDetailed
