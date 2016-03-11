@@ -86,7 +86,7 @@ namespace cDBusTimersHelper
     cString remote = "";
     #if VDRVERSNUM > 20300
     id = Timer->Id();
-    remote = Timer->Remote();
+    remote = Timer->Remote() ? Timer->Remote() : "";
     #endif
     cString channel = Timer->Channel()->GetChannelID().ToString();
     cString day = cTimer::PrintDay(Timer->Day(), Timer->WeekDays(), true);
