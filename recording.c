@@ -33,7 +33,6 @@ public:
        gboolean b;
        guint64 tu64;
        int i;
-       gdouble d;
 
        c = recording->FileName();
        if (c != NULL)
@@ -62,8 +61,7 @@ public:
        cDBusHelper::AddKeyValue(array, "Lifetime", "i", (void**)&i);
        i = recording->HierarchyLevels();
        cDBusHelper::AddKeyValue(array, "HierarchyLevels", "i", (void**)&i);
-       d = recording->FramesPerSecond();
-       cDBusHelper::AddKeyValue(array, "FramesPerSecond", "d", (void**)&d);
+       cDBusHelper::AddKeyDouble(array, "FramesPerSecond", recording->FramesPerSecond());
        i = recording->NumFrames();
        cDBusHelper::AddKeyValue(array, "NumFrames", "i", (void**)&i);
        i = recording->LengthInSeconds();
@@ -97,8 +95,7 @@ public:
           c = info->Aux();
           if (c != NULL)
              cDBusHelper::AddKeyValue(array, "Info/Aux", "s", (void**)&c);
-          d = info->FramesPerSecond();
-          cDBusHelper::AddKeyValue(array, "Info/FramesPerSecond", "d", (void**)&d);
+          cDBusHelper::AddKeyDouble(array, "Info/FramesPerSecond", info->FramesPerSecond());
           const cComponents *components = info->Components();
           if ((components != NULL) && (components->NumComponents() > 0)) {
              for (int comp = 0; comp < components->NumComponents(); comp++) {

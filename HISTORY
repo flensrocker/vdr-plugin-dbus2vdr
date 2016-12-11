@@ -245,3 +245,6 @@ VDR Plugin 'dbus2vdr' Revision History
 
 2016-03-09: Version 30
 - add timer.ListDetailed
+
+2016-12-11: Version 31
+- correct output of "frames per second"

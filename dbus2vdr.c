@@ -39,7 +39,7 @@
 #include "avahi-helper.h"
 
 
-static const char *VERSION        = "30";
+static const char *VERSION        = "31";
 static const char *DESCRIPTION    = trNOOP("control vdr via D-Bus");
 static const char *MAINMENUENTRY  = NULL;
 

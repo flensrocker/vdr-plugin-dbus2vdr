@@ -64,6 +64,22 @@ void cDBusHelper::ToUtf8(cString &text)
      }
 }
 
+void  cDBusHelper::AddKeyDouble(GVariantBuilder *Array, const char *Key, double Value)
+{
+  GVariantBuilder *element = g_variant_builder_new(G_VARIANT_TYPE("(sv)"));
+
+  g_variant_builder_add(element, "s", Key);
+
+  GVariantBuilder *variant = g_variant_builder_new(G_VARIANT_TYPE("v"));
+  g_variant_builder_add(variant, "d", Value);
+  g_variant_builder_add_value(element, g_variant_builder_end(variant));
+
+  g_variant_builder_add_value(Array, g_variant_builder_end(element));
+
+  g_variant_builder_unref(variant);
+  g_variant_builder_unref(element);
+}
+
 void  cDBusHelper::AddKeyValue(GVariantBuilder *Array, const char *Key, const gchar *Type, void **Value)
 {
   GVariantBuilder *element = g_variant_builder_new(G_VARIANT_TYPE("(sv)"));

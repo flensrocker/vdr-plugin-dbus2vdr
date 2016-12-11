@@ -16,6 +16,7 @@ public:
   static bool IsValidUtf8(const char *text);
   static void ToUtf8(cString &text);
 
+  static void AddKeyDouble(GVariantBuilder *Array, const char *Key, double Value);
   static void AddKeyValue(GVariantBuilder *Array, const char *Key, const gchar *Type, void **Value);
   static void SendReply(GDBusMethodInvocation *Invocation, int  ReplyCode, const char *ReplyMessage);
 };
