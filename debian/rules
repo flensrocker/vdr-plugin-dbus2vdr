@@ -9,5 +9,5 @@ override_dh_auto_install:
 	dh_auto_install --destdir=debian/vdr-plugin-dbus2vdr
 
 %:
-	dh $@
+	dh $@ --with vdrplugin
 
