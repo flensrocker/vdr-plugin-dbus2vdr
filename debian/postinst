@@ -1,9 +1,26 @@
-#!/bin/sh
+#! /bin/sh
+set -e
 
-chmod +s /usr/share/vdr-plugin-dbus2vdr/shutdown-wrapper
-mkdir -p /var/lib/vdr/plugins/dbus2vdr
-chown vdr.vdr /var/lib/vdr/plugins/dbus2vdr
-chown vdr.vdr /var/lib/vdr/plugins/dbus2vdr/*
-chmod 755 /var/lib/vdr/plugins/dbus2vdr
-chmod 644 /var/lib/vdr/plugins/dbus2vdr/*
+case "$1" in
+    configure)
+	chown root:vdr /usr/share/vdr-plugin-dbus2vdr/shutdown-wrapper
+        chmod 6750 /usr/share/vdr-plugin-dbus2vdr/shutdown-wrapper
+        mkdir -p /var/lib/vdr/plugins/dbus2vdr
+        chown vdr:vdr /var/lib/vdr/plugins/dbus2vdr
+        chown vdr:vdr /var/lib/vdr/plugins/dbus2vdr/*
+        chmod 755 /var/lib/vdr/plugins/dbus2vdr
+        chmod 644 /var/lib/vdr/plugins/dbus2vdr/*
+    ;;
 
+    abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0

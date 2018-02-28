@@ -114,6 +114,7 @@ int main(int argc, char *argv[])
      dbus2vdrShutdownWrapper wrapper(argv[1]);
      if (argc > 2)
         args = argv[2];
+     setuid(0);
      return wrapper.ConfirmShutdown(args);
      }
   return 0;
