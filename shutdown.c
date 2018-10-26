@@ -26,7 +26,7 @@ public:
     g_variant_builder_unref(builder);
   };
 
-  static void UserActive(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
+  static void IsUserActive(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
     gboolean active = !ShutdownHandler.IsUserInactive();
     g_dbus_method_invocation_return_value(Invocation, g_variant_new("(b)", active));
@@ -239,7 +239,7 @@ const char *cDBusShutdownHelper::_xmlNodeInfo =
     "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
     "<node>\n"
     "  <interface name=\""DBUS_VDR_SHUTDOWN_INTERFACE"\">\n"
-    "    <method name=\"UserActive\">\n"
+    "    <method name=\"IsUserActive\">\n"
     "      <arg name=\"active\"       type=\"b\" direction=\"out\"/>\n"
     "    </method>\n"
     "    <method name=\"ConfirmShutdown\">\n"
@@ -281,7 +281,7 @@ void cDBusShutdown::SetShutdownHooksWrapper(const char *Wrapper)
 cDBusShutdown::cDBusShutdown(void)
 :cDBusObject("/Shutdown", cDBusShutdownHelper::_xmlNodeInfo)
 {
-  AddMethod("UserActive", cDBusShutdownHelper::UserActive);
+  AddMethod("IsUserActive", cDBusShutdownHelper::IsUserActive);
   AddMethod("ConfirmShutdown" , cDBusShutdownHelper::ConfirmShutdown);
   AddMethod("ManualStart" , cDBusShutdownHelper::ManualStart);
   AddMethod("NextWakeupTime" , cDBusShutdownHelper::NextWakeupTime);

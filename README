@@ -332,7 +332,7 @@ Interface "shutdown"
   useful for external frontends like XBMC etc..
 
 - ask if user is active
-  vdr-dbus-send.sh /Shutdown shutdown.UserActive
+  vdr-dbus-send.sh /Shutdown shutdown.IsUserActive
   This is a more efficient way to check if the user is active than using ConfirmShutdown,
   because the shutdown hooks won't be executed if the user is inactive.
 
