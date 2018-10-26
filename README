@@ -331,6 +331,11 @@ Interface "shutdown"
   The boolean argument "ignoreuser" will ignore user activity. This may be
   useful for external frontends like XBMC etc..
 
+- ask if user is active
+  vdr-dbus-send.sh /Shutdown shutdown.IsUserActive
+  This is a more efficient way to check if the user is active than using ConfirmShutdown,
+  because the shutdown hooks won't be executed if the user is inactive.
+
 - ask if vdr was started manually
   vdr-dbus-send.sh /Shutdown shutdown.ManualStart
   Actually it compares the startup time of vdr with the current set NextWakeupTime.
