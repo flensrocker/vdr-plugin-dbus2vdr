@@ -208,8 +208,13 @@ public:
     const char *hmsf = NULL;
 
 #if VDRVERSNUM > 20300
-    LOCK_RECORDINGS_READ;
-    const cRecordings *recs = Recordings;
+    cStateKey StateKey;
+    const cRecordings *recs = cRecordings::GetRecordingsRead(StateKey);
+    if (recs == NULL) {
+       replyMessage = cString::sprintf("cannot lock recordings");
+       cDBusHelper::SendReply(Invocation, replyCode, *replyMessage);
+       return;
+       }
 #else
     recordings.Update(true);
     cRecordings *recs = &recordings;
@@ -272,6 +277,13 @@ public:
        else if (g_variant_is_of_type(refSecond, G_VARIANT_TYPE_INT32))
           g_variant_get(refSecond, "i", &position);
 
+       cString recFileName = recording->FileName();
+       cString recTitle = recording->Title();
+       bool recIsPesRecording = recording->IsPesRecording();
+#if VDRVERSNUM > 20300
+       StateKey.Remove(); // must give up the lock for the call to cControl::Shutdown()
+#endif
+
        replyCode = 250;
 #if VDRVERSNUM < 10728
        cReplayControl::SetRecording(NULL, NULL);
@@ -280,26 +292,26 @@ public:
 #endif
        cControl::Shutdown();
        if (position >= 0) {
-          cResumeFile resume(recording->FileName(), recording->IsPesRecording());
+          cResumeFile resume(recFileName, recIsPesRecording);
           if (position == 0)
              resume.Delete();
           else
              resume.Save(position);
           }
 #if VDRVERSNUM < 10728
-       cReplayControl::SetRecording(recording->FileName(), recording->Title());
+       cReplayControl::SetRecording(recFileName, recTitle);
 #else
-       cReplayControl::SetRecording(recording->FileName());
+       cReplayControl::SetRecording(recFileName);
 #endif
        cControl::Launch(new cReplayControl);
        cControl::Attach();
 
        if (hmsf != NULL)
-          replyMessage = cString::sprintf("Playing recording \"%s\" from position %s", recording->FileName(), hmsf);
+          replyMessage = cString::sprintf("Playing recording \"%s\" from position %s", *recFileName, hmsf);
        else if (position >= 0)
-          replyMessage = cString::sprintf("Playing recording \"%s\" from position %d", recording->FileName(), position);
+          replyMessage = cString::sprintf("Playing recording \"%s\" from position %d", *recFileName, position);
        else
-          replyMessage = cString::sprintf("Resume playing recording \"%s\"", recording->FileName());
+          replyMessage = cString::sprintf("Resume playing recording \"%s\"", *recFileName);
        }
     cDBusHelper::SendReply(Invocation, replyCode, *replyMessage);
     if (refFirst != first)
