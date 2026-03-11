@@ -238,7 +238,7 @@ const char *cDBusShutdownHelper::_xmlNodeInfo =
     "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
     "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
     "<node>\n"
-    "  <interface name=\""DBUS_VDR_SHUTDOWN_INTERFACE"\">\n"
+    "  <interface name=\"" DBUS_VDR_SHUTDOWN_INTERFACE "\">\n"
     "    <method name=\"IsUserActive\">\n"
     "      <arg name=\"active\"       type=\"b\" direction=\"out\"/>\n"
     "    </method>\n"

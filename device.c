@@ -30,7 +30,7 @@ namespace cDBusDevicesHelper
     "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
     "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
     "<node>\n"
-    "  <interface name=\""DBUS_VDR_DEVICE_INTERFACE"\">\n"
+    "  <interface name=\"" DBUS_VDR_DEVICE_INTERFACE "\">\n"
     "    <method name=\"GetPrimary\">\n"
     "      <arg name=\"index\"        type=\"i\" direction=\"out\"/>\n"
     "      <arg name=\"number\"       type=\"i\" direction=\"out\"/>\n"

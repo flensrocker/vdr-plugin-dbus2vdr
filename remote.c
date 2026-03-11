@@ -61,7 +61,7 @@ namespace cDBusRemoteHelper
     "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
     "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
     "<node>\n"
-    "  <interface name=\""DBUS_VDR_REMOTE_INTERFACE"\">\n"
+    "  <interface name=\"" DBUS_VDR_REMOTE_INTERFACE "\">\n"
     "    <method name=\"CallPlugin\">\n"
     "      <arg name=\"pluginName\"   type=\"s\" direction=\"in\"/>\n"
     "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"

@@ -27,7 +27,11 @@ public:
     if (recording == NULL)
        g_variant_builder_add(struc, "i", -1);
     else {
+#if VDRVERSNUM >= 20304
+       g_variant_builder_add(struc, "i", recording->Id());
+#else
        g_variant_builder_add(struc, "i", recording->Index() + 1);
+#endif
        cString s;
        const char *c;
        gboolean b;
@@ -534,7 +538,7 @@ const char *cDBusRecordingsHelper::_xmlNodeInfoConst =
   "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
   "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
   "<node>\n"
-  "  <interface name=\""DBUS_VDR_RECORDING_INTERFACE"\">\n"
+  "  <interface name=\"" DBUS_VDR_RECORDING_INTERFACE "\">\n"
   "    <method name=\"Get\">\n"
   "      <arg name=\"number_or_path\" type=\"v\" direction=\"in\"/>\n"
   "      <arg name=\"recording\"      type=\"(ia(sv))\" direction=\"out\"/>\n"
@@ -556,7 +560,7 @@ const char *cDBusRecordingsHelper::_xmlNodeInfo =
   "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
   "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
   "<node>\n"
-  "  <interface name=\""DBUS_VDR_RECORDING_INTERFACE"\">\n"
+  "  <interface name=\"" DBUS_VDR_RECORDING_INTERFACE "\">\n"
   "    <method name=\"Update\">\n"
   "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
   "      <arg name=\"replymessage\" type=\"s\" direction=\"out\"/>\n"

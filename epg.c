@@ -18,7 +18,7 @@ namespace cDBusEpgHelper
     "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
     "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
     "<node>\n"
-    "  <interface name=\""DBUS_VDR_EPG_INTERFACE"\">\n"
+    "  <interface name=\"" DBUS_VDR_EPG_INTERFACE "\">\n"
     "    <method name=\"DisableScanner\">\n"
     "      <arg name=\"eitdisabletime\" type=\"i\" direction=\"in\"/>\n"
     "      <arg name=\"replycode\"      type=\"i\" direction=\"out\"/>\n"

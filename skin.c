@@ -11,7 +11,7 @@ namespace cDBusSkinHelper
     "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
     "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
     "<node>\n"
-    "  <interface name=\""DBUS_VDR_SKIN_INTERFACE"\">\n"
+    "  <interface name=\"" DBUS_VDR_SKIN_INTERFACE "\">\n"
     "    <method name=\"CurrentSkin\">\n"
     "      <arg name=\"replycode\"    type=\"i\" direction=\"out\"/>\n"
     "      <arg name=\"skin\"         type=\"(iss)\" direction=\"out\"/>\n"

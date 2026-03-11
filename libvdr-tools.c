@@ -1323,7 +1323,7 @@ cReadDir::~cReadDir()
 
 struct dirent *cReadDir::Next(void)
 {
-  return directory && readdir_r(directory, &u.d, &result) == 0 ? result : NULL;
+  return directory ? readdir(directory) : NULL;
 }
 
 // --- cStringList -----------------------------------------------------------

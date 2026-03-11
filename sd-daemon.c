@@ -443,7 +443,8 @@ _sd_export_ int sd_notify(int unset_environment, const char *state) {
 
         memset(&sockaddr, 0, sizeof(sockaddr));
         sockaddr.sa.sa_family = AF_UNIX;
-        strncpy(sockaddr.un.sun_path, e, sizeof(sockaddr.un.sun_path));
+	snprintf(sockaddr.un.sun_path, sizeof(sockaddr.un.sun_path), "%s", e);
+
 
         if (sockaddr.un.sun_path[0] == '@')
                 sockaddr.un.sun_path[0] = 0;

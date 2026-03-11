@@ -27,12 +27,12 @@ namespace cDBusTimersHelper
     "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
     "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
     "<node>\n"
-    "  <interface name=\""DBUS_VDR_TIMER_INTERFACE"\">\n"
+    "  <interface name=\"" DBUS_VDR_TIMER_INTERFACE "\">\n"
     "    <method name=\"List\">\n"
     "      <arg name=\"timer\"     type=\"as\" direction=\"out\"/>\n"
     "    </method>\n"
     "    <method name=\"ListDetailed\">\n"
-    "      <arg name=\"timer\"     type=\"a("TimerDBusStruct")\" direction=\"out\"/>\n"
+    "      <arg name=\"timer\"     type=\"a(" TimerDBusStruct ")\" direction=\"out\"/>\n"
     "    </method>\n"
     "    <method name=\"Next\">\n"
     "      <arg name=\"replycode\" type=\"i\" direction=\"out\"/>\n"
@@ -49,7 +49,7 @@ namespace cDBusTimersHelper
     "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
     "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
     "<node>\n"
-    "  <interface name=\""DBUS_VDR_TIMER_INTERFACE"\">\n"
+    "  <interface name=\"" DBUS_VDR_TIMER_INTERFACE "\">\n"
     "    <method name=\"New\">\n"
     "      <arg name=\"timer\"          type=\"s\" direction=\"in\"/>\n"
     "      <arg name=\"replycode\"      type=\"i\"  direction=\"out\"/>\n"
@@ -64,7 +64,7 @@ namespace cDBusTimersHelper
     "      <arg name=\"timer\"     type=\"as\" direction=\"out\"/>\n"
     "    </method>\n"
     "    <method name=\"ListDetailed\">\n"
-    "      <arg name=\"timer\"     type=\"a("TimerDBusStruct")\" direction=\"out\"/>\n"
+    "      <arg name=\"timer\"     type=\"a(" TimerDBusStruct ")\" direction=\"out\"/>\n"
     "    </method>\n"
     "    <method name=\"Next\">\n"
     "      <arg name=\"replycode\" type=\"i\" direction=\"out\"/>\n"
@@ -95,7 +95,7 @@ namespace cDBusTimersHelper
     if (Timer->Event() != NULL)
        eventId = Timer->Event()->EventID();
 
-    g_variant_builder_add(Array, "("TimerDBusStruct")",
+    g_variant_builder_add(Array, "(" TimerDBusStruct ")",
      id, *remote, Timer->Flags(), *channel, *day, Timer->Start(), Timer->Stop(),
      Timer->Priority(), Timer->Lifetime(), Timer->File(), aux, eventId,
      Timer->Recording(), Timer->Pending(), Timer->InVpsMargin());
@@ -121,7 +121,11 @@ namespace cDBusTimersHelper
           timers->SetModified();
 #endif
           isyslog("timer %s added", *timer->ToDescr());
+#if VDRVERSNUM >= 20304
+          cDBusHelper::SendReply(Invocation, 250, *cString::sprintf("%d %s", timer->Id(), *timer->ToText()));
+#else
           cDBusHelper::SendReply(Invocation, 250, *cString::sprintf("%d %s", timer->Index() + 1, *timer->ToText()));
+#endif
           return;
           }
        else
@@ -200,8 +204,8 @@ namespace cDBusTimersHelper
 
   static void ListDetailed(cDBusObject *Object, GVariant *Parameters, GDBusMethodInvocation *Invocation)
   {
-    GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("(a("TimerDBusStruct"))"));
-    GVariantBuilder *array = g_variant_builder_new(G_VARIANT_TYPE("a("TimerDBusStruct")"));
+    GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("(a(" TimerDBusStruct "))"));
+    GVariantBuilder *array = g_variant_builder_new(G_VARIANT_TYPE("a(" TimerDBusStruct ")"));
 
     const cTimers *timers = NULL;
 #if VDRVERSNUM > 20300

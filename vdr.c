@@ -12,7 +12,7 @@ namespace cDBusVdrHelper
     "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
     "       \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
     "<node>\n"
-    "  <interface name=\""DBUS_VDR_VDR_INTERFACE"\">\n"
+    "  <interface name=\"" DBUS_VDR_VDR_INTERFACE "\">\n"
     "    <method name=\"Status\">\n"
     "      <arg name=\"status\"       type=\"s\" direction=\"out\"/>\n"
     "    </method>\n"
